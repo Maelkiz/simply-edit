@@ -12,6 +12,7 @@ fn run() -> Result<(), String> {
     let args: Vec<String> = env::args().collect();
     match args.as_slice() {
         [_, command, path] if command == "fliph" => flip_horizontal(path),
+        [_, command, path] if command == "flipv" => flip_vertical(path),
         _ => Err(usage()),
     }
 }
@@ -20,6 +21,18 @@ fn flip_horizontal(path: &str) -> Result<(), String> {
     let img = image::open(path).map_err(|e| format!("failed to open image '{path}': {e}"))?;
     let flipped = img.fliph();
     let output = output_path(path, "fliph");
+    flipped
+        .save(&output)
+        .map_err(|e| format!("failed to save image '{}': {e}", output.display()))?;
+
+    println!("Saved flipped image to {}", output.display());
+    Ok(())
+}
+
+fn flip_vertical(path: &str) -> Result<(), String> {
+    let img = image::open(path).map_err(|e| format!("failed to open image '{path}': {e}"))?;
+    let flipped = img.flipv();
+    let output = output_path(path, "flipv");
     flipped
         .save(&output)
         .map_err(|e| format!("failed to save image '{}': {e}", output.display()))?;
@@ -37,5 +50,10 @@ fn output_path(input: &str, suffix: &str) -> PathBuf {
 }
 
 fn usage() -> String {
-    "Usage: simple-edit fliph <path-to-image>".to_string()
+    [
+        "Usage:",
+        "  simple-edit fliph <path-to-image>",
+        "  simple-edit flipv <path-to-image>",
+    ]
+    .join("\n")
 }
