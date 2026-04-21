@@ -75,8 +75,8 @@ fn convert(src: &str, dst: &str) -> Result<(), String> {
         .to_lowercase();
 
     match ext.as_str() {
-        "jpg" | "jpeg" | "png" => {},
-        _ => return Err(format!("unsupported format '{ext}': use jpg or png")),
+        "jpg" | "jpeg" | "png" | "ico" => {},
+        _ => return Err(format!("unsupported format '{ext}': use jpg, png, or ico")),
     };
 
     img.save(dst)
