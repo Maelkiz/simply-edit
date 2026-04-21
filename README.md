@@ -2,6 +2,49 @@
 
 > A simple CLI tool for manipulating images.
 
+## Installation & Setup
+
+### Prerequisites
+
+- **Rust 1.56+** — Install from [rustup.rs](https://rustup.rs/)
+
+### Clone the Repository
+
+```bash
+git clone https://github.com/yourusername/simple-edit.git
+cd simple-edit
+```
+
+### Build from Source
+
+**Development build:**
+```bash
+cargo build
+./target/debug/simple-edit <command> <args>
+```
+
+**Release build (optimized):**
+```bash
+cargo build --release
+./target/release/simple-edit <command> <args>
+```
+
+### Run Without Building
+
+You can run commands directly from the repository without building:
+
+```bash
+cargo run -- <command> <args>
+```
+
+### Run Tests
+
+Execute the unit test suite:
+
+```bash
+cargo test
+```
+
 ## Usage
 
 ### Flip Horizontal
