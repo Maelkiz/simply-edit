@@ -40,6 +40,11 @@ fn run() -> Result<(), String> {
         }
         [_, command, path] if command == "invert" => invert(path, OutputMode::Generated("invert")),
         [_, command, path, output] if command == "invert" => invert(path, OutputMode::Explicit(output.as_str())),
+        [_, command, flag, path] if command == "grayscale" && is_replace_flag(flag) => {
+            grayscale(path, OutputMode::Replace)
+        }
+        [_, command, path] if command == "grayscale" => grayscale(path, OutputMode::Generated("grayscale")),
+        [_, command, path, output] if command == "grayscale" => grayscale(path, OutputMode::Explicit(output.as_str())),
         [_, command, src, dst] if command == "convert" => convert(src, dst),
         _ => Err(usage()),
     }
@@ -116,6 +121,14 @@ fn invert_colors(img: image::DynamicImage) -> image::DynamicImage {
     }
 
     image::DynamicImage::ImageRgba8(rgba_image)
+}
+
+fn grayscale(path: &str, output: OutputMode<'_>) -> Result<(), String> {
+    let img = image::open(path).map_err(|e| format!("failed to open image '{path}': {e}"))?;
+    let grayscale = img.grayscale();
+    let output_path = save_transformed_image(grayscale, path, output, "grayscale")?;
+    println!("Saved grayscale image to {}", output_path);
+    Ok(())
 }
 
 fn save_transformed_image(
@@ -204,6 +217,7 @@ fn usage() -> String {
         "  simple-edit flipv [-r|--replace] <path-to-image> [output-path]",
         "  simple-edit rotate <degrees> [-r|--replace] <path-to-image> [output-path]",
         "  simple-edit invert [-r|--replace] <path-to-image> [output-path]",
+        "  simple-edit grayscale [-r|--replace] <path-to-image> [output-path]",
         "  simple-edit convert <path-to-image> <new-path>",
     ]
     .join("\n")

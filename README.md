@@ -1,6 +1,6 @@
 # simple-edit
 
-> A simple image CLI tool for flipping and rotating images.
+> A simple CLI tool for manipulating images.
 
 ## Usage
 
@@ -80,6 +80,25 @@ simple-edit invert [-r|--replace] <path-to-image> [output-path]
 cargo run -- invert image.jpg                   # Saves to image_invert.jpg
 cargo run -- invert image.jpg output.png        # Saves to output.png
 cargo run -- invert -r image.jpg                # Replaces image.jpg after writing successfully
+```
+
+### Grayscale
+
+Convert an image to grayscale.
+
+```bash
+simple-edit grayscale [-r|--replace] <path-to-image> [output-path]
+```
+
+- `<path-to-image>`: Path to the source image file
+- `-r` / `--replace`: Replace the source file in place after the grayscale image is written successfully
+- `[output-path]` (optional): Path for the output file. Omit this when using `-r` / `--replace`. If omitted, saves as `{filename}_grayscale.{ext}` in the same directory
+
+**Examples:**
+```bash
+cargo run -- grayscale image.jpg               # Saves to image_grayscale.jpg
+cargo run -- grayscale image.jpg output.png    # Saves to output.png
+cargo run -- grayscale -r image.jpg            # Replaces image.jpg after writing successfully
 ```
 
 ### Convert
