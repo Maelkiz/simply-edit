@@ -14,6 +14,7 @@ fn run() -> Result<(), String> {
         [_, command, path] if command == "fliph" => flip_horizontal(path),
         [_, command, path] if command == "flipv" => flip_vertical(path),
         [_, command, degrees, path] if command == "rotate" => rotate(degrees, path),
+        [_, command, src, dst] if command == "convert" => convert(src, dst),
         _ => Err(usage()),
     }
 }
@@ -64,6 +65,27 @@ fn rotate(degrees: &str, path: &str) -> Result<(), String> {
     Ok(())
 }
 
+fn convert(src: &str, dst: &str) -> Result<(), String> {
+    let img = image::open(src).map_err(|e| format!("failed to open image '{src}': {e}"))?;
+    let dst_path = Path::new(dst);
+    let ext = dst_path
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_lowercase();
+
+    match ext.as_str() {
+        "jpg" | "jpeg" | "png" => {},
+        _ => return Err(format!("unsupported format '{ext}': use jpg or png")),
+    };
+
+    img.save(dst)
+        .map_err(|e| format!("failed to save image '{dst}': {e}"))?;
+
+    println!("Converted image to {}", dst);
+    Ok(())
+}
+
 fn output_path(input: &str, suffix: &str) -> PathBuf {
     let path = Path::new(input);
     let parent = path.parent().unwrap_or_else(|| Path::new("."));
@@ -78,6 +100,7 @@ fn usage() -> String {
         "  simple-edit fliph <path-to-image>",
         "  simple-edit flipv <path-to-image>",
         "  simple-edit rotate <degrees> <path-to-image>",
+        "  simple-edit convert <path-to-image> <new-path>",
     ]
     .join("\n")
 }
