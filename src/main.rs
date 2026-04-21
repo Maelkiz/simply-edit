@@ -2,6 +2,7 @@ use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 use image::GenericImageView;
+use palette::Srgba;
 
 enum OutputMode<'a> {
     Generated(&'a str),
@@ -34,6 +35,11 @@ fn run() -> Result<(), String> {
         }
         [_, command, degrees, path] if command == "rotate" => rotate(degrees, path, OutputMode::Generated("rotate")),
         [_, command, degrees, path, output] if command == "rotate" => rotate(degrees, path, OutputMode::Explicit(output.as_str())),
+        [_, command, flag, path] if command == "invert" && is_replace_flag(flag) => {
+            invert(path, OutputMode::Replace)
+        }
+        [_, command, path] if command == "invert" => invert(path, OutputMode::Generated("invert")),
+        [_, command, path, output] if command == "invert" => invert(path, OutputMode::Explicit(output.as_str())),
         [_, command, src, dst] if command == "convert" => convert(src, dst),
         _ => Err(usage()),
     }
@@ -78,6 +84,38 @@ fn convert(src: &str, dst: &str) -> Result<(), String> {
     save_image(img, dst)?;
     println!("Converted image to {}", dst);
     Ok(())
+}
+
+fn invert(path: &str, output: OutputMode<'_>) -> Result<(), String> {
+    let img = image::open(path).map_err(|e| format!("failed to open image '{path}': {e}"))?;
+    let inverted = invert_colors(img);
+    let output_path = save_transformed_image(inverted, path, output, "invert")?;
+    println!("Saved inverted image to {}", output_path);
+    Ok(())
+}
+
+fn invert_colors(img: image::DynamicImage) -> image::DynamicImage {
+    let mut rgba_image = img.to_rgba8();
+
+    for pixel in rgba_image.pixels_mut() {
+        let color = Srgba::new(
+            pixel[0] as f32 / 255.0,
+            pixel[1] as f32 / 255.0,
+            pixel[2] as f32 / 255.0,
+            pixel[3] as f32 / 255.0,
+        );
+
+        let inverted = Srgba::new(1.0 - color.red, 1.0 - color.green, 1.0 - color.blue, color.alpha);
+
+        *pixel = image::Rgba([
+            (inverted.red * 255.0).round() as u8,
+            (inverted.green * 255.0).round() as u8,
+            (inverted.blue * 255.0).round() as u8,
+            (inverted.alpha * 255.0).round() as u8,
+        ]);
+    }
+
+    image::DynamicImage::ImageRgba8(rgba_image)
 }
 
 fn save_transformed_image(
@@ -165,6 +203,7 @@ fn usage() -> String {
         "  simple-edit fliph [-r|--replace] <path-to-image> [output-path]",
         "  simple-edit flipv [-r|--replace] <path-to-image> [output-path]",
         "  simple-edit rotate <degrees> [-r|--replace] <path-to-image> [output-path]",
+        "  simple-edit invert [-r|--replace] <path-to-image> [output-path]",
         "  simple-edit convert <path-to-image> <new-path>",
     ]
     .join("\n")

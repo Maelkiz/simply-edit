@@ -63,6 +63,25 @@ cargo run -- rotate 270 image.jpg output.ico    # Saves to output.ico (converts 
 cargo run -- rotate 90 --replace image.jpg      # Replaces image.jpg after writing successfully
 ```
 
+### Invert
+
+Invert the colors in an image.
+
+```bash
+simple-edit invert [-r|--replace] <path-to-image> [output-path]
+```
+
+- `<path-to-image>`: Path to the source image file
+- `-r` / `--replace`: Replace the source file in place after the inverted image is written successfully
+- `[output-path]` (optional): Path for the output file. Omit this when using `-r` / `--replace`. If omitted, saves as `{filename}_invert.{ext}` in the same directory
+
+**Examples:**
+```bash
+cargo run -- invert image.jpg                   # Saves to image_invert.jpg
+cargo run -- invert image.jpg output.png        # Saves to output.png
+cargo run -- invert -r image.jpg                # Replaces image.jpg after writing successfully
+```
+
 ### Convert
 
 Convert between supported image formats (PNG, JPG, ICO).
