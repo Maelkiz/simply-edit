@@ -222,3 +222,192 @@ fn usage() -> String {
     ]
     .join("\n")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Path generation tests
+    mod path_generation {
+        use super::*;
+
+        #[test]
+        fn test_output_path_with_suffix_simple() {
+            let path = output_path_with_suffix("image.jpg", "fliph");
+            assert_eq!(path.to_string_lossy(), "image_fliph.jpg");
+        }
+
+        #[test]
+        fn test_output_path_with_suffix_nested() {
+            let path = output_path_with_suffix("path/to/image.png", "invert");
+            assert_eq!(path.to_string_lossy(), "path/to/image_invert.png");
+        }
+
+        #[test]
+        fn test_output_path_with_suffix_multiple_dots() {
+            let path = output_path_with_suffix("my.image.file.jpg", "rotate90");
+            assert_eq!(path.to_string_lossy(), "my.image.file_rotate90.jpg");
+        }
+
+        #[test]
+        fn test_output_path_with_suffix_no_extension() {
+            let path = output_path_with_suffix("imagefile", "grayscale");
+            assert_eq!(path.to_string_lossy(), "imagefile_grayscale.png");
+        }
+
+        #[test]
+        fn test_replacement_temp_path_creates_tmp_suffix() {
+            let path = replacement_temp_path("image.jpg", "fliph");
+            let path_str = path.to_string_lossy();
+            assert!(path_str.contains("simple-edit-tmp"));
+            assert!(path_str.ends_with(".jpg"));
+        }
+
+        #[test]
+        fn test_replacement_temp_path_nested() {
+            let path = replacement_temp_path("dir/image.png", "rotate90");
+            let path_str = path.to_string_lossy();
+            assert!(path_str.contains("simple-edit-tmp"));
+            assert!(path_str.contains("dir/"));
+        }
+    }
+
+    // Flag parsing tests
+    mod flag_parsing {
+        use super::*;
+
+        #[test]
+        fn test_is_replace_flag_short() {
+            assert!(is_replace_flag("-r"));
+        }
+
+        #[test]
+        fn test_is_replace_flag_long() {
+            assert!(is_replace_flag("--replace"));
+        }
+
+        #[test]
+        fn test_is_replace_flag_rejects_other_short() {
+            assert!(!is_replace_flag("-f"));
+            assert!(!is_replace_flag("-x"));
+        }
+
+        #[test]
+        fn test_is_replace_flag_rejects_other_long() {
+            assert!(!is_replace_flag("--foo"));
+            assert!(!is_replace_flag("--other"));
+        }
+
+        #[test]
+        fn test_is_replace_flag_rejects_close_matches() {
+            assert!(!is_replace_flag("replace"));
+            assert!(!is_replace_flag("-replace"));
+            assert!(!is_replace_flag("--r"));
+        }
+
+        #[test]
+        fn test_is_replace_flag_case_sensitive() {
+            assert!(!is_replace_flag("-R"));
+            assert!(!is_replace_flag("--Replace"));
+            assert!(!is_replace_flag("--REPLACE"));
+        }
+    }
+
+    // Color inversion tests
+    mod color_operations {
+        use super::*;
+
+        #[test]
+        fn test_color_inversion_black_becomes_white() {
+            // Create a simple 1x1 black pixel image
+            let img = image::ImageBuffer::from_pixel(1, 1, image::Rgba([0, 0, 0, 255]));
+            let dynamic_img = image::DynamicImage::ImageRgba8(img);
+
+            let inverted = invert_colors(dynamic_img);
+            let rgba_img = inverted.to_rgba8();
+            let pixel = rgba_img.get_pixel(0, 0);
+
+            // Black (0,0,0) should invert to white (255,255,255)
+            assert_eq!(pixel[0], 255);
+            assert_eq!(pixel[1], 255);
+            assert_eq!(pixel[2], 255);
+            assert_eq!(pixel[3], 255); // Alpha should remain unchanged
+        }
+
+        #[test]
+        fn test_color_inversion_white_becomes_black() {
+            // Create a simple 1x1 white pixel image
+            let img = image::ImageBuffer::from_pixel(1, 1, image::Rgba([255, 255, 255, 255]));
+            let dynamic_img = image::DynamicImage::ImageRgba8(img);
+
+            let inverted = invert_colors(dynamic_img);
+            let rgba_img = inverted.to_rgba8();
+            let pixel = rgba_img.get_pixel(0, 0);
+
+            // White (255,255,255) should invert to black (0,0,0)
+            assert_eq!(pixel[0], 0);
+            assert_eq!(pixel[1], 0);
+            assert_eq!(pixel[2], 0);
+            assert_eq!(pixel[3], 255); // Alpha should remain unchanged
+        }
+
+        #[test]
+        fn test_color_inversion_preserves_alpha() {
+            // Create a 1x1 image with semi-transparent red
+            let img = image::ImageBuffer::from_pixel(1, 1, image::Rgba([255, 0, 0, 128]));
+            let dynamic_img = image::DynamicImage::ImageRgba8(img);
+
+            let inverted = invert_colors(dynamic_img);
+            let rgba_img = inverted.to_rgba8();
+            let pixel = rgba_img.get_pixel(0, 0);
+
+            // Alpha should be preserved
+            assert_eq!(pixel[3], 128);
+        }
+
+        #[test]
+        fn test_color_inversion_gray_stays_roughly_gray() {
+            // Create a 1x1 gray pixel (128,128,128)
+            let img = image::ImageBuffer::from_pixel(1, 1, image::Rgba([128, 128, 128, 255]));
+            let dynamic_img = image::DynamicImage::ImageRgba8(img);
+
+            let inverted = invert_colors(dynamic_img);
+            let rgba_img = inverted.to_rgba8();
+            let pixel = rgba_img.get_pixel(0, 0);
+
+            // Gray (128,128,128) should invert to roughly gray (127,127,127)
+            // allowing for rounding
+            assert!(pixel[0] >= 126 && pixel[0] <= 128);
+            assert!(pixel[1] >= 126 && pixel[1] <= 128);
+            assert!(pixel[2] >= 126 && pixel[2] <= 128);
+        }
+    }
+
+    // Usage text validation
+    mod usage {
+        use super::*;
+
+        #[test]
+        fn test_usage_contains_all_commands() {
+            let usage_text = usage();
+            assert!(usage_text.contains("fliph"));
+            assert!(usage_text.contains("flipv"));
+            assert!(usage_text.contains("rotate"));
+            assert!(usage_text.contains("invert"));
+            assert!(usage_text.contains("grayscale"));
+            assert!(usage_text.contains("convert"));
+        }
+
+        #[test]
+        fn test_usage_contains_replace_flag_info() {
+            let usage_text = usage();
+            assert!(usage_text.contains("-r|--replace"));
+        }
+
+        #[test]
+        fn test_usage_is_non_empty() {
+            let usage_text = usage();
+            assert!(!usage_text.is_empty());
+        }
+    }
+}
