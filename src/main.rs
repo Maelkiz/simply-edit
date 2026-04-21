@@ -1,6 +1,13 @@
 use std::env;
+use std::fs;
 use std::path::{Path, PathBuf};
 use image::GenericImageView;
+
+enum OutputMode<'a> {
+    Generated(&'a str),
+    Explicit(&'a str),
+    Replace,
+}
 
 fn main() {
     if let Err(err) = run() {
@@ -12,40 +19,43 @@ fn main() {
 fn run() -> Result<(), String> {
     let args: Vec<String> = env::args().collect();
     match args.as_slice() {
-        [_, command, path] if command == "fliph" => flip_horizontal(path, None),
-        [_, command, path, output] if command == "fliph" => flip_horizontal(path, Some(output.as_str())),
-        [_, command, path] if command == "flipv" => flip_vertical(path, None),
-        [_, command, path, output] if command == "flipv" => flip_vertical(path, Some(output.as_str())),
-        [_, command, degrees, path] if command == "rotate" => rotate(degrees, path, None),
-        [_, command, degrees, path, output] if command == "rotate" => rotate(degrees, path, Some(output.as_str())),
+        [_, command, flag, path] if command == "fliph" && is_replace_flag(flag) => {
+            flip_horizontal(path, OutputMode::Replace)
+        }
+        [_, command, path] if command == "fliph" => flip_horizontal(path, OutputMode::Generated("fliph")),
+        [_, command, path, output] if command == "fliph" => flip_horizontal(path, OutputMode::Explicit(output.as_str())),
+        [_, command, flag, path] if command == "flipv" && is_replace_flag(flag) => {
+            flip_vertical(path, OutputMode::Replace)
+        }
+        [_, command, path] if command == "flipv" => flip_vertical(path, OutputMode::Generated("flipv")),
+        [_, command, path, output] if command == "flipv" => flip_vertical(path, OutputMode::Explicit(output.as_str())),
+        [_, command, degrees, flag, path] if command == "rotate" && is_replace_flag(flag) => {
+            rotate(degrees, path, OutputMode::Replace)
+        }
+        [_, command, degrees, path] if command == "rotate" => rotate(degrees, path, OutputMode::Generated("rotate")),
+        [_, command, degrees, path, output] if command == "rotate" => rotate(degrees, path, OutputMode::Explicit(output.as_str())),
         [_, command, src, dst] if command == "convert" => convert(src, dst),
         _ => Err(usage()),
     }
 }
 
-fn flip_horizontal(path: &str, output: Option<&str>) -> Result<(), String> {
+fn flip_horizontal(path: &str, output: OutputMode<'_>) -> Result<(), String> {
     let img = image::open(path).map_err(|e| format!("failed to open image '{path}': {e}"))?;
     let flipped = img.fliph();
-    let output_path = output.map(|o| o.to_string()).unwrap_or_else(|| {
-        output_path_with_suffix(path, "fliph").to_string_lossy().to_string()
-    });
-    save_image(flipped, &output_path)?;
+    let output_path = save_transformed_image(flipped, path, output, "fliph")?;
     println!("Saved flipped image to {}", output_path);
     Ok(())
 }
 
-fn flip_vertical(path: &str, output: Option<&str>) -> Result<(), String> {
+fn flip_vertical(path: &str, output: OutputMode<'_>) -> Result<(), String> {
     let img = image::open(path).map_err(|e| format!("failed to open image '{path}': {e}"))?;
     let flipped = img.flipv();
-    let output_path = output.map(|o| o.to_string()).unwrap_or_else(|| {
-        output_path_with_suffix(path, "flipv").to_string_lossy().to_string()
-    });
-    save_image(flipped, &output_path)?;
+    let output_path = save_transformed_image(flipped, path, output, "flipv")?;
     println!("Saved flipped image to {}", output_path);
     Ok(())
 }
 
-fn rotate(degrees: &str, path: &str, output: Option<&str>) -> Result<(), String> {
+fn rotate(degrees: &str, path: &str, output: OutputMode<'_>) -> Result<(), String> {
     let deg: u16 = degrees
         .parse()
         .map_err(|_| format!("invalid rotation '{degrees}': use 90, 180, or 270"))?;
@@ -58,10 +68,7 @@ fn rotate(degrees: &str, path: &str, output: Option<&str>) -> Result<(), String>
         _ => return Err(format!("invalid rotation '{degrees}': use 90, 180, or 270")),
     };
 
-    let output_path = output.map(|o| o.to_string()).unwrap_or_else(|| {
-        output_path_with_suffix(path, &format!("rotate{deg}")).to_string_lossy().to_string()
-    });
-    save_image(rotated, &output_path)?;
+    let output_path = save_transformed_image(rotated, path, output, &format!("rotate{deg}"))?;
     println!("Saved rotated image to {}", output_path);
     Ok(())
 }
@@ -73,8 +80,36 @@ fn convert(src: &str, dst: &str) -> Result<(), String> {
     Ok(())
 }
 
-fn save_image(mut img: image::DynamicImage, output_path: &str) -> Result<(), String> {
-    let dst_path = Path::new(output_path);
+fn save_transformed_image(
+    img: image::DynamicImage,
+    source_path: &str,
+    output: OutputMode<'_>,
+    default_suffix: &str,
+) -> Result<String, String> {
+    match output {
+        OutputMode::Generated(suffix) => {
+            let output_path = output_path_with_suffix(source_path, suffix);
+            save_image(img, output_path.as_path())?;
+            Ok(output_path.to_string_lossy().to_string())
+        }
+        OutputMode::Explicit(output_path) => {
+            save_image(img, output_path)?;
+            Ok(output_path.to_string())
+        }
+        OutputMode::Replace => {
+            let temp_path = replacement_temp_path(source_path, default_suffix);
+            save_image(img, temp_path.as_path())?;
+            fs::rename(&temp_path, source_path).map_err(|e| {
+                format!("failed to replace image '{}' with '{}': {e}", source_path, temp_path.display())
+            })?;
+            Ok(source_path.to_string())
+        }
+    }
+}
+
+fn save_image<P: AsRef<Path>>(mut img: image::DynamicImage, output_path: P) -> Result<(), String> {
+    let output_path = output_path.as_ref();
+    let dst_path = output_path;
     let ext = dst_path
         .extension()
         .and_then(|e| e.to_str())
@@ -99,9 +134,17 @@ fn save_image(mut img: image::DynamicImage, output_path: &str) -> Result<(), Str
     }
 
     img.save(output_path)
-        .map_err(|e| format!("failed to save image '{output_path}': {e}"))?;
+        .map_err(|e| format!("failed to save image '{}': {e}", output_path.display()))?;
 
     Ok(())
+}
+
+fn replacement_temp_path(input: &str, suffix: &str) -> PathBuf {
+    let path = Path::new(input);
+    let parent = path.parent().unwrap_or_else(|| Path::new("."));
+    let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("output");
+    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("png");
+    parent.join(format!("{stem}_{suffix}.simple-edit-tmp.{ext}"))
 }
 
 fn output_path_with_suffix(input: &str, suffix: &str) -> PathBuf {
@@ -112,12 +155,16 @@ fn output_path_with_suffix(input: &str, suffix: &str) -> PathBuf {
     parent.join(format!("{stem}_{suffix}.{ext}"))
 }
 
+fn is_replace_flag(value: &str) -> bool {
+    matches!(value, "-r" | "--replace")
+}
+
 fn usage() -> String {
     [
         "Usage:",
-        "  simple-edit fliph <path-to-image> [output-path]",
-        "  simple-edit flipv <path-to-image> [output-path]",
-        "  simple-edit rotate <degrees> <path-to-image> [output-path]",
+        "  simple-edit fliph [-r|--replace] <path-to-image> [output-path]",
+        "  simple-edit flipv [-r|--replace] <path-to-image> [output-path]",
+        "  simple-edit rotate <degrees> [-r|--replace] <path-to-image> [output-path]",
         "  simple-edit convert <path-to-image> <new-path>",
     ]
     .join("\n")

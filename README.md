@@ -9,16 +9,18 @@
 Flip an image horizontally (left-right mirror).
 
 ```bash
-simple-edit fliph <path-to-image> [output-path]
+simple-edit fliph [-r|--replace] <path-to-image> [output-path]
 ```
 
 - `<path-to-image>`: Path to the source image file
-- `[output-path]` (optional): Path for the output file. If omitted, saves as `{filename}_fliph.{ext}` in the same directory
+- `-r` / `--replace`: Replace the source file in place after the transformed image is written successfully
+- `[output-path]` (optional): Path for the output file. Omit this when using `-r` / `--replace`. If omitted, saves as `{filename}_fliph.{ext}` in the same directory
 
 **Examples:**
 ```bash
 cargo run -- fliph image.jpg                    # Saves to image_fliph.jpg
 cargo run -- fliph image.jpg output.png         # Saves to output.png (converts to PNG)
+cargo run -- fliph -r image.jpg                 # Replaces image.jpg after writing successfully
 ```
 
 ### Flip Vertical
@@ -26,16 +28,18 @@ cargo run -- fliph image.jpg output.png         # Saves to output.png (converts 
 Flip an image vertically (top-bottom mirror).
 
 ```bash
-simple-edit flipv <path-to-image> [output-path]
+simple-edit flipv [-r|--replace] <path-to-image> [output-path]
 ```
 
 - `<path-to-image>`: Path to the source image file
-- `[output-path]` (optional): Path for the output file. If omitted, saves as `{filename}_flipv.{ext}` in the same directory
+- `-r` / `--replace`: Replace the source file in place after the transformed image is written successfully
+- `[output-path]` (optional): Path for the output file. Omit this when using `-r` / `--replace`. If omitted, saves as `{filename}_flipv.{ext}` in the same directory
 
 **Examples:**
 ```bash
 cargo run -- flipv image.jpg                    # Saves to image_flipv.jpg
 cargo run -- flipv image.png output.ico         # Saves to output.ico (converts to ICO, auto-resized to 256x256)
+cargo run -- flipv --replace image.jpg          # Replaces image.jpg after writing successfully
 ```
 
 ### Rotate
@@ -43,18 +47,20 @@ cargo run -- flipv image.png output.ico         # Saves to output.ico (converts 
 Rotate an image by 90, 180, or 270 degrees.
 
 ```bash
-simple-edit rotate <degrees> <path-to-image> [output-path]
+simple-edit rotate <degrees> [-r|--replace] <path-to-image> [output-path]
 ```
 
 - `<degrees>`: Rotation angle in degrees (90, 180, or 270)
 - `<path-to-image>`: Path to the source image file
-- `[output-path]` (optional): Path for the output file. If omitted, saves as `{filename}_rotate{degrees}.{ext}` in the same directory
+- `-r` / `--replace`: Replace the source file in place after the transformed image is written successfully
+- `[output-path]` (optional): Path for the output file. Omit this when using `-r` / `--replace`. If omitted, saves as `{filename}_rotate{degrees}.{ext}` in the same directory
 
 **Examples:**
 ```bash
 cargo run -- rotate 90 image.jpg                # Saves to image_rotate90.jpg
 cargo run -- rotate 180 image.png output.jpg    # Saves to output.jpg (converts to JPG)
 cargo run -- rotate 270 image.jpg output.ico    # Saves to output.ico (converts to ICO, auto-resized)
+cargo run -- rotate 90 --replace image.jpg      # Replaces image.jpg after writing successfully
 ```
 
 ### Convert
