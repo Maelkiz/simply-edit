@@ -13,6 +13,7 @@ fn run() -> Result<(), String> {
     match args.as_slice() {
         [_, command, path] if command == "fliph" => flip_horizontal(path),
         [_, command, path] if command == "flipv" => flip_vertical(path),
+        [_, command, degrees, path] if command == "rotate" => rotate(degrees, path),
         _ => Err(usage()),
     }
 }
@@ -41,6 +42,28 @@ fn flip_vertical(path: &str) -> Result<(), String> {
     Ok(())
 }
 
+fn rotate(degrees: &str, path: &str) -> Result<(), String> {
+    let deg: u16 = degrees
+        .parse()
+        .map_err(|_| format!("invalid rotation '{degrees}': use 90, 180, or 270"))?;
+
+    let img = image::open(path).map_err(|e| format!("failed to open image '{path}': {e}"))?;
+    let rotated = match deg {
+        90 => img.rotate90(),
+        180 => img.rotate180(),
+        270 => img.rotate270(),
+        _ => return Err(format!("invalid rotation '{degrees}': use 90, 180, or 270")),
+    };
+
+    let output = output_path(path, &format!("rotate{deg}"));
+    rotated
+        .save(&output)
+        .map_err(|e| format!("failed to save image '{}': {e}", output.display()))?;
+
+    println!("Saved rotated image to {}", output.display());
+    Ok(())
+}
+
 fn output_path(input: &str, suffix: &str) -> PathBuf {
     let path = Path::new(input);
     let parent = path.parent().unwrap_or_else(|| Path::new("."));
@@ -54,6 +77,7 @@ fn usage() -> String {
         "Usage:",
         "  simple-edit fliph <path-to-image>",
         "  simple-edit flipv <path-to-image>",
+        "  simple-edit rotate <degrees> <path-to-image>",
     ]
     .join("\n")
 }
