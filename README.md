@@ -29,6 +29,17 @@ cargo build --release
 ./target/release/simple-edit <command> <args>
 ```
 
+### Install to PATH
+
+To use the tool from anywhere on your system without specifying the full binary path:
+
+```bash
+cargo install --path .
+simple-edit <command> <args>
+```
+
+This installs the release binary to `~/.cargo/bin/`, which is typically already in your `$PATH`.
+
 ### Run Without Building
 
 You can run commands directly from the repository without building:
