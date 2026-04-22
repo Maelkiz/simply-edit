@@ -17,24 +17,29 @@ cd simple-edit
 
 ### Build from Source
 
+> The following commands should be run from the project root.
+
 **Development build:**
 ```bash
 cargo build
-./target/debug/simple-edit <command> <args>
 ```
+This outputs a binary to `./target/debug/simple-edit`. 
 
-**Release build (optimized):**
+**Release build:**
 ```bash
 cargo build --release
-./target/release/simple-edit <command> <args>
 ```
+This outputs an optimized binary to `./target/release/simple-edit`.
 
 ### Install to PATH
 
-To use the tool from anywhere on your system without specifying the full binary path:
+To use simple-edit from anywhere on your system without specifying the full binary path:
 
 ```bash
 cargo install --path .
+```
+You can now use the tool like so (see the [Usage](#usage) section for more details):
+```
 simple-edit <command> <args>
 ```
 
@@ -57,6 +62,8 @@ cargo test
 ```
 
 ## Usage
+
+> The following instructions assume you have installed build binary to your systems PATH. See the [Installation & Setup](#installation--setup) section for instructions on how to do this.
 
 ### Flip Horizontal
 
