@@ -38,12 +38,14 @@ To use simple-edit from anywhere on your system without specifying the full bina
 ```bash
 cargo install --path .
 ```
-You can now use the tool like so (see the [Usage](#usage) section for more details):
+You can now use the tool like so:
 ```
 simple-edit <command> <args>
 ```
 
 This installs the release binary to `~/.cargo/bin/`, which is typically already in your `$PATH`.
+
+ See the [Usage](#usage) section for more details on how to use simple-edit.
 
 ### Run Without Building
 
