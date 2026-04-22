@@ -11,7 +11,7 @@
 ### Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/simple-edit.git
+git clone https://github.com/Maelkiz/simple-edit.git
 cd simple-edit
 ```
 
@@ -178,16 +178,3 @@ cargo run -- convert image.ico image.png        # Converts ICO to PNG
 - **PNG**: Full support, preserves transparency
 - **JPG/JPEG**: Supported for input and output
 - **ICO**: Supported for input and output. Images larger than 256×256 pixels are automatically resized while maintaining aspect ratio
-
-## Building
-
-```bash
-cargo build --release
-./target/release/simple-edit <command> <args>
-```
-
-## Running
-
-```bash
-cargo run -- <command> <args>
-```
