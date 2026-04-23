@@ -44,6 +44,7 @@ simply <command> <args>
 
 | Command | What it does |
 | --- | --- |
+| `help` | Prints a detailed overview of the available commands |
 | `fliph` | Flip image horizontally |
 | `flipv` | Flip image vertically |
 | `rotate` | Rotate image (`90`, `180`, `270`) |
@@ -75,7 +76,7 @@ The output file type is determined by the extension you provide in the output pa
 - **SVG**: Supported as a `convert` output format via vector tracing (raster image -> SVG)
 - **SVG input**: Supported for `convert` output to raster formats via `resvg` at 1.0 scale
 
---
+---
 
 ## Contributing / Development Setup
 
