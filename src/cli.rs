@@ -1,5 +1,6 @@
 #[derive(Debug, Clone)]
 pub(crate) enum ParsedCommand {
+    Help,
     Fliph {
         path: String,
         output: ParsedOutput,
@@ -35,6 +36,9 @@ pub(crate) enum ParsedOutput {
 
 pub(crate) fn parse_command(args: &[String]) -> Result<ParsedCommand, String> {
     match args {
+        [_, command] if matches!(command.as_str(), "help" | "--help" | "-h") => {
+            Ok(ParsedCommand::Help)
+        }
         [_, command, flag, path] if command == "fliph" && crate::io::is_replace_flag(flag) => {
             Ok(ParsedCommand::Fliph {
                 path: path.clone(),
@@ -124,15 +128,22 @@ pub(crate) fn parse_command(args: &[String]) -> Result<ParsedCommand, String> {
 
 pub(crate) fn usage() -> String {
     [
-		"Usage:",
-		"  simple-edit fliph [-r|--replace] <path-to-image> [output-path]",
-		"  simple-edit flipv [-r|--replace] <path-to-image> [output-path]",
-		"  simple-edit rotate <degrees> [-r|--replace] <path-to-image> [output-path]",
-		"  simple-edit invert [-r|--replace] <path-to-image> [output-path]",
-		"  simple-edit grayscale [-r|--replace] <path-to-image> [output-path]",
-		"  simple-edit convert [-s|--scale <factor>] [-w|--width <px>] [-h|--height <px>] <path-to-image> <new-path>",
-	]
-	.join("\n")
+        "simply-edit",
+        "",
+        "Usage:",
+        "  simply --help",
+        "  simply fliph [-r|--replace] <path-to-image> [output-path]",
+        "  simply flipv [-r|--replace] <path-to-image> [output-path]",
+        "  simply rotate <degrees> [-r|--replace] <path-to-image> [output-path]",
+        "  simply invert [-r|--replace] <path-to-image> [output-path]",
+        "  simply grayscale [-r|--replace] <path-to-image> [output-path]",
+        "  simply convert [-s|--scale <factor>] [-w|--width <px>] [-h|--height <px>] <path-to-image> <new-path>",
+        "",
+        "Notes:",
+        "  rotate <degrees> supports: 90, 180, 270",
+        "  convert -s/-w/-h are only supported for SVG input converted to raster output",
+    ]
+    .join("\n")
 }
 
 #[cfg(test)]
@@ -142,6 +153,7 @@ mod tests {
     #[test]
     fn test_usage_contains_all_commands() {
         let usage_text = usage();
+        assert!(usage_text.contains("simply --help"));
         assert!(usage_text.contains("fliph"));
         assert!(usage_text.contains("flipv"));
         assert!(usage_text.contains("rotate"));
@@ -200,6 +212,19 @@ mod tests {
                 assert_eq!(args, vec!["-s", "2", "in.svg", "out.png"]);
             }
             _ => panic!("unexpected parsed command variant"),
+        }
+    }
+
+    #[test]
+    fn test_parse_command_help_variants() {
+        for arg in ["help", "--help", "-h"] {
+            let args = vec!["simply".to_string(), arg.to_string()];
+            let parsed = parse_command(&args).expect("failed to parse help command");
+
+            match parsed {
+                ParsedCommand::Help => {}
+                _ => panic!("expected help command variant"),
+            }
         }
     }
 }

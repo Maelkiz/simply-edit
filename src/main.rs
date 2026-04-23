@@ -20,6 +20,10 @@ fn main() {
 fn run() -> Result<(), String> {
     let args: Vec<String> = env::args().collect();
     match cli::parse_command(&args)? {
+        cli::ParsedCommand::Help => {
+            println!("{}", usage());
+            Ok(())
+        }
         cli::ParsedCommand::Fliph { path, output } => {
             commands::transforms::run_fliph(&path, to_output_mode(output, "fliph"))
         }

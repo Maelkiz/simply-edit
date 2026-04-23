@@ -31,6 +31,20 @@ fn test_cli_without_args_prints_usage_error() {
 }
 
 #[test]
+fn test_cli_help_prints_usage_successfully() {
+    let output = Command::new(binary_path())
+        .arg("--help")
+        .output()
+        .expect("failed to run simply binary");
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("simply-edit"));
+    assert!(stdout.contains("Usage:"));
+    assert!(stdout.contains("simply convert"));
+}
+
+#[test]
 fn test_cli_convert_rejects_unknown_flag() {
     let output = Command::new(binary_path())
         .args(["convert", "--bogus", "in.svg", "out.png"])
