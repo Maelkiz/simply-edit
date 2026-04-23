@@ -165,7 +165,7 @@ cargo run -- grayscale -r image.jpg            # Replaces image.jpg after writin
 
 ### Convert
 
-Convert between supported image formats (PNG, JPG, ICO) and vectorize raster images to SVG.
+Convert between supported image formats (PNG, JPG, ICO), vectorize raster images to SVG, and rasterize SVG into images.
 
 ```bash
 simply convert <path-to-image> <new-path>
@@ -180,6 +180,7 @@ cargo run -- convert image.png image.jpg        # Converts PNG to JPG
 cargo run -- convert image.jpg image.ico        # Converts JPG to ICO (auto-resized to 256x256 if needed)
 cargo run -- convert image.ico image.png        # Converts ICO to PNG
 cargo run -- convert image.png image.svg        # Converts raster image to vector SVG
+cargo run -- convert image.svg image.png        # Converts SVG to PNG at 1:1 scale
 ```
 
 ## Format Support
@@ -188,6 +189,7 @@ cargo run -- convert image.png image.svg        # Converts raster image to vecto
 - **JPG/JPEG**: Supported for input and output
 - **ICO**: Supported for input and output. Images larger than 256×256 pixels are automatically resized while maintaining aspect ratio
 - **SVG**: Supported as a `convert` output format via vector tracing (raster image -> SVG)
+- **SVG input**: Supported for `convert` output to raster formats via `resvg` at 1.0 scale
 
 ## Building
 

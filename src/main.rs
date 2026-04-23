@@ -3,6 +3,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use image::GenericImageView;
 use palette::Srgba;
+use resvg::tiny_skia::{Pixmap, Transform};
+use resvg::usvg::{Options, Tree};
 use vtracer::Config;
 
 enum OutputMode<'a> {
@@ -87,23 +89,78 @@ fn rotate(degrees: &str, path: &str, output: OutputMode<'_>) -> Result<(), Strin
 
 fn convert(src: &str, dst: &str) -> Result<(), String> {
     if is_svg_path(dst) {
-        let src_path = Path::new(src);
-        let dst_path = Path::new(dst);
-        vtracer::convert_image_to_svg(src_path, dst_path, Config::default()).map_err(|e| {
-            format!(
-                "failed to vectorize image '{}' to '{}': {e}",
-                src_path.display(),
-                dst_path.display()
-            )
-        })?;
-        println!("Converted image to {}", dst);
-        return Ok(());
+        return convert_image_to_svg(src, dst);
+    }
+
+    if is_svg_path(src) {
+        return convert_svg_to_image(src, dst);
     }
 
     let img = image::open(src).map_err(|e| format!("failed to open image '{src}': {e}"))?;
     save_image(img, dst)?;
     println!("Converted image to {}", dst);
     Ok(())
+}
+
+fn convert_image_to_svg(src: &str, dst: &str) -> Result<(), String> {
+    let src_path = Path::new(src);
+    let dst_path = Path::new(dst);
+    vtracer::convert_image_to_svg(src_path, dst_path, Config::default()).map_err(|e| {
+        format!(
+            "failed to vectorize image '{}' to '{}': {e}",
+            src_path.display(),
+            dst_path.display()
+        )
+    })?;
+    println!("Converted image to {}", dst);
+    Ok(())
+}
+
+fn convert_svg_to_image(src: &str, dst: &str) -> Result<(), String> {
+    let src_path = Path::new(src);
+    let dst_path = Path::new(dst);
+    let svg_data = fs::read(src_path)
+        .map_err(|e| format!("failed to read SVG '{}': {e}", src_path.display()))?;
+
+    let mut options = Options::default();
+    options.resources_dir = src_path.parent().map(Path::to_path_buf);
+
+    let tree = Tree::from_data(&svg_data, &options)
+        .map_err(|e| format!("failed to parse SVG '{}': {e}", src_path.display()))?;
+
+    let size = tree.size().to_int_size();
+    let mut pixmap = Pixmap::new(size.width(), size.height()).ok_or_else(|| {
+        format!(
+            "failed to create pixmap for '{}' with size {}x{}",
+            src_path.display(),
+            size.width(),
+            size.height()
+        )
+    })?;
+
+    let mut pixmap_mut = pixmap.as_mut();
+    resvg::render(&tree, Transform::default(), &mut pixmap_mut);
+
+    save_rendered_pixmap(pixmap, dst_path)?;
+    println!("Converted image to {}", dst);
+    Ok(())
+}
+
+fn save_rendered_pixmap(pixmap: Pixmap, output_path: &Path) -> Result<(), String> {
+    let width = pixmap.width();
+    let height = pixmap.height();
+    let image = image::RgbaImage::from_raw(width, height, pixmap.take_demultiplied()).ok_or_else(|| {
+        format!(
+            "failed to build image buffer for '{}' with size {}x{}",
+            output_path.display(),
+            width,
+            height
+        )
+    })?;
+
+    image::DynamicImage::ImageRgba8(image)
+        .save(output_path)
+        .map_err(|e| format!("failed to save image '{}': {e}", output_path.display()))
 }
 
 fn is_svg_path(path: &str) -> bool {
@@ -435,6 +492,7 @@ mod tests {
 
     mod convert {
         use super::*;
+        use std::fs;
 
         #[test]
         fn test_is_svg_path_accepts_svg_extension_case_insensitive() {
@@ -446,6 +504,43 @@ mod tests {
         fn test_is_svg_path_rejects_non_svg_extensions() {
             assert!(!is_svg_path("output.png"));
             assert!(!is_svg_path("output"));
+        }
+
+        #[test]
+        fn test_convert_svg_to_image_creates_png() {
+            let temp_root = std::env::temp_dir().join(format!(
+                "simply-edit-svg-test-{}-{}",
+                std::process::id(),
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .expect("system time before unix epoch")
+                    .as_nanos()
+            ));
+            fs::create_dir_all(&temp_root).expect("failed to create temp dir");
+
+            let input_path = temp_root.join("input.svg");
+            let output_path = temp_root.join("output.png");
+            fs::write(
+                &input_path,
+                r#"<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1" viewBox="0 0 1 1">
+  <rect width="1" height="1" fill="red"/>
+</svg>"#,
+            )
+            .expect("failed to write svg");
+
+            convert_svg_to_image(
+                input_path.to_str().expect("invalid input path"),
+                output_path.to_str().expect("invalid output path"),
+            )
+            .expect("svg conversion failed");
+
+            let converted = image::open(&output_path).expect("failed to open converted image");
+            assert_eq!(converted.width(), 1);
+            assert_eq!(converted.height(), 1);
+
+            let _ = fs::remove_file(&input_path);
+            let _ = fs::remove_file(&output_path);
+            let _ = fs::remove_dir(&temp_root);
         }
     }
 }
