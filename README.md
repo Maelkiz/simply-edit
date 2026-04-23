@@ -1,4 +1,4 @@
-# simple-edit
+# simply-edit
 
 > A simple CLI tool for manipulating images.
 
@@ -11,8 +11,8 @@
 ### Clone the Repository
 
 ```bash
-git clone https://github.com/Maelkiz/simple-edit.git
-cd simple-edit
+git clone https://github.com/Maelkiz/simply-edit.git
+cd simply-edit
 ```
 
 ### Build from Source
@@ -23,29 +23,29 @@ cd simple-edit
 ```bash
 cargo build
 ```
-This outputs a binary to `./target/debug/simple-edit`. 
+This outputs a binary to `./target/debug/simply-edit`. 
 
 **Release build:**
 ```bash
 cargo build --release
 ```
-This outputs an optimized binary to `./target/release/simple-edit`.
+This outputs an optimized binary to `./target/release/simply-edit`.
 
 ### Install to PATH
 
-To use simple-edit from anywhere on your system without specifying the full binary path:
+To use simply-edit from anywhere on your system without specifying the full binary path:
 
 ```bash
 cargo install --path .
 ```
 You can now use the tool like so:
 ```
-simple-edit <command> <args>
+simply-edit <command> <args>
 ```
 
 This installs the release binary to `~/.cargo/bin/`, which is typically already in your `$PATH`.
 
- See the [Usage](#usage) section for more details on how to use simple-edit.
+ See the [Usage](#usage) section for more details on how to use simply-edit.
 
 ### Run Without Building
 
@@ -72,7 +72,7 @@ cargo test
 Flip an image horizontally (left-right mirror).
 
 ```bash
-simple-edit fliph [-r|--replace] <path-to-image> [output-path]
+simply-edit fliph [-r|--replace] <path-to-image> [output-path]
 ```
 
 - `<path-to-image>`: Path to the source image file
@@ -91,7 +91,7 @@ cargo run -- fliph -r image.jpg                 # Replaces image.jpg after writi
 Flip an image vertically (top-bottom mirror).
 
 ```bash
-simple-edit flipv [-r|--replace] <path-to-image> [output-path]
+simply-edit flipv [-r|--replace] <path-to-image> [output-path]
 ```
 
 - `<path-to-image>`: Path to the source image file
@@ -110,7 +110,7 @@ cargo run -- flipv --replace image.jpg          # Replaces image.jpg after writi
 Rotate an image by 90, 180, or 270 degrees.
 
 ```bash
-simple-edit rotate <degrees> [-r|--replace] <path-to-image> [output-path]
+simply-edit rotate <degrees> [-r|--replace] <path-to-image> [output-path]
 ```
 
 - `<degrees>`: Rotation angle in degrees (90, 180, or 270)
@@ -131,7 +131,7 @@ cargo run -- rotate 90 --replace image.jpg      # Replaces image.jpg after writi
 Invert the colors in an image.
 
 ```bash
-simple-edit invert [-r|--replace] <path-to-image> [output-path]
+simply-edit invert [-r|--replace] <path-to-image> [output-path]
 ```
 
 - `<path-to-image>`: Path to the source image file
@@ -150,7 +150,7 @@ cargo run -- invert -r image.jpg                # Replaces image.jpg after writi
 Convert an image to grayscale.
 
 ```bash
-simple-edit grayscale [-r|--replace] <path-to-image> [output-path]
+simply-edit grayscale [-r|--replace] <path-to-image> [output-path]
 ```
 
 - `<path-to-image>`: Path to the source image file
@@ -169,7 +169,7 @@ cargo run -- grayscale -r image.jpg            # Replaces image.jpg after writin
 Convert between supported image formats (PNG, JPG, ICO).
 
 ```bash
-simple-edit convert <path-to-image> <new-path>
+simply-edit convert <path-to-image> <new-path>
 ```
 
 - `<path-to-image>`: Path to the source image file
