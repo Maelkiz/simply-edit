@@ -2,7 +2,7 @@
 
 > A simple CLI tool for manipulating images.
 
-simply-edit is a fast, no-nonsense command-line utility for everyday image tasks: flip, rotate, invert, grayscale, and convert between common formats like PNG, JPG, ICO, and SVG. It is designed to be easy to run from scripts or the terminal, with sensible defaults, optional in-place replacement, and straightforward commands that help you process images quickly.
+simply-edit is a conveniant command-line utility for everyday image tasks: flip, rotate, invert, grayscale, and convert between common formats like PNG, JPG, ICO, and SVG. It is designed to be easy use with sensible defaults, optional in-place replacement, and straightforward commands that help you process images quickly.
 
 ---
 
