@@ -48,7 +48,7 @@ fn run() -> Result<(), String> {
         }
         [_, command, path] if command == "grayscale" => grayscale(path, OutputMode::Generated("grayscale")),
         [_, command, path, output] if command == "grayscale" => grayscale(path, OutputMode::Explicit(output.as_str())),
-        [_, command, src, dst] if command == "convert" => convert(src, dst),
+        [_, command, rest @ ..] if command == "convert" => convert(rest),
         _ => Err(usage()),
     }
 }
@@ -87,19 +87,110 @@ fn rotate(degrees: &str, path: &str, output: OutputMode<'_>) -> Result<(), Strin
     Ok(())
 }
 
-fn convert(src: &str, dst: &str) -> Result<(), String> {
-    if is_svg_path(dst) {
-        return convert_image_to_svg(src, dst);
+fn convert(args: &[String]) -> Result<(), String> {
+    let ConvertArgs { options, src, dst } = parse_convert_args(args)?;
+
+    if is_svg_path(&dst) {
+        if !options.is_empty() {
+            return Err("scale and width/height flags are only supported for SVG to image conversion".to_string());
+        }
+
+        return convert_image_to_svg(&src, &dst);
     }
 
-    if is_svg_path(src) {
-        return convert_svg_to_image(src, dst);
+    if is_svg_path(&src) {
+        return convert_svg_to_image(&src, &dst, options);
     }
 
-    let img = image::open(src).map_err(|e| format!("failed to open image '{src}': {e}"))?;
-    save_image(img, dst)?;
+    if !options.is_empty() {
+        return Err("scale and width/height flags are only supported for SVG to image conversion".to_string());
+    }
+
+    let img = image::open(&src).map_err(|e| format!("failed to open image '{src}': {e}"))?;
+    save_image(img, &dst)?;
     println!("Converted image to {}", dst);
     Ok(())
+}
+
+#[derive(Default)]
+struct ConvertOptions {
+    scale: Option<f32>,
+    width: Option<u32>,
+    height: Option<u32>,
+}
+
+impl ConvertOptions {
+    fn is_empty(&self) -> bool {
+        self.scale.is_none() && self.width.is_none() && self.height.is_none()
+    }
+}
+
+struct ConvertArgs {
+    options: ConvertOptions,
+    src: String,
+    dst: String,
+}
+
+fn parse_convert_args(args: &[String]) -> Result<ConvertArgs, String> {
+    let mut options = ConvertOptions::default();
+    let mut positionals = Vec::new();
+    let mut index = 0;
+
+    while index < args.len() {
+        match args[index].as_str() {
+            "-s" | "--scale" => {
+                let value = args.get(index + 1).ok_or_else(|| "missing value for --scale".to_string())?;
+                options.scale = Some(parse_positive_f32(value, "--scale")?);
+                index += 2;
+            }
+            "-w" | "--width" => {
+                let value = args.get(index + 1).ok_or_else(|| "missing value for --width".to_string())?;
+                options.width = Some(parse_positive_u32(value, "--width")?);
+                index += 2;
+            }
+            "-h" | "--height" => {
+                let value = args.get(index + 1).ok_or_else(|| "missing value for --height".to_string())?;
+                options.height = Some(parse_positive_u32(value, "--height")?);
+                index += 2;
+            }
+            value if value.starts_with('-') => {
+                return Err(format!("unrecognized convert flag '{value}'"));
+            }
+            value => {
+                positionals.push(value.to_string());
+                index += 1;
+            }
+        }
+    }
+
+    match positionals.as_slice() {
+        [src, dst] => Ok(ConvertArgs { options, src: src.clone(), dst: dst.clone() }),
+        _ => Err(usage()),
+    }
+}
+
+fn parse_positive_f32(value: &str, flag: &str) -> Result<f32, String> {
+    let parsed: f32 = value
+        .parse()
+        .map_err(|_| format!("invalid value '{value}' for {flag}: use a positive number"))?;
+
+    if !parsed.is_finite() || parsed <= 0.0 {
+        return Err(format!("invalid value '{value}' for {flag}: use a positive number"));
+    }
+
+    Ok(parsed)
+}
+
+fn parse_positive_u32(value: &str, flag: &str) -> Result<u32, String> {
+    let parsed: u32 = value
+        .parse()
+        .map_err(|_| format!("invalid value '{value}' for {flag}: use a positive integer"))?;
+
+    if parsed == 0 {
+        return Err(format!("invalid value '{value}' for {flag}: use a positive integer"));
+    }
+
+    Ok(parsed)
 }
 
 fn convert_image_to_svg(src: &str, dst: &str) -> Result<(), String> {
@@ -116,34 +207,64 @@ fn convert_image_to_svg(src: &str, dst: &str) -> Result<(), String> {
     Ok(())
 }
 
-fn convert_svg_to_image(src: &str, dst: &str) -> Result<(), String> {
+fn convert_svg_to_image(src: &str, dst: &str, options: ConvertOptions) -> Result<(), String> {
     let src_path = Path::new(src);
     let dst_path = Path::new(dst);
     let svg_data = fs::read(src_path)
         .map_err(|e| format!("failed to read SVG '{}': {e}", src_path.display()))?;
 
-    let mut options = Options::default();
-    options.resources_dir = src_path.parent().map(Path::to_path_buf);
+    let mut usvg_options = Options::default();
+    usvg_options.resources_dir = src_path.parent().map(Path::to_path_buf);
 
-    let tree = Tree::from_data(&svg_data, &options)
+    let tree = Tree::from_data(&svg_data, &usvg_options)
         .map_err(|e| format!("failed to parse SVG '{}': {e}", src_path.display()))?;
 
-    let size = tree.size().to_int_size();
-    let mut pixmap = Pixmap::new(size.width(), size.height()).ok_or_else(|| {
+    let (render_width, render_height, scale_x, scale_y) = compute_render_dimensions(tree.size(), &options)?;
+    let mut pixmap = Pixmap::new(render_width, render_height).ok_or_else(|| {
         format!(
             "failed to create pixmap for '{}' with size {}x{}",
             src_path.display(),
-            size.width(),
-            size.height()
+            render_width,
+            render_height
         )
     })?;
 
     let mut pixmap_mut = pixmap.as_mut();
-    resvg::render(&tree, Transform::default(), &mut pixmap_mut);
+    resvg::render(&tree, Transform::from_scale(scale_x, scale_y), &mut pixmap_mut);
 
     save_rendered_pixmap(pixmap, dst_path)?;
     println!("Converted image to {}", dst);
     Ok(())
+}
+
+fn compute_render_dimensions(size: resvg::usvg::Size, options: &ConvertOptions) -> Result<(u32, u32, f32, f32), String> {
+    let source_width = size.width();
+    let source_height = size.height();
+
+    if let Some(width) = options.width {
+        let height = options.height.unwrap_or_else(|| round_scaled_dimension(source_height, width as f32 / source_width));
+        let scale_x = width as f32 / source_width;
+        let scale_y = height as f32 / source_height;
+        return Ok((width, height, scale_x, scale_y));
+    }
+
+    if let Some(height) = options.height {
+        let width = round_scaled_dimension(source_width, height as f32 / source_height);
+        let scale_x = width as f32 / source_width;
+        let scale_y = height as f32 / source_height;
+        return Ok((width, height, scale_x, scale_y));
+    }
+
+    let scale = options.scale.unwrap_or(1.0);
+    let scaled_size = size
+        .scale_by(scale)
+        .ok_or_else(|| format!("invalid SVG scale factor '{scale}'"))?;
+    let int_size = scaled_size.to_int_size();
+    Ok((int_size.width(), int_size.height(), scale, scale))
+}
+
+fn round_scaled_dimension(source: f32, scale: f32) -> u32 {
+    (source * scale).round().max(1.0) as u32
 }
 
 fn save_rendered_pixmap(pixmap: Pixmap, output_path: &Path) -> Result<(), String> {
@@ -297,7 +418,7 @@ fn usage() -> String {
         "  simple-edit rotate <degrees> [-r|--replace] <path-to-image> [output-path]",
         "  simple-edit invert [-r|--replace] <path-to-image> [output-path]",
         "  simple-edit grayscale [-r|--replace] <path-to-image> [output-path]",
-        "  simple-edit convert <path-to-image> <new-path>",
+        "  simple-edit convert [-s|--scale <factor>] [-w|--width <px>] [-h|--height <px>] <path-to-image> <new-path>",
     ]
     .join("\n")
 }
@@ -531,6 +652,7 @@ mod tests {
             convert_svg_to_image(
                 input_path.to_str().expect("invalid input path"),
                 output_path.to_str().expect("invalid output path"),
+                ConvertOptions::default(),
             )
             .expect("svg conversion failed");
 
@@ -541,6 +663,49 @@ mod tests {
             let _ = fs::remove_file(&input_path);
             let _ = fs::remove_file(&output_path);
             let _ = fs::remove_dir(&temp_root);
+        }
+
+        #[test]
+        fn test_parse_convert_args_accepts_scale_and_resolution_flags() {
+            let args = vec![
+                "-s".to_string(),
+                "2.5".to_string(),
+                "-w".to_string(),
+                "200".to_string(),
+                "-h".to_string(),
+                "100".to_string(),
+                "input.svg".to_string(),
+                "output.png".to_string(),
+            ];
+
+            let parsed = parse_convert_args(&args).expect("failed to parse convert args");
+            assert_eq!(parsed.src, "input.svg");
+            assert_eq!(parsed.dst, "output.png");
+            assert_eq!(parsed.options.scale, Some(2.5));
+            assert_eq!(parsed.options.width, Some(200));
+            assert_eq!(parsed.options.height, Some(100));
+        }
+
+        #[test]
+        fn test_compute_render_dimensions_uses_scale_when_no_resolution_is_set() {
+            let size = resvg::usvg::Size::from_wh(10.0, 20.0).expect("valid size");
+            let options = ConvertOptions { scale: Some(2.0), width: None, height: None };
+
+            let (width, height, scale_x, scale_y) = compute_render_dimensions(size, &options).expect("dimension computation failed");
+            assert_eq!((width, height), (20, 40));
+            assert_eq!(scale_x, 2.0);
+            assert_eq!(scale_y, 2.0);
+        }
+
+        #[test]
+        fn test_compute_render_dimensions_uses_explicit_width_and_height() {
+            let size = resvg::usvg::Size::from_wh(10.0, 20.0).expect("valid size");
+            let options = ConvertOptions { scale: Some(5.0), width: Some(80), height: Some(60) };
+
+            let (width, height, scale_x, scale_y) = compute_render_dimensions(size, &options).expect("dimension computation failed");
+            assert_eq!((width, height), (80, 60));
+            assert_eq!(scale_x, 8.0);
+            assert_eq!(scale_y, 3.0);
         }
     }
 }

@@ -173,6 +173,8 @@ simply convert <path-to-image> <new-path>
 
 - `<path-to-image>`: Path to the source image file
 - `<new-path>`: Path and filename for the output. The file extension determines the output format
+- `-s` / `--scale <factor>`: Scale factor for SVG rasterization when converting SVG to a raster image
+- `-w` / `--width <px>` and `-h` / `--height <px>`: Explicit raster output size for SVG to image conversion
 
 **Examples:**
 ```bash
@@ -181,6 +183,8 @@ cargo run -- convert image.jpg image.ico        # Converts JPG to ICO (auto-resi
 cargo run -- convert image.ico image.png        # Converts ICO to PNG
 cargo run -- convert image.png image.svg        # Converts raster image to vector SVG
 cargo run -- convert image.svg image.png        # Converts SVG to PNG at 1:1 scale
+cargo run -- convert -s 2 image.svg image.png   # Converts SVG to PNG at 2x scale
+cargo run -- convert -w 800 -h 600 image.svg image.png  # Converts SVG to 800x600 PNG
 ```
 
 ## Format Support
