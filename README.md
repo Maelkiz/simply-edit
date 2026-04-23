@@ -4,6 +4,8 @@
 
 simply-edit is a fast, no-nonsense command-line utility for everyday image tasks: flip, rotate, invert, grayscale, and convert between common formats like PNG, JPG, ICO, and SVG. It is designed to be easy to run from scripts or the terminal, with sensible defaults, optional in-place replacement, and straightforward commands that help you process images quickly.
 
+---
+
 ## Installation
 
 ### Prerequisites
@@ -27,6 +29,8 @@ The binary is installed to `~/.cargo/bin/`, which is usually already in your `$P
 ```bash
 simply --help
 ```
+
+---
 
 ## Quick Start
 
@@ -63,13 +67,15 @@ simply <command> <args>
 
 The output file type is determined by the extension you provide in the output path (for example, `.png`, `.jpg`, `.ico`, or `.svg`).
 
-## Format Support
+### Format Support
 
 - **PNG**: Full support, preserves transparency
 - **JPG/JPEG**: Supported for input and output
 - **ICO**: Supported for input and output. Images larger than 256×256 pixels are automatically resized while maintaining aspect ratio
 - **SVG**: Supported as a `convert` output format via vector tracing (raster image -> SVG)
 - **SVG input**: Supported for `convert` output to raster formats via `resvg` at 1.0 scale
+
+--
 
 ## Contributing / Development Setup
 
