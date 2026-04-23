@@ -3,6 +3,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use image::GenericImageView;
 use palette::Srgba;
+use vtracer::Config;
 
 enum OutputMode<'a> {
     Generated(&'a str),
@@ -85,10 +86,31 @@ fn rotate(degrees: &str, path: &str, output: OutputMode<'_>) -> Result<(), Strin
 }
 
 fn convert(src: &str, dst: &str) -> Result<(), String> {
+    if is_svg_path(dst) {
+        let src_path = Path::new(src);
+        let dst_path = Path::new(dst);
+        vtracer::convert_image_to_svg(src_path, dst_path, Config::default()).map_err(|e| {
+            format!(
+                "failed to vectorize image '{}' to '{}': {e}",
+                src_path.display(),
+                dst_path.display()
+            )
+        })?;
+        println!("Converted image to {}", dst);
+        return Ok(());
+    }
+
     let img = image::open(src).map_err(|e| format!("failed to open image '{src}': {e}"))?;
     save_image(img, dst)?;
     println!("Converted image to {}", dst);
     Ok(())
+}
+
+fn is_svg_path(path: &str) -> bool {
+    Path::new(path)
+        .extension()
+        .and_then(|e| e.to_str())
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("svg"))
 }
 
 fn invert(path: &str, output: OutputMode<'_>) -> Result<(), String> {
@@ -408,6 +430,22 @@ mod tests {
         fn test_usage_is_non_empty() {
             let usage_text = usage();
             assert!(!usage_text.is_empty());
+        }
+    }
+
+    mod convert {
+        use super::*;
+
+        #[test]
+        fn test_is_svg_path_accepts_svg_extension_case_insensitive() {
+            assert!(is_svg_path("output.svg"));
+            assert!(is_svg_path("output.SVG"));
+        }
+
+        #[test]
+        fn test_is_svg_path_rejects_non_svg_extensions() {
+            assert!(!is_svg_path("output.png"));
+            assert!(!is_svg_path("output"));
         }
     }
 }
