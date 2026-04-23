@@ -1,3 +1,4 @@
 /target
-.vscode
 /test/output/*
+.vscode
+.claude
