@@ -22,14 +22,16 @@ cd simply-edit
 **Development build:**
 ```bash
 cargo build
+./target/debug/simply <command> <args>
 ```
-This outputs a binary to `./target/debug/simply-edit`. 
+This outputs a binary to `./target/debug/simply`. 
 
 **Release build:**
 ```bash
 cargo build --release
+./target/release/simply <command> <args>
 ```
-This outputs an optimized binary to `./target/release/simply-edit`.
+This outputs an optimized binary to `./target/release/simply`.
 
 ### Install to PATH
 
@@ -37,15 +39,12 @@ To use simply-edit from anywhere on your system without specifying the full bina
 
 ```bash
 cargo install --path .
-```
-You can now use the tool like so:
-```
-simply-edit <command> <args>
+simply <command> <args>
 ```
 
 This installs the release binary to `~/.cargo/bin/`, which is typically already in your `$PATH`.
 
- See the [Usage](#usage) section for more details on how to use simply-edit.
+See the [Usage](#usage) section for more details on how to use simply-edit.
 
 ### Run Without Building
 
@@ -72,7 +71,7 @@ cargo test
 Flip an image horizontally (left-right mirror).
 
 ```bash
-simply-edit fliph [-r|--replace] <path-to-image> [output-path]
+simply fliph [-r|--replace] <path-to-image> [output-path]
 ```
 
 - `<path-to-image>`: Path to the source image file
@@ -91,7 +90,7 @@ cargo run -- fliph -r image.jpg                 # Replaces image.jpg after writi
 Flip an image vertically (top-bottom mirror).
 
 ```bash
-simply-edit flipv [-r|--replace] <path-to-image> [output-path]
+simply flipv [-r|--replace] <path-to-image> [output-path]
 ```
 
 - `<path-to-image>`: Path to the source image file
@@ -110,7 +109,7 @@ cargo run -- flipv --replace image.jpg          # Replaces image.jpg after writi
 Rotate an image by 90, 180, or 270 degrees.
 
 ```bash
-simply-edit rotate <degrees> [-r|--replace] <path-to-image> [output-path]
+simply rotate <degrees> [-r|--replace] <path-to-image> [output-path]
 ```
 
 - `<degrees>`: Rotation angle in degrees (90, 180, or 270)
@@ -131,7 +130,7 @@ cargo run -- rotate 90 --replace image.jpg      # Replaces image.jpg after writi
 Invert the colors in an image.
 
 ```bash
-simply-edit invert [-r|--replace] <path-to-image> [output-path]
+simply invert [-r|--replace] <path-to-image> [output-path]
 ```
 
 - `<path-to-image>`: Path to the source image file
@@ -150,7 +149,7 @@ cargo run -- invert -r image.jpg                # Replaces image.jpg after writi
 Convert an image to grayscale.
 
 ```bash
-simply-edit grayscale [-r|--replace] <path-to-image> [output-path]
+simply grayscale [-r|--replace] <path-to-image> [output-path]
 ```
 
 - `<path-to-image>`: Path to the source image file
@@ -169,7 +168,7 @@ cargo run -- grayscale -r image.jpg            # Replaces image.jpg after writin
 Convert between supported image formats (PNG, JPG, ICO).
 
 ```bash
-simply-edit convert <path-to-image> <new-path>
+simply convert <path-to-image> <new-path>
 ```
 
 - `<path-to-image>`: Path to the source image file
@@ -187,3 +186,16 @@ cargo run -- convert image.ico image.png        # Converts ICO to PNG
 - **PNG**: Full support, preserves transparency
 - **JPG/JPEG**: Supported for input and output
 - **ICO**: Supported for input and output. Images larger than 256×256 pixels are automatically resized while maintaining aspect ratio
+
+## Building
+
+```bash
+cargo build --release
+./target/release/simply <command> <args>
+```
+
+## Running
+
+```bash
+cargo run -- <command> <args>
+```
