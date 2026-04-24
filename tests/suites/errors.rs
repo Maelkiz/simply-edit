@@ -145,6 +145,40 @@ fn test_rotate_non_numeric_degrees_rejected() {
 }
 
 #[test]
+fn test_rotate_interactive_non_tty_invalid_input_rejected() {
+    let temp = TestDir::new("simply-phase1-errors");
+    let input = temp.path().join("input.png");
+    create_png(&input, 2, 2, [255, 0, 0, 255]);
+
+    let output = run_with_stdin(
+        &["rotate", input.to_str().expect("valid input path")],
+        "45\n",
+    );
+
+    assert!(!output.status.success());
+    assert!(stderr(&output).contains("invalid rotation '45'"));
+}
+
+#[test]
+fn test_rotate_replace_with_output_path_rejected() {
+    let temp = TestDir::new("simply-phase1-errors");
+    let input = temp.path().join("input.png");
+    let out = temp.path().join("out.png");
+    create_png(&input, 2, 2, [255, 0, 0, 255]);
+
+    let output = run(&[
+        "rotate",
+        "--replace",
+        "90",
+        input.to_str().expect("valid input path"),
+        out.to_str().expect("valid output path"),
+    ]);
+
+    assert!(!output.status.success());
+    assert!(stderr(&output).contains("output-path is not allowed"));
+}
+
+#[test]
 fn test_convert_missing_value_for_scale_rejected() {
     let output = run(&["convert", "-s"]);
     assert!(!output.status.success());

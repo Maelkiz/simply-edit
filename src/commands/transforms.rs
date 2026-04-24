@@ -76,22 +76,77 @@ fn prompt_flip_axis_non_tty() -> Result<FlipAxis, String> {
     }
 }
 
-pub(crate) fn run_rotate(degrees: &str, path: &str, output: OutputMode<'_>) -> Result<(), String> {
-    let deg: u16 = degrees
-        .parse()
-        .map_err(|_| format!("invalid rotation '{degrees}': use 90, 180, or 270"))?;
+pub(crate) fn run_rotate(
+    path: &str,
+    output: OutputMode<'_>,
+    degrees: Option<u16>,
+) -> Result<(), String> {
+    let deg = match degrees {
+        Some(deg) => deg,
+        None => prompt_rotate_degrees()?,
+    };
 
     let img = image::open(path).map_err(|e| format!("failed to open image '{path}': {e}"))?;
     let rotated = match deg {
         90 => img.rotate90(),
         180 => img.rotate180(),
         270 => img.rotate270(),
-        _ => return Err(format!("invalid rotation '{degrees}': use 90, 180, or 270")),
+        _ => return Err(format!("invalid rotation '{deg}': use 90, 180, or 270")),
     };
 
-    let output_path = save_transformed_image(rotated, path, output, &format!("rotate{deg}"))?;
+    let rotate_suffix = format!("rotate{deg}");
+    let selected_output = match output {
+        OutputMode::Generated(_) => OutputMode::Generated(rotate_suffix.as_str()),
+        OutputMode::Explicit(path) => OutputMode::Explicit(path),
+        OutputMode::Replace => OutputMode::Replace,
+    };
+
+    let output_path = save_transformed_image(rotated, path, selected_output, &rotate_suffix)?;
     println!("Saved rotated image to {}", output_path);
     Ok(())
+}
+
+fn prompt_rotate_degrees() -> Result<u16, String> {
+    if !stdin().is_terminal() {
+        return prompt_rotate_degrees_non_tty();
+    }
+
+    let deg = CustomType::<u16>::new(
+        "Choose rotation:\n (1) 90 degrees\n (2) 180 degrees\n (3) 270 degrees\n",
+    )
+    .with_error_message("Please enter 1, 2, or 3")
+    .with_validator(|value: &u16| {
+        if matches!(*value, 1 | 2 | 3) {
+            Ok(Validation::Valid)
+        } else {
+            Ok(Validation::Invalid("Enter 1, 2, or 3".into()))
+        }
+    })
+    .prompt()
+    .map_err(|e| format!("failed to read rotation: {e}"))?;
+
+    match deg {
+        1 => Ok(90),
+        2 => Ok(180),
+        3 => Ok(270),
+        _ => Err("invalid rotation selection: use 1, 2, or 3".to_string()),
+    }
+}
+
+fn prompt_rotate_degrees_non_tty() -> Result<u16, String> {
+    let mut input = String::new();
+    stdin()
+        .read_line(&mut input)
+        .map_err(|e| format!("failed to read rotation from stdin: {e}"))?;
+
+    match input.trim() {
+        "1" => Ok(90),
+        "2" => Ok(180),
+        "3" => Ok(270),
+        other => Err(format!(
+            "invalid rotation '{other}': use 1 (90deg), 2 (180deg), or 3 (270deg)"
+        )),
+    }
 }
 
 pub(crate) fn run_invert(path: &str, output: OutputMode<'_>) -> Result<(), String> {

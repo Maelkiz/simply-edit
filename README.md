@@ -46,7 +46,7 @@ simply <command> <args>
 | --- | --- |
 | `help` | Prints a detailed overview of the available commands |
 | `flip` | Flip image (interactive by default, or via direction flags) |
-| `rotate` | Rotate image (`90`, `180`, `270`) |
+| `rotate` | Rotate image (interactive, or explicit `90`/`180`/`270`) |
 | `invert` | Invert image colors |
 | `grayscale` | Convert image to grayscale |
 | `convert` | Convert between PNG/JPG/ICO/SVG |

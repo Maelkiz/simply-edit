@@ -126,6 +126,22 @@ fn test_rotate_explicit_output_mode() {
 }
 
 #[test]
+fn test_rotate_interactive_generated_output_mode() {
+    let temp = TestDir::new("simply-phase1-int");
+    let input = temp.path().join("img.png");
+    let generated = temp.path().join("img_rotate180.png");
+    create_png(&input, 3, 2, [0, 180, 180, 255]);
+
+    let output = run_with_stdin(&["rotate", input.to_str().expect("valid input path")], "2\n");
+    assert!(output.status.success());
+    assert!(generated.exists());
+
+    let rotated = image::open(&generated).expect("failed to open rotated output");
+    assert_eq!(rotated.width(), 3);
+    assert_eq!(rotated.height(), 2);
+}
+
+#[test]
 fn test_invalid_flag_syntax_for_transform_fails() {
     let temp = TestDir::new("simply-phase1-int");
     let input = temp.path().join("img.png");

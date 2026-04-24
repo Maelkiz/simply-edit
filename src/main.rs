@@ -30,10 +30,14 @@ fn run() -> Result<(), String> {
             to_flip_axis(axis),
         ),
         cli::ParsedCommand::Rotate {
-            degrees,
+            mode,
             path,
             output,
-        } => commands::transforms::run_rotate(&degrees, &path, to_output_mode(output, "rotate")),
+        } => commands::transforms::run_rotate(
+            &path,
+            to_output_mode(output, "rotate"),
+            to_rotate_degrees(mode),
+        ),
         cli::ParsedCommand::Invert { path, output } => {
             commands::transforms::run_invert(&path, to_output_mode(output, "invert"))
         }
@@ -61,5 +65,12 @@ fn to_flip_axis(axis: cli::ParsedFlipAxis) -> Option<commands::transforms::FlipA
         cli::ParsedFlipAxis::Prompt => None,
         cli::ParsedFlipAxis::Horizontal => Some(commands::transforms::FlipAxis::Horizontal),
         cli::ParsedFlipAxis::Vertical => Some(commands::transforms::FlipAxis::Vertical),
+    }
+}
+
+fn to_rotate_degrees(mode: cli::ParsedRotateMode) -> Option<u16> {
+    match mode {
+        cli::ParsedRotateMode::Prompt => None,
+        cli::ParsedRotateMode::Explicit(degrees) => Some(degrees),
     }
 }
