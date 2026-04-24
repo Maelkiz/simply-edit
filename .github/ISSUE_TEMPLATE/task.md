@@ -21,6 +21,6 @@ assignees: []
 
 ## 🧠 Notes / Context (if applicable)
 
-[Add any relevant details, constraints, or links.]
+[Add any extra context, links, or assumptions here]
 
 ---
