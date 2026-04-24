@@ -24,11 +24,8 @@ fn run() -> Result<(), String> {
             println!("{}", usage());
             Ok(())
         }
-        cli::ParsedCommand::Fliph { path, output } => {
-            commands::transforms::run_fliph(&path, to_output_mode(output, "fliph"))
-        }
-        cli::ParsedCommand::Flipv { path, output } => {
-            commands::transforms::run_flipv(&path, to_output_mode(output, "flipv"))
+        cli::ParsedCommand::Flip { path, output } => {
+            commands::transforms::run_flip(&path, to_output_mode(output, "flip"))
         }
         cli::ParsedCommand::Rotate {
             degrees,

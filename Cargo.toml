@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 image = "0.25"
+inquire = "0.9"
 palette = "0.7"
 resvg = "0.47"
 vtracer = "0.6"

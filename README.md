@@ -45,8 +45,7 @@ simply <command> <args>
 | Command | What it does |
 | --- | --- |
 | `help` | Prints a detailed overview of the available commands |
-| `fliph` | Flip image horizontally |
-| `flipv` | Flip image vertically |
+| `flip` | Flip image (interactive: horizontal or vertical) |
 | `rotate` | Rotate image (`90`, `180`, `270`) |
 | `invert` | Invert image colors |
 | `grayscale` | Convert image to grayscale |
@@ -54,7 +53,7 @@ simply <command> <args>
 
 ### Available Flags
 
-**Common transform flag (`fliph`, `flipv`, `rotate`, `invert`, `grayscale`):**
+**Common transform flag (`flip`, `rotate`, `invert`, `grayscale`):**
 
 - `-r`, `--replace`: Replace the source file after a successful write.
 

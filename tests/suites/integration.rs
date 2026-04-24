@@ -1,30 +1,33 @@
-use crate::common::{TestDir, assert_valid_image, create_png, create_svg, run};
+use crate::common::{TestDir, assert_valid_image, create_png, create_svg, run, run_with_stdin};
 
 #[test]
-fn test_fliph_generated_output_mode() {
+fn test_flip_horizontal_generated_output_mode() {
     let temp = TestDir::new("simply-phase1-int");
     let input = temp.path().join("img.png");
     let generated = temp.path().join("img_fliph.png");
     create_png(&input, 3, 2, [220, 30, 30, 255]);
 
-    let output = run(&["fliph", input.to_str().expect("valid input path")]);
+    let output = run_with_stdin(&["flip", input.to_str().expect("valid input path")], "1\n");
     assert!(output.status.success());
     assert!(generated.exists());
     assert_valid_image(&generated);
 }
 
 #[test]
-fn test_flipv_explicit_output_mode() {
+fn test_flip_vertical_explicit_output_mode() {
     let temp = TestDir::new("simply-phase1-int");
     let input = temp.path().join("img.png");
     let out = temp.path().join("custom.png");
     create_png(&input, 3, 2, [220, 30, 30, 255]);
 
-    let output = run(&[
-        "flipv",
-        input.to_str().expect("valid input path"),
-        out.to_str().expect("valid output path"),
-    ]);
+    let output = run_with_stdin(
+        &[
+            "flip",
+            input.to_str().expect("valid input path"),
+            out.to_str().expect("valid output path"),
+        ],
+        "2\n",
+    );
     assert!(output.status.success());
     assert!(out.exists());
     assert_valid_image(&out);
@@ -93,7 +96,7 @@ fn test_invalid_flag_syntax_for_transform_fails() {
     create_png(&input, 2, 2, [255, 0, 0, 255]);
 
     let output = run(&[
-        "fliph",
+        "invert",
         "--replace=true",
         input.to_str().expect("valid input path"),
     ]);

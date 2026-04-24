@@ -1,20 +1,71 @@
 use crate::{OutputMode, io::save_transformed_image};
+use inquire::{CustomType, validator::Validation};
 use palette::Srgba;
+use std::io::{IsTerminal, stdin};
 
-pub(crate) fn run_fliph(path: &str, output: OutputMode<'_>) -> Result<(), String> {
+enum FlipAxis {
+    Horizontal,
+    Vertical,
+}
+
+pub(crate) fn run_flip(path: &str, output: OutputMode<'_>) -> Result<(), String> {
+    let axis = prompt_flip_axis()?;
     let img = image::open(path).map_err(|e| format!("failed to open image '{path}': {e}"))?;
-    let flipped = img.fliph();
-    let output_path = save_transformed_image(flipped, path, output, "fliph")?;
-    println!("Saved flipped image to {}", output_path);
+    let (flipped, suffix, axis_label) = match axis {
+        FlipAxis::Horizontal => (img.fliph(), "fliph", "horizontally"),
+        FlipAxis::Vertical => (img.flipv(), "flipv", "vertically"),
+    };
+
+    let selected_output = match output {
+        OutputMode::Generated(_) => OutputMode::Generated(suffix),
+        OutputMode::Explicit(path) => OutputMode::Explicit(path),
+        OutputMode::Replace => OutputMode::Replace,
+    };
+
+    let output_path = save_transformed_image(flipped, path, selected_output, suffix)?;
+    println!("Saved {axis_label} flipped image to {}", output_path);
     Ok(())
 }
 
-pub(crate) fn run_flipv(path: &str, output: OutputMode<'_>) -> Result<(), String> {
-    let img = image::open(path).map_err(|e| format!("failed to open image '{path}': {e}"))?;
-    let flipped = img.flipv();
-    let output_path = save_transformed_image(flipped, path, output, "flipv")?;
-    println!("Saved flipped image to {}", output_path);
-    Ok(())
+fn prompt_flip_axis() -> Result<FlipAxis, String> {
+    if !stdin().is_terminal() {
+        return prompt_flip_axis_non_tty();
+    }
+
+    let mode = CustomType::<u8>::new(
+        "Choose flip direction:\n (1) Horizontal\n (2) Vertical\n",
+    )
+    .with_error_message("Please enter 1 or 2")
+    .with_validator(|value: &u8| {
+        if matches!(*value, 1..=2) {
+            Ok(Validation::Valid)
+        } else {
+            Ok(Validation::Invalid("Enter 1 or 2".into()))
+        }
+    })
+    .prompt()
+    .map_err(|e| format!("failed to read flip direction: {e}"))?;
+
+    match mode {
+        1 => Ok(FlipAxis::Horizontal),
+        2 => Ok(FlipAxis::Vertical),
+        _ => Err("invalid flip direction: use 1 (horizontal) or 2 (vertical)".to_string()),
+    }
+}
+
+fn prompt_flip_axis_non_tty() -> Result<FlipAxis, String> {
+    let mut input = String::new();
+    stdin()
+        .read_line(&mut input)
+        .map_err(|e| format!("failed to read flip direction from stdin: {e}"))?;
+
+    match input.trim() {
+        "1" => Ok(FlipAxis::Horizontal),
+        "2" => Ok(FlipAxis::Vertical),
+        other => Err(format!(
+            "invalid flip direction '{other}': use 1 (horizontal) or 2 (vertical)"
+        )),
+    }
 }
 
 pub(crate) fn run_rotate(degrees: &str, path: &str, output: OutputMode<'_>) -> Result<(), String> {

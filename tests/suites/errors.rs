@@ -1,6 +1,6 @@
 use std::fs;
 
-use crate::common::{TestDir, create_png, run, stderr};
+use crate::common::{TestDir, create_png, run, run_with_stdin, stderr};
 
 #[test]
 fn test_no_args_prints_usage() {
@@ -17,10 +17,37 @@ fn test_unknown_command_prints_usage() {
 }
 
 #[test]
-fn test_fliph_missing_path_prints_usage() {
-    let output = run(&["fliph"]);
+fn test_flip_missing_path_prints_usage() {
+    let output = run(&["flip"]);
     assert!(!output.status.success());
     assert!(stderr(&output).contains("Usage:"));
+}
+
+#[test]
+fn test_flip_empty_non_tty_input_rejected() {
+    let temp = TestDir::new("simply-phase1-errors");
+    let input = temp.path().join("input.png");
+    create_png(&input, 2, 2, [255, 0, 0, 255]);
+
+    let output = run_with_stdin(&["flip", input.to_str().expect("valid input path")], "\n");
+
+    assert!(!output.status.success());
+    assert!(stderr(&output).contains("invalid flip direction"));
+}
+
+#[test]
+fn test_flip_text_non_tty_input_rejected() {
+    let temp = TestDir::new("simply-phase1-errors");
+    let input = temp.path().join("input.png");
+    create_png(&input, 2, 2, [255, 0, 0, 255]);
+
+    let output = run_with_stdin(
+        &["flip", input.to_str().expect("valid input path")],
+        "horizontal\n",
+    );
+
+    assert!(!output.status.success());
+    assert!(stderr(&output).contains("invalid flip direction"));
 }
 
 #[test]

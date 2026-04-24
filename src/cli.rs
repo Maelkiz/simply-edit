@@ -1,11 +1,7 @@
 #[derive(Debug, Clone)]
 pub(crate) enum ParsedCommand {
     Help,
-    Fliph {
-        path: String,
-        output: ParsedOutput,
-    },
-    Flipv {
+    Flip {
         path: String,
         output: ParsedOutput,
     },
@@ -39,32 +35,17 @@ pub(crate) fn parse_command(args: &[String]) -> Result<ParsedCommand, String> {
         [_, command] if matches!(command.as_str(), "help" | "--help" | "-h") => {
             Ok(ParsedCommand::Help)
         }
-        [_, command, flag, path] if command == "fliph" && crate::io::is_replace_flag(flag) => {
-            Ok(ParsedCommand::Fliph {
+        [_, command, flag, path] if command == "flip" && crate::io::is_replace_flag(flag) => {
+            Ok(ParsedCommand::Flip {
                 path: path.clone(),
                 output: ParsedOutput::Replace,
             })
         }
-        [_, command, path] if command == "fliph" => Ok(ParsedCommand::Fliph {
+        [_, command, path] if command == "flip" => Ok(ParsedCommand::Flip {
             path: path.clone(),
             output: ParsedOutput::Generated,
         }),
-        [_, command, path, output] if command == "fliph" => Ok(ParsedCommand::Fliph {
-            path: path.clone(),
-            output: ParsedOutput::Explicit(output.clone()),
-        }),
-
-        [_, command, flag, path] if command == "flipv" && crate::io::is_replace_flag(flag) => {
-            Ok(ParsedCommand::Flipv {
-                path: path.clone(),
-                output: ParsedOutput::Replace,
-            })
-        }
-        [_, command, path] if command == "flipv" => Ok(ParsedCommand::Flipv {
-            path: path.clone(),
-            output: ParsedOutput::Generated,
-        }),
-        [_, command, path, output] if command == "flipv" => Ok(ParsedCommand::Flipv {
+        [_, command, path, output] if command == "flip" => Ok(ParsedCommand::Flip {
             path: path.clone(),
             output: ParsedOutput::Explicit(output.clone()),
         }),
@@ -132,8 +113,7 @@ pub(crate) fn usage() -> String {
         "",
         "Usage:",
         "  simply --help",
-        "  simply fliph [-r|--replace] <path-to-image> [output-path]",
-        "  simply flipv [-r|--replace] <path-to-image> [output-path]",
+        "  simply flip [-r|--replace] <path-to-image> [output-path]",
         "  simply rotate <degrees> [-r|--replace] <path-to-image> [output-path]",
         "  simply invert [-r|--replace] <path-to-image> [output-path]",
         "  simply grayscale [-r|--replace] <path-to-image> [output-path]",
@@ -154,8 +134,7 @@ mod tests {
     fn test_usage_contains_all_commands() {
         let usage_text = usage();
         assert!(usage_text.contains("simply --help"));
-        assert!(usage_text.contains("fliph"));
-        assert!(usage_text.contains("flipv"));
+        assert!(usage_text.contains("flip"));
         assert!(usage_text.contains("rotate"));
         assert!(usage_text.contains("invert"));
         assert!(usage_text.contains("grayscale"));
@@ -175,17 +154,17 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_command_fliph_replace() {
+    fn test_parse_command_flip_replace() {
         let args = vec![
             "simply".to_string(),
-            "fliph".to_string(),
+            "flip".to_string(),
             "--replace".to_string(),
             "image.png".to_string(),
         ];
 
-        let parsed = parse_command(&args).expect("failed to parse fliph command");
+        let parsed = parse_command(&args).expect("failed to parse flip command");
         match parsed {
-            ParsedCommand::Fliph {
+            ParsedCommand::Flip {
                 path,
                 output: ParsedOutput::Replace,
             } => {

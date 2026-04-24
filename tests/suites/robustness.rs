@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::common::{TestDir, assert_valid_image, create_png, run};
+use crate::common::{TestDir, assert_valid_image, create_png, run, run_with_stdin};
 
 fn pixel(path: &Path, x: u32, y: u32) -> [u8; 4] {
     image::open(path)
@@ -192,7 +192,7 @@ fn test_multiple_generated_operations_do_not_conflict() {
     assert!(first.status.success());
     assert!(step1.exists());
 
-    let second = run(&["fliph", step1.to_str().expect("valid input path")]);
+    let second = run_with_stdin(&["flip", step1.to_str().expect("valid input path")], "1\n");
     assert!(second.status.success());
     assert!(step2.exists());
 }

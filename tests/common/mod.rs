@@ -1,8 +1,9 @@
 #![allow(dead_code)]
 
 use std::fs;
+use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output};
+use std::process::{Command, Output, Stdio};
 
 pub fn binary_path() -> &'static str {
     env!("CARGO_BIN_EXE_simply")
@@ -64,6 +65,27 @@ pub fn run(args: &[&str]) -> Output {
         .args(args)
         .output()
         .expect("failed to run simply binary")
+}
+
+pub fn run_with_stdin(args: &[&str], stdin_input: &str) -> Output {
+    let mut child = Command::new(binary_path())
+        .args(args)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("failed to spawn simply binary");
+
+    {
+        let stdin = child.stdin.as_mut().expect("failed to open child stdin");
+        stdin
+            .write_all(stdin_input.as_bytes())
+            .expect("failed to write stdin to simply binary");
+    }
+
+    child
+        .wait_with_output()
+        .expect("failed to collect simply binary output")
 }
 
 pub fn stderr(output: &Output) -> String {
