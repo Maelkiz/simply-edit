@@ -1,7 +1,9 @@
 use crate::{OutputMode, io::save_transformed_image};
+use indicatif::{ProgressBar, ProgressStyle};
 use inquire::{CustomType, validator::Validation};
 use palette::Srgba;
-use std::io::{IsTerminal, stdin};
+use std::io::{IsTerminal, stderr, stdin};
+use std::time::Duration;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum FlipAxis {
@@ -18,19 +20,30 @@ pub(crate) fn run_flip(
         Some(axis) => axis,
         None => prompt_flip_axis()?,
     };
-    let img = image::open(path).map_err(|e| format!("failed to open image '{path}': {e}"))?;
-    let (flipped, suffix, axis_label) = match axis {
-        FlipAxis::Horizontal => (img.fliph(), "fliph", "horizontally"),
-        FlipAxis::Vertical => (img.flipv(), "flipv", "vertically"),
-    };
+    let spinner = start_spinner("Processing flip...");
 
-    let selected_output = match output {
-        OutputMode::Generated(_) => OutputMode::Generated(suffix),
-        OutputMode::Explicit(path) => OutputMode::Explicit(path),
-        OutputMode::Replace => OutputMode::Replace,
-    };
+    let result = (|| {
+        let img = image::open(path).map_err(|e| format!("failed to open image '{path}': {e}"))?;
+        let (flipped, suffix, axis_label) = match axis {
+            FlipAxis::Horizontal => (img.fliph(), "fliph", "horizontally"),
+            FlipAxis::Vertical => (img.flipv(), "flipv", "vertically"),
+        };
 
-    let output_path = save_transformed_image(flipped, path, selected_output, suffix)?;
+        let selected_output = match output {
+            OutputMode::Generated(_) => OutputMode::Generated(suffix),
+            OutputMode::Explicit(path) => OutputMode::Explicit(path),
+            OutputMode::Replace => OutputMode::Replace,
+        };
+
+        let output_path = save_transformed_image(flipped, path, selected_output, suffix)?;
+        Ok::<(String, &'static str), String>((output_path, axis_label))
+    })();
+
+    if let Some(pb) = spinner {
+        pb.finish_and_clear();
+    }
+
+    let (output_path, axis_label) = result?;
     println!("Saved {axis_label} flipped image to {}", output_path);
     Ok(())
 }
@@ -85,25 +98,51 @@ pub(crate) fn run_rotate(
         Some(deg) => deg,
         None => prompt_rotate_degrees()?,
     };
+    let spinner = start_spinner("Processing rotation...");
 
-    let img = image::open(path).map_err(|e| format!("failed to open image '{path}': {e}"))?;
-    let rotated = match deg {
-        90 => img.rotate90(),
-        180 => img.rotate180(),
-        270 => img.rotate270(),
-        _ => return Err(format!("invalid rotation '{deg}': use 90, 180, or 270")),
-    };
+    let result = (|| {
+        let img = image::open(path).map_err(|e| format!("failed to open image '{path}': {e}"))?;
+        let rotated = match deg {
+            90 => img.rotate90(),
+            180 => img.rotate180(),
+            270 => img.rotate270(),
+            _ => return Err(format!("invalid rotation '{deg}': use 90, 180, or 270")),
+        };
 
-    let rotate_suffix = format!("rotate{deg}");
-    let selected_output = match output {
-        OutputMode::Generated(_) => OutputMode::Generated(rotate_suffix.as_str()),
-        OutputMode::Explicit(path) => OutputMode::Explicit(path),
-        OutputMode::Replace => OutputMode::Replace,
-    };
+        let rotate_suffix = format!("rotate{deg}");
+        let selected_output = match output {
+            OutputMode::Generated(_) => OutputMode::Generated(rotate_suffix.as_str()),
+            OutputMode::Explicit(path) => OutputMode::Explicit(path),
+            OutputMode::Replace => OutputMode::Replace,
+        };
 
-    let output_path = save_transformed_image(rotated, path, selected_output, &rotate_suffix)?;
+        let output_path = save_transformed_image(rotated, path, selected_output, &rotate_suffix)?;
+        Ok::<String, String>(output_path)
+    })();
+
+    if let Some(pb) = spinner {
+        pb.finish_and_clear();
+    }
+
+    let output_path = result?;
     println!("Saved rotated image to {}", output_path);
     Ok(())
+}
+
+fn start_spinner(message: &str) -> Option<ProgressBar> {
+    if !stderr().is_terminal() {
+        return None;
+    }
+
+    let pb = ProgressBar::new_spinner();
+    let style = ProgressStyle::with_template("{spinner} {msg}")
+        .unwrap_or_else(|_| ProgressStyle::default_spinner())
+        .tick_chars("-\\|/ ");
+
+    pb.set_style(style);
+    pb.set_message(message.to_string());
+    pb.enable_steady_tick(Duration::from_millis(100));
+    Some(pb)
 }
 
 fn prompt_rotate_degrees() -> Result<u16, String> {
