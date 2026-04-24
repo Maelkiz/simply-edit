@@ -3,13 +3,21 @@ use inquire::{CustomType, validator::Validation};
 use palette::Srgba;
 use std::io::{IsTerminal, stdin};
 
-enum FlipAxis {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum FlipAxis {
     Horizontal,
     Vertical,
 }
 
-pub(crate) fn run_flip(path: &str, output: OutputMode<'_>) -> Result<(), String> {
-    let axis = prompt_flip_axis()?;
+pub(crate) fn run_flip(
+    path: &str,
+    output: OutputMode<'_>,
+    axis: Option<FlipAxis>,
+) -> Result<(), String> {
+    let axis = match axis {
+        Some(axis) => axis,
+        None => prompt_flip_axis()?,
+    };
     let img = image::open(path).map_err(|e| format!("failed to open image '{path}': {e}"))?;
     let (flipped, suffix, axis_label) = match axis {
         FlipAxis::Horizontal => (img.fliph(), "fliph", "horizontally"),

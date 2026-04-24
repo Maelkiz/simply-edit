@@ -4,6 +4,7 @@ pub(crate) enum ParsedCommand {
     Flip {
         path: String,
         output: ParsedOutput,
+        axis: ParsedFlipAxis,
     },
     Rotate {
         degrees: String,
@@ -30,25 +31,19 @@ pub(crate) enum ParsedOutput {
     Replace,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ParsedFlipAxis {
+    Prompt,
+    Horizontal,
+    Vertical,
+}
+
 pub(crate) fn parse_command(args: &[String]) -> Result<ParsedCommand, String> {
     match args {
         [_, command] if matches!(command.as_str(), "help" | "--help" | "-h") => {
             Ok(ParsedCommand::Help)
         }
-        [_, command, flag, path] if command == "flip" && crate::io::is_replace_flag(flag) => {
-            Ok(ParsedCommand::Flip {
-                path: path.clone(),
-                output: ParsedOutput::Replace,
-            })
-        }
-        [_, command, path] if command == "flip" => Ok(ParsedCommand::Flip {
-            path: path.clone(),
-            output: ParsedOutput::Generated,
-        }),
-        [_, command, path, output] if command == "flip" => Ok(ParsedCommand::Flip {
-            path: path.clone(),
-            output: ParsedOutput::Explicit(output.clone()),
-        }),
+        [_, command, rest @ ..] if command == "flip" => parse_flip_command(rest),
 
         [_, command, degrees, flag, path]
             if command == "rotate" && crate::io::is_replace_flag(flag) =>
@@ -113,7 +108,7 @@ pub(crate) fn usage() -> String {
         "",
         "Usage:",
         "  simply --help",
-        "  simply flip [-r|--replace] <path-to-image> [output-path]",
+        "  simply flip [--horizontal|--vertical] [-r|--replace] <path-to-image> [output-path]",
         "  simply rotate <degrees> [-r|--replace] <path-to-image> [output-path]",
         "  simply invert [-r|--replace] <path-to-image> [output-path]",
         "  simply grayscale [-r|--replace] <path-to-image> [output-path]",
@@ -167,11 +162,73 @@ mod tests {
             ParsedCommand::Flip {
                 path,
                 output: ParsedOutput::Replace,
+                axis: ParsedFlipAxis::Prompt,
             } => {
                 assert_eq!(path, "image.png");
             }
             _ => panic!("unexpected parsed command variant"),
         }
+    }
+
+    #[test]
+    fn test_parse_command_flip_horizontal_explicit_output() {
+        let args = vec![
+            "simply".to_string(),
+            "flip".to_string(),
+            "--horizontal".to_string(),
+            "image.png".to_string(),
+            "out.png".to_string(),
+        ];
+
+        let parsed = parse_command(&args).expect("failed to parse horizontal flip command");
+        match parsed {
+            ParsedCommand::Flip {
+                path,
+                output: ParsedOutput::Explicit(output),
+                axis: ParsedFlipAxis::Horizontal,
+            } => {
+                assert_eq!(path, "image.png");
+                assert_eq!(output, "out.png");
+            }
+            _ => panic!("unexpected parsed command variant"),
+        }
+    }
+
+    #[test]
+    fn test_parse_command_flip_vertical_replace_order_independent() {
+        let args = vec![
+            "simply".to_string(),
+            "flip".to_string(),
+            "--replace".to_string(),
+            "--vertical".to_string(),
+            "image.png".to_string(),
+        ];
+
+        let parsed = parse_command(&args).expect("failed to parse vertical replace flip command");
+        match parsed {
+            ParsedCommand::Flip {
+                path,
+                output: ParsedOutput::Replace,
+                axis: ParsedFlipAxis::Vertical,
+            } => {
+                assert_eq!(path, "image.png");
+            }
+            _ => panic!("unexpected parsed command variant"),
+        }
+    }
+
+    #[test]
+    fn test_parse_command_flip_rejects_conflicting_axis_flags() {
+        let args = vec![
+            "simply".to_string(),
+            "flip".to_string(),
+            "--horizontal".to_string(),
+            "--vertical".to_string(),
+            "image.png".to_string(),
+        ];
+
+        let err = parse_command(&args).expect_err("expected conflicting axis flags to fail");
+        assert!(err.contains("choose only one"));
     }
 
     #[test]
@@ -206,4 +263,61 @@ mod tests {
             }
         }
     }
+}
+
+fn parse_flip_command(rest: &[String]) -> Result<ParsedCommand, String> {
+    let mut replace = false;
+    let mut axis = ParsedFlipAxis::Prompt;
+    let mut positionals: Vec<String> = Vec::new();
+
+    for arg in rest {
+        if crate::io::is_replace_flag(arg) {
+            replace = true;
+            continue;
+        }
+
+        match arg.as_str() {
+            "--horizontal" => {
+                if axis == ParsedFlipAxis::Vertical {
+                    return Err("flip: choose only one of --horizontal or --vertical".to_string());
+                }
+                axis = ParsedFlipAxis::Horizontal;
+            }
+            "--vertical" => {
+                if axis == ParsedFlipAxis::Horizontal {
+                    return Err("flip: choose only one of --horizontal or --vertical".to_string());
+                }
+                axis = ParsedFlipAxis::Vertical;
+            }
+            _ if arg.starts_with('-') => {
+                return Err(format!(
+                    "flip: unrecognized flag '{arg}' (supported: --horizontal, --vertical, -r, --replace)"
+                ));
+            }
+            _ => positionals.push(arg.clone()),
+        }
+    }
+
+    if positionals.is_empty() || positionals.len() > 2 {
+        return Err(usage());
+    }
+
+    let output = if replace {
+        if positionals.len() != 1 {
+            return Err("flip: output-path is not allowed with -r/--replace".to_string());
+        }
+        ParsedOutput::Replace
+    } else {
+        match positionals.len() {
+            1 => ParsedOutput::Generated,
+            2 => ParsedOutput::Explicit(positionals[1].clone()),
+            _ => return Err(usage()),
+        }
+    };
+
+    Ok(ParsedCommand::Flip {
+        path: positionals[0].clone(),
+        output,
+        axis,
+    })
 }

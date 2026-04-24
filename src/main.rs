@@ -24,9 +24,11 @@ fn run() -> Result<(), String> {
             println!("{}", usage());
             Ok(())
         }
-        cli::ParsedCommand::Flip { path, output } => {
-            commands::transforms::run_flip(&path, to_output_mode(output, "flip"))
-        }
+        cli::ParsedCommand::Flip { path, output, axis } => commands::transforms::run_flip(
+            &path,
+            to_output_mode(output, "flip"),
+            to_flip_axis(axis),
+        ),
         cli::ParsedCommand::Rotate {
             degrees,
             path,
@@ -51,5 +53,13 @@ fn to_output_mode<'a>(output: cli::ParsedOutput, generated_suffix: &'a str) -> O
         cli::ParsedOutput::Generated => OutputMode::Generated(generated_suffix),
         cli::ParsedOutput::Explicit(path) => OutputMode::Explicit(path),
         cli::ParsedOutput::Replace => OutputMode::Replace,
+    }
+}
+
+fn to_flip_axis(axis: cli::ParsedFlipAxis) -> Option<commands::transforms::FlipAxis> {
+    match axis {
+        cli::ParsedFlipAxis::Prompt => None,
+        cli::ParsedFlipAxis::Horizontal => Some(commands::transforms::FlipAxis::Horizontal),
+        cli::ParsedFlipAxis::Vertical => Some(commands::transforms::FlipAxis::Vertical),
     }
 }

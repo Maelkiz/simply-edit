@@ -51,6 +51,57 @@ fn test_flip_text_non_tty_input_rejected() {
 }
 
 #[test]
+fn test_flip_conflicting_axis_flags_rejected() {
+    let temp = TestDir::new("simply-phase1-errors");
+    let input = temp.path().join("input.png");
+    create_png(&input, 2, 2, [255, 0, 0, 255]);
+
+    let output = run(&[
+        "flip",
+        "--horizontal",
+        "--vertical",
+        input.to_str().expect("valid input path"),
+    ]);
+
+    assert!(!output.status.success());
+    assert!(stderr(&output).contains("choose only one"));
+}
+
+#[test]
+fn test_flip_unknown_flag_rejected() {
+    let temp = TestDir::new("simply-phase1-errors");
+    let input = temp.path().join("input.png");
+    create_png(&input, 2, 2, [255, 0, 0, 255]);
+
+    let output = run(&[
+        "flip",
+        "--fast",
+        input.to_str().expect("valid input path"),
+    ]);
+
+    assert!(!output.status.success());
+    assert!(stderr(&output).contains("unrecognized flag '--fast'"));
+}
+
+#[test]
+fn test_flip_replace_with_output_path_rejected() {
+    let temp = TestDir::new("simply-phase1-errors");
+    let input = temp.path().join("input.png");
+    let out = temp.path().join("out.png");
+    create_png(&input, 2, 2, [255, 0, 0, 255]);
+
+    let output = run(&[
+        "flip",
+        "--replace",
+        input.to_str().expect("valid input path"),
+        out.to_str().expect("valid output path"),
+    ]);
+
+    assert!(!output.status.success());
+    assert!(stderr(&output).contains("output-path is not allowed"));
+}
+
+#[test]
 fn test_rotate_missing_path_prints_usage() {
     let output = run(&["rotate", "90"]);
     assert!(!output.status.success());

@@ -45,7 +45,7 @@ simply <command> <args>
 | Command | What it does |
 | --- | --- |
 | `help` | Prints a detailed overview of the available commands |
-| `flip` | Flip image (interactive: horizontal or vertical) |
+| `flip` | Flip image (interactive by default, or via direction flags) |
 | `rotate` | Rotate image (`90`, `180`, `270`) |
 | `invert` | Invert image colors |
 | `grayscale` | Convert image to grayscale |
@@ -56,6 +56,11 @@ simply <command> <args>
 **Common transform flag (`flip`, `rotate`, `invert`, `grayscale`):**
 
 - `-r`, `--replace`: Replace the source file after a successful write.
+
+**`flip` flags:**
+
+- `--horizontal`: Flip horizontally without interactive prompt.
+- `--vertical`: Flip vertically without interactive prompt.
 
 **`convert` flags:**
 

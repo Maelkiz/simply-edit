@@ -34,6 +34,42 @@ fn test_flip_vertical_explicit_output_mode() {
 }
 
 #[test]
+fn test_flip_horizontal_flag_bypasses_prompt() {
+    let temp = TestDir::new("simply-phase1-int");
+    let input = temp.path().join("img.png");
+    let generated = temp.path().join("img_fliph.png");
+    create_png(&input, 3, 2, [220, 30, 30, 255]);
+
+    let output = run(&[
+        "flip",
+        "--horizontal",
+        input.to_str().expect("valid input path"),
+    ]);
+
+    assert!(output.status.success());
+    assert!(generated.exists());
+    assert_valid_image(&generated);
+}
+
+#[test]
+fn test_flip_vertical_flag_bypasses_prompt() {
+    let temp = TestDir::new("simply-phase1-int");
+    let input = temp.path().join("img.png");
+    let generated = temp.path().join("img_flipv.png");
+    create_png(&input, 3, 2, [220, 30, 30, 255]);
+
+    let output = run(&[
+        "flip",
+        "--vertical",
+        input.to_str().expect("valid input path"),
+    ]);
+
+    assert!(output.status.success());
+    assert!(generated.exists());
+    assert_valid_image(&generated);
+}
+
+#[test]
 fn test_invert_replace_mode() {
     let temp = TestDir::new("simply-phase1-int");
     let input = temp.path().join("img.png");
