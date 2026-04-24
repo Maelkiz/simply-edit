@@ -2,7 +2,7 @@
 
 > A simple CLI tool for manipulating images.
 
-simply-edit is a conveniant command-line utility for everyday image tasks: flip, rotate, invert, grayscale, and convert between common formats like PNG, JPG, ICO, and SVG. It is designed to be easy use with sensible defaults, optional in-place replacement, and straightforward commands that help you process images quickly.
+simply-edit is a convenient command-line utility for everyday image tasks: flip, rotate, invert, grayscale, and convert between common formats like PNG, JPG, ICO, and SVG. It is designed to be easy to use with sensible defaults, optional in-place replacement, and straightforward commands that help you process images quickly.
 
 ---
 
@@ -10,7 +10,7 @@ simply-edit is a conveniant command-line utility for everyday image tasks: flip,
 
 ### Prerequisites
 
-- **Rust 1.56+** — Install from [rustup.rs](https://rustup.rs/)
+- **Rust (stable, edition 2024 compatible)** — Install from [rustup.rs](https://rustup.rs/)
 
 ### Install from Source
 
@@ -46,7 +46,7 @@ simply <command> <args>
 | --- | --- |
 | `help` | Prints a detailed overview of the available commands |
 | `flip` | Flip image (interactive by default, or via direction flags) |
-| `rotate` | Rotate image (interactive, or explicit `90`/`180`/`270`) |
+| `rotate` | Rotate image (interactive by default, or explicit `90`/`180`/`270`) |
 | `invert` | Invert image colors |
 | `grayscale` | Convert image to grayscale |
 | `convert` | Convert between PNG/JPG/ICO/SVG |
@@ -62,15 +62,39 @@ simply <command> <args>
 - `--horizontal`: Flip horizontally without interactive prompt.
 - `--vertical`: Flip vertically without interactive prompt.
 
+**`rotate` input modes:**
+
+- `rotate <path> [output]`: Interactive degree selection (`1` = 90deg, `2` = 180deg, `3` = 270deg).
+- `rotate <90|180|270> <path> [output]`: Non-interactive explicit degree.
+
 **`convert` flags:**
 
 - `-s`, `--scale <factor>`: Scale SVG rasterization output.
 - `-w`, `--width <px>`: Set raster output width (for SVG input).
 - `-h`, `--height <px>`: Set raster output height (for SVG input).
 
-### Output File Type
+### Output Path
 
-The output file type is determined by the extension you provide in the output path (for example, `.png`, `.jpg`, `.ico`, or `.svg`).
+If you omit the output path, the tool generates one automatically based on the command — for example, `image.png` becomes `image_fliph.png` after a horizontal flip. The output file type is determined by the extension you provide (for example, `.png`, `.jpg`, `.ico`, or `.svg`).
+
+### Common Examples
+
+```bash
+# Flip (interactive: choose horizontal or vertical)
+simply flip ./image.png
+
+# Flip bypassing interactive mode
+simply flip --vertical ./image.png
+
+# Rotate (interactive: choose 90, 180, or 270 degrees)
+simply rotate ./image.png
+
+# Rotate bypassing interactive mode
+simply rotate 90 ./image.png
+
+# Replace original file after transform
+simply rotate 180 --replace ./image.png
+```
 
 ### Format Support
 
