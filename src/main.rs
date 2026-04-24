@@ -24,6 +24,10 @@ fn run() -> Result<(), String> {
             println!("{}", usage());
             Ok(())
         }
+        cli::ParsedCommand::CommandHelp(cmd) => {
+            println!("{}", cli::command_usage(&cmd));
+            Ok(())
+        }
         cli::ParsedCommand::Flip { path, output, axis } => commands::transforms::run_flip(
             &path,
             to_output_mode(output, "flip"),

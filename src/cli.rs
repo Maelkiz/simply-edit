@@ -1,6 +1,7 @@
 #[derive(Debug, Clone)]
 pub(crate) enum ParsedCommand {
     Help,
+    CommandHelp(String),
     Flip {
         path: String,
         output: ParsedOutput,
@@ -49,10 +50,23 @@ pub(crate) fn parse_command(args: &[String]) -> Result<ParsedCommand, String> {
         [_, command] if matches!(command.as_str(), "help" | "--help" | "-h") => {
             Ok(ParsedCommand::Help)
         }
-        [_, command, rest @ ..] if command == "flip" => parse_flip_command(rest),
+        [_, command, rest @ ..] if command == "flip" => {
+            if rest.iter().any(|a| a == "--help") {
+                return Ok(ParsedCommand::CommandHelp("flip".to_string()));
+            }
+            parse_flip_command(rest)
+        }
 
-        [_, command, rest @ ..] if command == "rotate" => parse_rotate_command(rest),
+        [_, command, rest @ ..] if command == "rotate" => {
+            if rest.iter().any(|a| a == "--help") {
+                return Ok(ParsedCommand::CommandHelp("rotate".to_string()));
+            }
+            parse_rotate_command(rest)
+        }
 
+        [_, command, rest @ ..] if command == "invert" && rest.iter().any(|a| a == "--help") => {
+            Ok(ParsedCommand::CommandHelp("invert".to_string()))
+        }
         [_, command, flag, path] if command == "invert" && crate::io::is_replace_flag(flag) => {
             Ok(ParsedCommand::Invert {
                 path: path.clone(),
@@ -68,6 +82,9 @@ pub(crate) fn parse_command(args: &[String]) -> Result<ParsedCommand, String> {
             output: ParsedOutput::Explicit(output.clone()),
         }),
 
+        [_, command, rest @ ..] if command == "grayscale" && rest.iter().any(|a| a == "--help") => {
+            Ok(ParsedCommand::CommandHelp("grayscale".to_string()))
+        }
         [_, command, flag, path] if command == "grayscale" && crate::io::is_replace_flag(flag) => {
             Ok(ParsedCommand::Grayscale {
                 path: path.clone(),
@@ -83,6 +100,9 @@ pub(crate) fn parse_command(args: &[String]) -> Result<ParsedCommand, String> {
             output: ParsedOutput::Explicit(output.clone()),
         }),
 
+        [_, command, rest @ ..] if command == "convert" && rest.iter().any(|a| a == "--help") => {
+            Ok(ParsedCommand::CommandHelp("convert".to_string()))
+        }
         [_, command, rest @ ..] if command == "convert" => Ok(ParsedCommand::Convert {
             args: rest.to_vec(),
         }),
@@ -92,22 +112,96 @@ pub(crate) fn parse_command(args: &[String]) -> Result<ParsedCommand, String> {
 
 pub(crate) fn usage() -> String {
     [
+        "",
         "simply-edit",
         "",
         "Usage:",
-        "  simply --help",
-        "  simply flip [--horizontal|--vertical] [-r|--replace] <path-to-image> [output-path]",
-        "  simply rotate [90|180|270] [-r|--replace] <path-to-image> [output-path]",
-        "  simply invert [-r|--replace] <path-to-image> [output-path]",
-        "  simply grayscale [-r|--replace] <path-to-image> [output-path]",
-        "  simply convert [-s|--scale <factor>] [-w|--width <px>] [-h|--height <px>] <path-to-image> <new-path>",
+        "  simply <command> <args>",
         "",
-        "Notes:",
-        "  rotate supports explicit degrees: 90, 180, 270",
-        "  rotate without a degree starts an interactive degree prompt",
-        "  convert -s/-w/-h are only supported for SVG input converted to raster output",
+        "For details on a specific command, run:",
+        "  simply <command> --help",
+        "",
+        "Commands:",
+        "  simply flip <args>",
+        "  simply rotate <args>",
+        "  simply invert <args>",
+        "  simply grayscale <args>",
+        "  simply convert <args>",
+        "",
     ]
     .join("\n")
+}
+
+pub(crate) fn command_usage(command: &str) -> String {
+    match command {
+        "flip" => [
+            "simply flip — Flip an image horizontally or vertically",
+            "",
+            "Usage:",
+            "  simply flip [options] <path-to-image> [output-path]",
+            "",
+            "Options:",
+            "  --horizontal    Flip horizontally (bypasses interactive prompt)",
+            "  --vertical      Flip vertically (bypasses interactive prompt)",
+            "  -r, --replace   Replace the source file instead of writing a new one",
+            "",
+            "Without --horizontal or --vertical, an interactive prompt lets you choose.",
+            "If no output path is given, one is generated automatically (e.g. image_fliph.png).",
+        ]
+        .join("\n"),
+        "rotate" => [
+            "simply rotate — Rotate an image by 90, 180, or 270 degrees",
+            "",
+            "Usage:",
+            "  simply rotate [90|180|270] [options] <path-to-image> [output-path]",
+            "",
+            "Options:",
+            "  -r, --replace   Replace the source file instead of writing a new one",
+            "",
+            "Without a degree argument, an interactive prompt lets you choose.",
+            "If no output path is given, one is generated automatically (e.g. image_rotate.png).",
+        ]
+        .join("\n"),
+        "invert" => [
+            "simply invert — Invert the colors of an image",
+            "",
+            "Usage:",
+            "  simply invert [options] <path-to-image> [output-path]",
+            "",
+            "Options:",
+            "  -r, --replace   Replace the source file instead of writing a new one",
+            "",
+            "If no output path is given, one is generated automatically (e.g. image_invert.png).",
+        ]
+        .join("\n"),
+        "grayscale" => [
+            "simply grayscale — Convert an image to grayscale",
+            "",
+            "Usage:",
+            "  simply grayscale [options] <path-to-image> [output-path]",
+            "",
+            "Options:",
+            "  -r, --replace   Replace the source file instead of writing a new one",
+            "",
+            "If no output path is given, one is generated automatically (e.g. image_grayscale.png).",
+        ]
+        .join("\n"),
+        "convert" => [
+            "simply convert — Convert between image formats (PNG, JPG, ICO, SVG)",
+            "",
+            "Usage:",
+            "  simply convert [options] <path-to-image> <output-path>",
+            "",
+            "Options (SVG input to raster output only):",
+            "  -s, --scale <factor>   Scale factor for SVG rasterization",
+            "  -w, --width <px>       Output width in pixels",
+            "  -h, --height <px>      Output height in pixels",
+            "",
+            "The output format is determined by the output path extension.",
+        ]
+        .join("\n"),
+        _ => usage(),
+    }
 }
 
 #[cfg(test)]
@@ -117,24 +211,82 @@ mod tests {
     #[test]
     fn test_usage_contains_all_commands() {
         let usage_text = usage();
-        assert!(usage_text.contains("simply --help"));
-        assert!(usage_text.contains("flip"));
-        assert!(usage_text.contains("rotate"));
-        assert!(usage_text.contains("invert"));
-        assert!(usage_text.contains("grayscale"));
-        assert!(usage_text.contains("convert"));
+        assert!(usage_text.contains("simply flip"));
+        assert!(usage_text.contains("simply rotate"));
+        assert!(usage_text.contains("simply invert"));
+        assert!(usage_text.contains("simply grayscale"));
+        assert!(usage_text.contains("simply convert"));
     }
 
     #[test]
-    fn test_usage_contains_replace_flag_info() {
+    fn test_usage_mentions_command_help() {
         let usage_text = usage();
-        assert!(usage_text.contains("-r|--replace"));
+        assert!(usage_text.contains("--help"));
     }
 
     #[test]
     fn test_usage_is_non_empty() {
         let usage_text = usage();
         assert!(!usage_text.is_empty());
+    }
+
+    #[test]
+    fn test_command_help_flip() {
+        let args = vec!["simply".into(), "flip".into(), "--help".into()];
+        match parse_command(&args).unwrap() {
+            ParsedCommand::CommandHelp(cmd) => assert_eq!(cmd, "flip"),
+            _ => panic!("expected CommandHelp"),
+        }
+    }
+
+    #[test]
+    fn test_command_help_rotate() {
+        let args = vec!["simply".into(), "rotate".into(), "--help".into()];
+        match parse_command(&args).unwrap() {
+            ParsedCommand::CommandHelp(cmd) => assert_eq!(cmd, "rotate"),
+            _ => panic!("expected CommandHelp"),
+        }
+    }
+
+    #[test]
+    fn test_command_help_invert() {
+        let args = vec!["simply".into(), "invert".into(), "--help".into()];
+        match parse_command(&args).unwrap() {
+            ParsedCommand::CommandHelp(cmd) => assert_eq!(cmd, "invert"),
+            _ => panic!("expected CommandHelp"),
+        }
+    }
+
+    #[test]
+    fn test_command_help_grayscale() {
+        let args = vec!["simply".into(), "grayscale".into(), "--help".into()];
+        match parse_command(&args).unwrap() {
+            ParsedCommand::CommandHelp(cmd) => assert_eq!(cmd, "grayscale"),
+            _ => panic!("expected CommandHelp"),
+        }
+    }
+
+    #[test]
+    fn test_command_help_convert() {
+        let args = vec!["simply".into(), "convert".into(), "--help".into()];
+        match parse_command(&args).unwrap() {
+            ParsedCommand::CommandHelp(cmd) => assert_eq!(cmd, "convert"),
+            _ => panic!("expected CommandHelp"),
+        }
+    }
+
+    #[test]
+    fn test_command_usage_contains_flags() {
+        assert!(command_usage("flip").contains("--horizontal"));
+        assert!(command_usage("flip").contains("--vertical"));
+        assert!(command_usage("flip").contains("--replace"));
+        assert!(command_usage("rotate").contains("90|180|270"));
+        assert!(command_usage("rotate").contains("--replace"));
+        assert!(command_usage("invert").contains("--replace"));
+        assert!(command_usage("grayscale").contains("--replace"));
+        assert!(command_usage("convert").contains("--scale"));
+        assert!(command_usage("convert").contains("--width"));
+        assert!(command_usage("convert").contains("--height"));
     }
 
     #[test]
