@@ -1,9 +1,9 @@
 use crate::{OutputMode, io::save_transformed_image};
-use indicatif::{ProgressBar, ProgressStyle};
 use inquire::{CustomType, validator::Validation};
 use palette::Srgba;
-use std::io::{IsTerminal, stderr, stdin};
-use std::time::Duration;
+use std::io::{IsTerminal, stdin};
+
+use super::start_spinner;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum FlipAxis {
@@ -127,22 +127,6 @@ pub(crate) fn run_rotate(
     let output_path = result?;
     println!("Saved rotated image to {}", output_path);
     Ok(())
-}
-
-fn start_spinner(message: &str) -> Option<ProgressBar> {
-    if !stderr().is_terminal() {
-        return None;
-    }
-
-    let pb = ProgressBar::new_spinner();
-    let style = ProgressStyle::with_template("{spinner} {msg}")
-        .unwrap_or_else(|_| ProgressStyle::default_spinner())
-        .tick_chars("-\\|/ ");
-
-    pb.set_style(style);
-    pb.set_message(message.to_string());
-    pb.enable_steady_tick(Duration::from_millis(100));
-    Some(pb)
 }
 
 fn prompt_rotate_degrees() -> Result<u16, String> {

@@ -5,6 +5,18 @@ use resvg::tiny_skia::{Pixmap, Transform};
 use resvg::usvg::{Options, Tree};
 use vtracer::Config;
 
+use super::start_spinner;
+
+fn fast_vectorize_config() -> Config {
+    Config {
+        color_precision: 4,
+        layer_difference: 48,
+        filter_speckle: 8,
+        max_iterations: 4,
+        ..Config::default()
+    }
+}
+
 pub(crate) fn run_convert(args: &[String]) -> Result<(), String> {
     let mut positionals = Vec::new();
 
@@ -25,7 +37,7 @@ pub(crate) fn run_convert(args: &[String]) -> Result<(), String> {
         .to_string();
 
     if is_svg_path(&dst) {
-        return vectorize(src, &dst);
+        return vectorize(src, &dst, false);
     }
 
     if is_svg_path(src) {
@@ -108,37 +120,51 @@ pub(crate) fn parse_rasterize_args(args: &[String]) -> Result<RasterizeArgs, Str
 pub(crate) struct VectorizeArgs {
     pub(crate) src: String,
     pub(crate) dst: String,
+    pub(crate) fast: bool,
 }
 
 pub(crate) fn parse_vectorize_args(args: &[String]) -> Result<VectorizeArgs, String> {
     let mut positionals = Vec::new();
+    let mut fast = false;
+    let mut index = 0;
 
-    for arg in args {
-        if arg.starts_with('-') {
-            return Err(format!("unrecognized vectorize flag '{arg}'"));
+    while index < args.len() {
+        match args[index].as_str() {
+            "--fast" => {
+                fast = true;
+                index += 1;
+            }
+            value if value.starts_with('-') => {
+                return Err(format!("unrecognized vectorize flag '{value}'"));
+            }
+            value => {
+                positionals.push(value);
+                index += 1;
+            }
         }
-        positionals.push(arg.as_str());
     }
 
     match positionals.as_slice() {
         [src, dst] => Ok(VectorizeArgs {
             src: src.to_string(),
             dst: dst.to_string(),
+            fast,
         }),
         [src] => Ok(VectorizeArgs {
             src: src.to_string(),
             dst: replace_extension(src, "svg"),
+            fast,
         }),
         _ => Err(crate::usage()),
     }
 }
 
 pub(crate) fn run_vectorize(args: &[String]) -> Result<(), String> {
-    let VectorizeArgs { src, dst } = parse_vectorize_args(args)?;
+    let VectorizeArgs { src, dst, fast } = parse_vectorize_args(args)?;
     let dst = crate::io::enumerate_if_exists(Path::new(&dst))
         .to_string_lossy()
         .to_string();
-    vectorize(&src, &dst)
+    vectorize(&src, &dst, fast)
 }
 
 pub(crate) fn run_rasterize(args: &[String]) -> Result<(), String> {
@@ -182,16 +208,32 @@ fn parse_positive_u32(value: &str, flag: &str) -> Result<u32, String> {
     Ok(parsed)
 }
 
-fn vectorize(src: &str, dst: &str) -> Result<(), String> {
+fn vectorize(src: &str, dst: &str, fast: bool) -> Result<(), String> {
     let src_path = Path::new(src);
     let dst_path = Path::new(dst);
-    vtracer::convert_image_to_svg(src_path, dst_path, Config::default()).map_err(|e| {
-        format!(
-            "failed to vectorize image '{}' to '{}': {e}",
-            src_path.display(),
-            dst_path.display()
-        )
-    })?;
+    let config = if fast {
+        fast_vectorize_config()
+    } else {
+        Config::default()
+    };
+    let spinner = start_spinner("Vectorizing image...");
+
+    let result =
+        vtracer::convert_image_to_svg(src_path, dst_path, config).map_err(
+            |e| {
+                format!(
+                    "failed to vectorize image '{}' to '{}': {e}",
+                    src_path.display(),
+                    dst_path.display()
+                )
+            },
+        );
+
+    if let Some(pb) = spinner {
+        pb.finish_and_clear();
+    }
+
+    result?;
     println!("Converted image to {}", dst);
     Ok(())
 }
@@ -477,6 +519,19 @@ mod tests {
         let parsed = parse_vectorize_args(&args).expect("failed to parse vectorize args");
         assert_eq!(parsed.src, "input.png");
         assert_eq!(parsed.dst, "output.svg");
+        assert!(!parsed.fast);
+    }
+
+    #[test]
+    fn test_parse_vectorize_args_fast_flag() {
+        let args = vec![
+            "--fast".to_string(),
+            "input.png".to_string(),
+            "output.svg".to_string(),
+        ];
+        let parsed = parse_vectorize_args(&args).expect("failed to parse vectorize args");
+        assert_eq!(parsed.src, "input.png");
+        assert!(parsed.fast);
     }
 
     #[test]
