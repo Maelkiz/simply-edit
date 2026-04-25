@@ -45,6 +45,6 @@ Example:
 # Inverts the colors of test.png and outputs it as a jpg
 cargo run -- invert playground/test.png playground/inverted.jpg
 
-# Outputs a vertically flipped version of inverted.jpg replacing the original
-cargo run -- flipv -r playground/inverted.jpg
+# Outputs a flipped version of inverted.jpg replacing the original
+cargo run -- flip -r playground/inverted.jpg
 ```
