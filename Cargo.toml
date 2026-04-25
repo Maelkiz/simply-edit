@@ -8,7 +8,6 @@ clap = { version = "4", features = ["derive"] }
 image = "0.25"
 indicatif = "0.17"
 inquire = "0.9"
-palette = "0.7"
 rayon = "1.10"
 regex = "1.11"
 resvg = "0.47"

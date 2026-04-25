@@ -36,7 +36,7 @@ pub(crate) fn run_convert(src: &str, dst: &str) -> Result<(), String> {
     Ok(())
 }
 
-#[derive(Default)]
+#[derive(Clone, Copy, Default)]
 pub(crate) struct RasterizeOptions {
     pub(crate) scale: Option<f32>,
     pub(crate) width: Option<u32>,

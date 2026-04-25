@@ -221,11 +221,7 @@ fn run() -> Result<(), String> {
                     let out_str = out_path.to_string_lossy().to_string();
                     let src_str = file.to_string_lossy().to_string();
                     commands::convert::run_rasterize(RasterizeArgs {
-                        options: RasterizeOptions {
-                            scale: raster_opts.scale,
-                            width: raster_opts.width,
-                            height: raster_opts.height,
-                        },
+                        options: raster_opts,
                         src: src_str,
                         dst: out_str.clone(),
                     })?;

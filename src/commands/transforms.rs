@@ -1,6 +1,5 @@
 use crate::{OutputMode, io::save_transformed_image};
 use inquire::{CustomType, validator::Validation};
-use palette::Srgba;
 use std::io::{IsTerminal, stdin};
 
 use super::start_spinner;
@@ -190,26 +189,9 @@ pub(crate) fn invert_colors(img: image::DynamicImage) -> image::DynamicImage {
     let mut rgba_image = img.to_rgba8();
 
     for pixel in rgba_image.pixels_mut() {
-        let color = Srgba::new(
-            pixel[0] as f32 / 255.0,
-            pixel[1] as f32 / 255.0,
-            pixel[2] as f32 / 255.0,
-            pixel[3] as f32 / 255.0,
-        );
-
-        let inverted = Srgba::new(
-            1.0 - color.red,
-            1.0 - color.green,
-            1.0 - color.blue,
-            color.alpha,
-        );
-
-        *pixel = image::Rgba([
-            (inverted.red * 255.0).round() as u8,
-            (inverted.green * 255.0).round() as u8,
-            (inverted.blue * 255.0).round() as u8,
-            (inverted.alpha * 255.0).round() as u8,
-        ]);
+        pixel[0] = 255 - pixel[0];
+        pixel[1] = 255 - pixel[1];
+        pixel[2] = 255 - pixel[2];
     }
 
     image::DynamicImage::ImageRgba8(rgba_image)

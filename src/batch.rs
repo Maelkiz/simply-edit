@@ -192,27 +192,24 @@ fn create_progress_bar(total: u64) -> ProgressBar {
     pb
 }
 
-pub(crate) fn resolve_output_path(
-    input: &Path,
-    suffix: &str,
-    options: &BatchOptions,
-) -> Result<PathBuf, String> {
-    let stem = input
-        .file_stem()
-        .and_then(|s| s.to_str())
-        .unwrap_or("output");
-    let ext = input.extension().and_then(|e| e.to_str()).unwrap_or("png");
-    let filename = format!("{stem}_{suffix}.{ext}");
-
-    let dir = match &options.output_dir {
+fn output_dir(input: &Path, options: &BatchOptions) -> PathBuf {
+    match &options.output_dir {
         Some(d) => d.clone(),
         None => input
             .parent()
             .unwrap_or_else(|| Path::new("."))
             .to_path_buf(),
-    };
+    }
+}
 
-    Ok(dir.join(filename))
+pub(crate) fn resolve_output_path(
+    input: &Path,
+    suffix: &str,
+    options: &BatchOptions,
+) -> Result<PathBuf, String> {
+    let stem = input.file_stem().and_then(|s| s.to_str()).unwrap_or("output");
+    let ext = input.extension().and_then(|e| e.to_str()).unwrap_or("png");
+    Ok(output_dir(input, options).join(format!("{stem}_{suffix}.{ext}")))
 }
 
 pub(crate) fn resolve_output_path_with_ext(
@@ -220,21 +217,8 @@ pub(crate) fn resolve_output_path_with_ext(
     ext: &str,
     options: &BatchOptions,
 ) -> Result<PathBuf, String> {
-    let stem = input
-        .file_stem()
-        .and_then(|s| s.to_str())
-        .unwrap_or("output");
-    let filename = format!("{stem}.{ext}");
-
-    let dir = match &options.output_dir {
-        Some(d) => d.clone(),
-        None => input
-            .parent()
-            .unwrap_or_else(|| Path::new("."))
-            .to_path_buf(),
-    };
-
-    Ok(dir.join(filename))
+    let stem = input.file_stem().and_then(|s| s.to_str()).unwrap_or("output");
+    Ok(output_dir(input, options).join(format!("{stem}.{ext}")))
 }
 
 pub(crate) fn print_summary(result: &BatchResult) {
