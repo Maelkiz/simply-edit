@@ -17,21 +17,7 @@ fn fast_vectorize_config() -> Config {
     }
 }
 
-pub(crate) fn run_convert(args: &[String]) -> Result<(), String> {
-    let mut positionals = Vec::new();
-
-    for arg in args {
-        if arg.starts_with('-') {
-            return Err(format!("unrecognized convert flag '{arg}'"));
-        }
-        positionals.push(arg.as_str());
-    }
-
-    let (src, dst) = match positionals.as_slice() {
-        [src, dst] => (*src, *dst),
-        _ => return Err("usage: simply convert <src> <dst>".to_string()),
-    };
-
+pub(crate) fn run_convert(src: &str, dst: &str) -> Result<(), String> {
     let dst = crate::io::enumerate_if_exists(Path::new(dst))
         .to_string_lossy()
         .to_string();
@@ -63,59 +49,6 @@ pub(crate) struct RasterizeArgs {
     pub(crate) dst: String,
 }
 
-pub(crate) fn parse_rasterize_args(args: &[String]) -> Result<RasterizeArgs, String> {
-    let mut options = RasterizeOptions::default();
-    let mut positionals = Vec::new();
-    let mut index = 0;
-
-    while index < args.len() {
-        match args[index].as_str() {
-            "-s" | "--scale" => {
-                let value = args
-                    .get(index + 1)
-                    .ok_or_else(|| "missing value for --scale".to_string())?;
-                options.scale = Some(parse_positive_f32(value, "--scale")?);
-                index += 2;
-            }
-            "-w" | "--width" => {
-                let value = args
-                    .get(index + 1)
-                    .ok_or_else(|| "missing value for --width".to_string())?;
-                options.width = Some(parse_positive_u32(value, "--width")?);
-                index += 2;
-            }
-            "-h" | "--height" => {
-                let value = args
-                    .get(index + 1)
-                    .ok_or_else(|| "missing value for --height".to_string())?;
-                options.height = Some(parse_positive_u32(value, "--height")?);
-                index += 2;
-            }
-            value if value.starts_with('-') => {
-                return Err(format!("unrecognized rasterize flag '{value}'"));
-            }
-            value => {
-                positionals.push(value.to_string());
-                index += 1;
-            }
-        }
-    }
-
-    match positionals.as_slice() {
-        [src, dst] => Ok(RasterizeArgs {
-            options,
-            src: src.clone(),
-            dst: dst.clone(),
-        }),
-        [src] => Ok(RasterizeArgs {
-            options,
-            src: src.clone(),
-            dst: replace_extension(src, "png"),
-        }),
-        _ => Err("usage: simply convert <src> <dst>".to_string()),
-    }
-}
-
 #[derive(Debug)]
 pub(crate) struct VectorizeArgs {
     pub(crate) src: String,
@@ -123,89 +56,18 @@ pub(crate) struct VectorizeArgs {
     pub(crate) fast: bool,
 }
 
-pub(crate) fn parse_vectorize_args(args: &[String]) -> Result<VectorizeArgs, String> {
-    let mut positionals = Vec::new();
-    let mut fast = false;
-    let mut index = 0;
-
-    while index < args.len() {
-        match args[index].as_str() {
-            "--fast" => {
-                fast = true;
-                index += 1;
-            }
-            value if value.starts_with('-') => {
-                return Err(format!("unrecognized vectorize flag '{value}'"));
-            }
-            value => {
-                positionals.push(value);
-                index += 1;
-            }
-        }
-    }
-
-    match positionals.as_slice() {
-        [src, dst] => Ok(VectorizeArgs {
-            src: src.to_string(),
-            dst: dst.to_string(),
-            fast,
-        }),
-        [src] => Ok(VectorizeArgs {
-            src: src.to_string(),
-            dst: replace_extension(src, "svg"),
-            fast,
-        }),
-        _ => Err("usage: simply convert <src> <dst>".to_string()),
-    }
-}
-
-pub(crate) fn run_vectorize(args: &[String]) -> Result<(), String> {
-    let VectorizeArgs { src, dst, fast } = parse_vectorize_args(args)?;
-    let dst = crate::io::enumerate_if_exists(Path::new(&dst))
+pub(crate) fn run_vectorize(args: VectorizeArgs) -> Result<(), String> {
+    let dst = crate::io::enumerate_if_exists(Path::new(&args.dst))
         .to_string_lossy()
         .to_string();
-    vectorize(&src, &dst, fast)
+    vectorize(&args.src, &dst, args.fast)
 }
 
-pub(crate) fn run_rasterize(args: &[String]) -> Result<(), String> {
-    let RasterizeArgs { options, src, dst } = parse_rasterize_args(args)?;
-    let dst = crate::io::enumerate_if_exists(Path::new(&dst))
+pub(crate) fn run_rasterize(args: RasterizeArgs) -> Result<(), String> {
+    let dst = crate::io::enumerate_if_exists(Path::new(&args.dst))
         .to_string_lossy()
         .to_string();
-    rasterize(&src, &dst, options)
-}
-
-fn replace_extension(path: &str, new_ext: &str) -> String {
-    let p = Path::new(path);
-    p.with_extension(new_ext).to_string_lossy().to_string()
-}
-
-fn parse_positive_f32(value: &str, flag: &str) -> Result<f32, String> {
-    let parsed: f32 = value
-        .parse()
-        .map_err(|_| format!("invalid value '{value}' for {flag}: use a positive number"))?;
-
-    if !parsed.is_finite() || parsed <= 0.0 {
-        return Err(format!(
-            "invalid value '{value}' for {flag}: use a positive number"
-        ));
-    }
-
-    Ok(parsed)
-}
-
-fn parse_positive_u32(value: &str, flag: &str) -> Result<u32, String> {
-    let parsed: u32 = value
-        .parse()
-        .map_err(|_| format!("invalid value '{value}' for {flag}: use a positive integer"))?;
-
-    if parsed == 0 {
-        return Err(format!(
-            "invalid value '{value}' for {flag}: use a positive integer"
-        ));
-    }
-
-    Ok(parsed)
+    rasterize(&args.src, &dst, args.options)
 }
 
 fn vectorize(src: &str, dst: &str, fast: bool) -> Result<(), String> {
@@ -407,10 +269,10 @@ mod tests {
             .save(&input_path)
             .expect("failed to save test png");
 
-        run_convert(&[
-            input_path.to_str().unwrap().to_string(),
-            output_path.to_str().unwrap().to_string(),
-        ])
+        run_convert(
+            input_path.to_str().unwrap(),
+            output_path.to_str().unwrap(),
+        )
         .expect("png to webp conversion failed");
 
         assert!(output_path.exists());
@@ -441,10 +303,10 @@ mod tests {
             .save(&input_path)
             .expect("failed to save test webp");
 
-        run_convert(&[
-            input_path.to_str().unwrap().to_string(),
-            output_path.to_str().unwrap().to_string(),
-        ])
+        run_convert(
+            input_path.to_str().unwrap(),
+            output_path.to_str().unwrap(),
+        )
         .expect("webp to png conversion failed");
 
         assert!(output_path.exists());
@@ -477,10 +339,10 @@ mod tests {
         )
         .expect("failed to write svg");
 
-        run_convert(&[
-            input_path.to_str().unwrap().to_string(),
-            output_path.to_str().unwrap().to_string(),
-        ])
+        run_convert(
+            input_path.to_str().unwrap(),
+            output_path.to_str().unwrap(),
+        )
         .expect("svg to webp conversion failed");
 
         assert!(output_path.exists());
@@ -489,59 +351,6 @@ mod tests {
         assert_eq!(converted.height(), 4);
 
         let _ = fs::remove_dir_all(&temp_root);
-    }
-
-    #[test]
-    fn test_parse_rasterize_args_accepts_scale_and_resolution_flags() {
-        let args = vec![
-            "-s".to_string(),
-            "2.5".to_string(),
-            "-w".to_string(),
-            "200".to_string(),
-            "-h".to_string(),
-            "100".to_string(),
-            "input.svg".to_string(),
-            "output.png".to_string(),
-        ];
-
-        let parsed = parse_rasterize_args(&args).expect("failed to parse rasterize args");
-        assert_eq!(parsed.src, "input.svg");
-        assert_eq!(parsed.dst, "output.png");
-        assert_eq!(parsed.options.scale, Some(2.5));
-        assert_eq!(parsed.options.width, Some(200));
-        assert_eq!(parsed.options.height, Some(100));
-    }
-
-    #[test]
-    fn test_parse_vectorize_args_accepts_positionals() {
-        let args = vec!["input.png".to_string(), "output.svg".to_string()];
-        let parsed = parse_vectorize_args(&args).expect("failed to parse vectorize args");
-        assert_eq!(parsed.src, "input.png");
-        assert_eq!(parsed.dst, "output.svg");
-        assert!(!parsed.fast);
-    }
-
-    #[test]
-    fn test_parse_vectorize_args_fast_flag() {
-        let args = vec![
-            "--fast".to_string(),
-            "input.png".to_string(),
-            "output.svg".to_string(),
-        ];
-        let parsed = parse_vectorize_args(&args).expect("failed to parse vectorize args");
-        assert_eq!(parsed.src, "input.png");
-        assert!(parsed.fast);
-    }
-
-    #[test]
-    fn test_parse_vectorize_args_rejects_flags() {
-        let args = vec![
-            "--unknown".to_string(),
-            "input.png".to_string(),
-            "output.svg".to_string(),
-        ];
-        let err = parse_vectorize_args(&args).expect_err("expected flag rejection");
-        assert!(err.contains("unrecognized vectorize flag"));
     }
 
     #[test]

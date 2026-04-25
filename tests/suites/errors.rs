@@ -163,7 +163,8 @@ fn test_rasterize_invalid_scale_rejected() {
 fn test_rasterize_zero_width_rejected() {
     let output = run(&["rasterize", "-w", "0", "in.svg", "out.png"]);
     assert!(!output.status.success());
-    assert!(stderr(&output).contains("invalid value '0' for --width"));
+    let err = stderr(&output);
+    assert!(err.contains("invalid value '0'") && err.contains("--width"));
 }
 
 #[test]

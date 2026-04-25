@@ -137,15 +137,15 @@ pub(crate) enum Command {
     /// Convert an SVG to a raster image
     Rasterize {
         /// Scale factor for rasterization
-        #[arg(short, long)]
+        #[arg(short, long, value_parser = parse_positive_f32)]
         scale: Option<f32>,
 
         /// Output width in pixels
-        #[arg(short, long)]
+        #[arg(short, long, value_parser = parse_positive_u32)]
         width: Option<u32>,
 
         /// Output height in pixels
-        #[arg(short = 'H', long)]
+        #[arg(short = 'H', long, value_parser = parse_positive_u32)]
         height: Option<u32>,
 
         #[command(flatten)]
@@ -157,6 +157,30 @@ pub(crate) enum Command {
         /// Output path (auto-generated if omitted)
         dst: Option<String>,
     },
+}
+
+fn parse_positive_f32(s: &str) -> Result<f32, String> {
+    let v: f32 = s
+        .parse()
+        .map_err(|_| format!("invalid value '{s}' for --scale: use a positive number"))?;
+    if !v.is_finite() || v <= 0.0 {
+        return Err(format!(
+            "invalid value '{s}' for --scale: use a positive number"
+        ));
+    }
+    Ok(v)
+}
+
+fn parse_positive_u32(s: &str) -> Result<u32, String> {
+    let v: u32 = s
+        .parse()
+        .map_err(|_| format!("invalid value '{s}': use a positive integer"))?;
+    if v == 0 {
+        return Err(format!(
+            "invalid value '{s}': use a positive integer"
+        ));
+    }
+    Ok(v)
 }
 
 fn parse_rotation(s: &str) -> Result<u16, String> {

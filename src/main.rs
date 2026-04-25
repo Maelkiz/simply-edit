@@ -8,6 +8,7 @@ use std::path::Path;
 use clap::Parser;
 
 use cli::{BatchArgs, Cli, Command};
+use commands::convert::{RasterizeArgs, RasterizeOptions, VectorizeArgs};
 
 enum OutputMode<'a> {
     Generated(&'a str),
@@ -155,7 +156,7 @@ fn run() -> Result<(), String> {
                     let out_path = batch::resolve_output_path_with_ext(file, &fmt, &options)?;
                     let out_str = out_path.to_string_lossy().to_string();
                     let src_str = file.to_string_lossy().to_string();
-                    commands::convert::run_convert(&[src_str, out_str.clone()])?;
+                    commands::convert::run_convert(&src_str, &out_str)?;
                     Ok(out_str)
                 })?;
                 batch::print_summary(&result);
@@ -165,7 +166,7 @@ fn run() -> Result<(), String> {
                     "convert: output path required (e.g. simply convert input.png output.jpg)"
                         .to_string()
                 })?;
-                commands::convert::run_convert(&[src, dst])
+                commands::convert::run_convert(&src, &dst)
             }
         }
         Command::Vectorize {
@@ -180,27 +181,23 @@ fn run() -> Result<(), String> {
                     let out_path = batch::resolve_output_path_with_ext(file, "svg", &options)?;
                     let out_str = out_path.to_string_lossy().to_string();
                     let src_str = file.to_string_lossy().to_string();
-                    let mut args = Vec::new();
-                    if fast {
-                        args.push("--fast".to_string());
-                    }
-                    args.push(src_str);
-                    args.push(out_str.clone());
-                    commands::convert::run_vectorize(&args)?;
+                    commands::convert::run_vectorize(VectorizeArgs {
+                        src: src_str,
+                        dst: out_str.clone(),
+                        fast,
+                    })?;
                     Ok(out_str)
                 })?;
                 batch::print_summary(&result);
                 Ok(())
             } else {
-                let mut args = Vec::new();
-                if fast {
-                    args.push("--fast".to_string());
-                }
-                args.push(src);
-                if let Some(d) = dst {
-                    args.push(d);
-                }
-                commands::convert::run_vectorize(&args)
+                let dst = dst.unwrap_or_else(|| {
+                    Path::new(&src)
+                        .with_extension("svg")
+                        .to_string_lossy()
+                        .to_string()
+                });
+                commands::convert::run_vectorize(VectorizeArgs { src, dst, fast })
             }
         }
         Command::Rasterize {
@@ -212,50 +209,46 @@ fn run() -> Result<(), String> {
             dst,
         } => {
             if is_batch(&src, &batch) {
+                let raster_opts = RasterizeOptions {
+                    scale,
+                    width,
+                    height,
+                };
                 let options = batch::to_batch_options(&batch)?;
                 let result = batch::run_batch_svg(Path::new(&src), &options, |file| {
-                    let out_path = batch::resolve_output_path_with_ext(file, "png", &options)?;
+                    let out_path =
+                        batch::resolve_output_path_with_ext(file, "png", &options)?;
                     let out_str = out_path.to_string_lossy().to_string();
                     let src_str = file.to_string_lossy().to_string();
-                    let mut args = Vec::new();
-                    if let Some(s) = scale {
-                        args.push("-s".to_string());
-                        args.push(s.to_string());
-                    }
-                    if let Some(w) = width {
-                        args.push("-w".to_string());
-                        args.push(w.to_string());
-                    }
-                    if let Some(h) = height {
-                        args.push("-h".to_string());
-                        args.push(h.to_string());
-                    }
-                    args.push(src_str);
-                    args.push(out_str.clone());
-                    commands::convert::run_rasterize(&args)?;
+                    commands::convert::run_rasterize(RasterizeArgs {
+                        options: RasterizeOptions {
+                            scale: raster_opts.scale,
+                            width: raster_opts.width,
+                            height: raster_opts.height,
+                        },
+                        src: src_str,
+                        dst: out_str.clone(),
+                    })?;
                     Ok(out_str)
                 })?;
                 batch::print_summary(&result);
                 Ok(())
             } else {
-                let mut args = Vec::new();
-                if let Some(s) = scale {
-                    args.push("-s".to_string());
-                    args.push(s.to_string());
-                }
-                if let Some(w) = width {
-                    args.push("-w".to_string());
-                    args.push(w.to_string());
-                }
-                if let Some(h) = height {
-                    args.push("-h".to_string());
-                    args.push(h.to_string());
-                }
-                args.push(src);
-                if let Some(d) = dst {
-                    args.push(d);
-                }
-                commands::convert::run_rasterize(&args)
+                let dst = dst.unwrap_or_else(|| {
+                    Path::new(&src)
+                        .with_extension("png")
+                        .to_string_lossy()
+                        .to_string()
+                });
+                commands::convert::run_rasterize(RasterizeArgs {
+                    options: RasterizeOptions {
+                        scale,
+                        width,
+                        height,
+                    },
+                    src,
+                    dst,
+                })
             }
         }
     }
