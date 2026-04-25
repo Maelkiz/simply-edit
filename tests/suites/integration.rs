@@ -156,14 +156,14 @@ fn test_invalid_flag_syntax_for_transform_fails() {
 }
 
 #[test]
-fn test_convert_svg_to_png_with_scale() {
+fn test_rasterize_svg_to_png_with_scale() {
     let temp = TestDir::new("simply-phase1-int");
     let src = temp.path().join("in.svg");
     let dst = temp.path().join("out.png");
     create_svg(&src, 3, 4, "#ff0000");
 
     let output = run(&[
-        "convert",
+        "rasterize",
         "-s",
         "2",
         src.to_str().expect("valid source path"),
@@ -178,14 +178,14 @@ fn test_convert_svg_to_png_with_scale() {
 }
 
 #[test]
-fn test_convert_svg_to_png_with_width_preserves_aspect_ratio() {
+fn test_rasterize_svg_to_png_with_width_preserves_aspect_ratio() {
     let temp = TestDir::new("simply-phase1-int");
     let src = temp.path().join("in.svg");
     let dst = temp.path().join("out.png");
     create_svg(&src, 10, 5, "#00ff00");
 
     let output = run(&[
-        "convert",
+        "rasterize",
         "-w",
         "20",
         src.to_str().expect("valid source path"),
@@ -199,14 +199,14 @@ fn test_convert_svg_to_png_with_width_preserves_aspect_ratio() {
 }
 
 #[test]
-fn test_convert_svg_to_png_with_height_preserves_aspect_ratio() {
+fn test_rasterize_svg_to_png_with_height_preserves_aspect_ratio() {
     let temp = TestDir::new("simply-phase1-int");
     let src = temp.path().join("in.svg");
     let dst = temp.path().join("out.png");
     create_svg(&src, 10, 5, "#0000ff");
 
     let output = run(&[
-        "convert",
+        "rasterize",
         "-h",
         "15",
         src.to_str().expect("valid source path"),
@@ -220,14 +220,14 @@ fn test_convert_svg_to_png_with_height_preserves_aspect_ratio() {
 }
 
 #[test]
-fn test_convert_svg_to_png_with_width_and_height() {
+fn test_rasterize_svg_to_png_with_width_and_height() {
     let temp = TestDir::new("simply-phase1-int");
     let src = temp.path().join("in.svg");
     let dst = temp.path().join("out.png");
     create_svg(&src, 10, 5, "#aabbcc");
 
     let output = run(&[
-        "convert",
+        "rasterize",
         "-w",
         "12",
         "-h",
@@ -240,6 +240,45 @@ fn test_convert_svg_to_png_with_width_and_height() {
     let img = image::open(&dst).expect("failed to open converted png");
     assert_eq!(img.width(), 12);
     assert_eq!(img.height(), 9);
+}
+
+#[test]
+fn test_vectorize_image_to_svg() {
+    let temp = TestDir::new("simply-phase1-int");
+    let src = temp.path().join("in.png");
+    let dst = temp.path().join("out.svg");
+    create_png(&src, 4, 4, [255, 255, 255, 255]);
+
+    let output = run(&[
+        "vectorize",
+        src.to_str().expect("valid source path"),
+        dst.to_str().expect("valid destination path"),
+    ]);
+    assert!(output.status.success());
+    assert!(dst.exists());
+
+    let body = std::fs::read_to_string(&dst).expect("failed to read output svg");
+    assert!(body.contains("<svg"));
+}
+
+#[test]
+fn test_rasterize_svg_to_png_default() {
+    let temp = TestDir::new("simply-phase1-int");
+    let src = temp.path().join("in.svg");
+    let dst = temp.path().join("out.png");
+    create_svg(&src, 8, 6, "#112233");
+
+    let output = run(&[
+        "rasterize",
+        src.to_str().expect("valid source path"),
+        dst.to_str().expect("valid destination path"),
+    ]);
+    assert!(output.status.success());
+    assert!(dst.exists());
+
+    let img = image::open(&dst).expect("failed to open converted png");
+    assert_eq!(img.width(), 8);
+    assert_eq!(img.height(), 6);
 }
 
 #[test]

@@ -3,14 +3,14 @@ use std::fs;
 use crate::common::{TestDir, assert_valid_image, create_png, create_svg, run};
 
 #[test]
-fn test_convert_scale_half_produces_half_size() {
+fn test_rasterize_scale_half_produces_half_size() {
     let temp = TestDir::new("simply-phase3");
     let src = temp.path().join("in.svg");
     let dst = temp.path().join("out.png");
     create_svg(&src, 20, 10, "#ff0000");
 
     let output = run(&[
-        "convert",
+        "rasterize",
         "-s",
         "0.5",
         src.to_str().expect("valid source path"),
@@ -24,14 +24,14 @@ fn test_convert_scale_half_produces_half_size() {
 }
 
 #[test]
-fn test_convert_scale_double_produces_double_size() {
+fn test_rasterize_scale_double_produces_double_size() {
     let temp = TestDir::new("simply-phase3");
     let src = temp.path().join("in.svg");
     let dst = temp.path().join("out.png");
     create_svg(&src, 6, 4, "#00ff00");
 
     let output = run(&[
-        "convert",
+        "rasterize",
         "-s",
         "2",
         src.to_str().expect("valid source path"),
@@ -45,14 +45,14 @@ fn test_convert_scale_double_produces_double_size() {
 }
 
 #[test]
-fn test_convert_small_scale_still_produces_non_zero_dimensions() {
+fn test_rasterize_small_scale_still_produces_non_zero_dimensions() {
     let temp = TestDir::new("simply-phase3");
     let src = temp.path().join("in.svg");
     let dst = temp.path().join("out.png");
     create_svg(&src, 10, 5, "#0000ff");
 
     let output = run(&[
-        "convert",
+        "rasterize",
         "-s",
         "0.1",
         src.to_str().expect("valid source path"),
@@ -66,14 +66,14 @@ fn test_convert_small_scale_still_produces_non_zero_dimensions() {
 }
 
 #[test]
-fn test_convert_width_minimum_value_one_is_valid() {
+fn test_rasterize_width_minimum_value_one_is_valid() {
     let temp = TestDir::new("simply-phase3");
     let src = temp.path().join("in.svg");
     let dst = temp.path().join("out.png");
     create_svg(&src, 10, 10, "#abcdef");
 
     let output = run(&[
-        "convert",
+        "rasterize",
         "-w",
         "1",
         src.to_str().expect("valid source path"),
@@ -86,14 +86,14 @@ fn test_convert_width_minimum_value_one_is_valid() {
 }
 
 #[test]
-fn test_convert_height_minimum_value_one_is_valid() {
+fn test_rasterize_height_minimum_value_one_is_valid() {
     let temp = TestDir::new("simply-phase3");
     let src = temp.path().join("in.svg");
     let dst = temp.path().join("out.png");
     create_svg(&src, 10, 10, "#fedcba");
 
     let output = run(&[
-        "convert",
+        "rasterize",
         "-h",
         "1",
         src.to_str().expect("valid source path"),
@@ -106,16 +106,16 @@ fn test_convert_height_minimum_value_one_is_valid() {
 }
 
 #[test]
-fn test_convert_rejects_nan_scale() {
-    let output = run(&["convert", "-s", "NaN", "in.svg", "out.png"]);
+fn test_rasterize_rejects_nan_scale() {
+    let output = run(&["rasterize", "-s", "NaN", "in.svg", "out.png"]);
     assert!(!output.status.success());
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(stderr.contains("invalid value 'NaN' for --scale"));
 }
 
 #[test]
-fn test_convert_rejects_infinite_scale() {
-    let output = run(&["convert", "-s", "inf", "in.svg", "out.png"]);
+fn test_rasterize_rejects_infinite_scale() {
+    let output = run(&["rasterize", "-s", "inf", "in.svg", "out.png"]);
     assert!(!output.status.success());
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(stderr.contains("invalid value 'inf' for --scale"));

@@ -23,6 +23,12 @@ pub(crate) enum ParsedCommand {
     Convert {
         args: Vec<String>,
     },
+    Vectorize {
+        args: Vec<String>,
+    },
+    Rasterize {
+        args: Vec<String>,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -122,6 +128,20 @@ pub(crate) fn parse_command(args: &[String]) -> Result<ParsedCommand, String> {
         [_, command, rest @ ..] if command == "convert" => Ok(ParsedCommand::Convert {
             args: rest.to_vec(),
         }),
+
+        [_, command, rest @ ..] if command == "vectorize" && rest.iter().any(|a| a == "--help") => {
+            Ok(ParsedCommand::CommandHelp("vectorize".to_string()))
+        }
+        [_, command, rest @ ..] if command == "vectorize" => Ok(ParsedCommand::Vectorize {
+            args: rest.to_vec(),
+        }),
+
+        [_, command, rest @ ..] if command == "rasterize" && rest.iter().any(|a| a == "--help") => {
+            Ok(ParsedCommand::CommandHelp("rasterize".to_string()))
+        }
+        [_, command, rest @ ..] if command == "rasterize" => Ok(ParsedCommand::Rasterize {
+            args: rest.to_vec(),
+        }),
         _ => Err(usage()),
     }
 }
@@ -143,6 +163,8 @@ pub(crate) fn usage() -> String {
         "  simply invert <args>",
         "  simply grayscale <args>",
         "  simply convert <args>",
+        "  simply vectorize <args>",
+        "  simply rasterize <args>",
         "",
     ]
     .join("\n")
@@ -206,14 +228,35 @@ pub(crate) fn command_usage(command: &str) -> String {
             "simply convert — Convert between image formats (PNG, JPG, ICO, SVG, WebP)",
             "",
             "Usage:",
-            "  simply convert [options] <path-to-image> <output-path>",
+            "  simply convert <path-to-image> <output-path>",
             "",
-            "Options (SVG input to raster output only):",
-            "  -s, --scale <factor>   Scale factor for SVG rasterization",
+            "The output format is determined by the output path extension.",
+            "For fine-grained SVG control, use 'simply vectorize' or 'simply rasterize'.",
+        ]
+        .join("\n"),
+        "vectorize" => [
+            "simply vectorize — Convert a raster image to SVG",
+            "",
+            "Usage:",
+            "  simply vectorize <path-to-image> [output.svg]",
+            "",
+            "Converts a raster image (PNG, JPG, WebP) to SVG using vectorization.",
+            "If no output path is given, the input extension is replaced with .svg.",
+        ]
+        .join("\n"),
+        "rasterize" => [
+            "simply rasterize — Convert an SVG to a raster image",
+            "",
+            "Usage:",
+            "  simply rasterize [options] <path-to-svg> [output-path]",
+            "",
+            "Options:",
+            "  -s, --scale <factor>   Scale factor for rasterization",
             "  -w, --width <px>       Output width in pixels",
             "  -h, --height <px>      Output height in pixels",
             "",
-            "The output format is determined by the output path extension.",
+            "If no output path is given, the input extension is replaced with .png.",
+            "Otherwise, the output format is determined by the output path extension.",
         ]
         .join("\n"),
         _ => usage(),
@@ -232,6 +275,8 @@ mod tests {
         assert!(usage_text.contains("simply invert"));
         assert!(usage_text.contains("simply grayscale"));
         assert!(usage_text.contains("simply convert"));
+        assert!(usage_text.contains("simply vectorize"));
+        assert!(usage_text.contains("simply rasterize"));
     }
 
     #[test]
@@ -300,9 +345,9 @@ mod tests {
         assert!(command_usage("rotate").contains("--replace"));
         assert!(command_usage("invert").contains("--replace"));
         assert!(command_usage("grayscale").contains("--replace"));
-        assert!(command_usage("convert").contains("--scale"));
-        assert!(command_usage("convert").contains("--width"));
-        assert!(command_usage("convert").contains("--height"));
+        assert!(command_usage("rasterize").contains("--scale"));
+        assert!(command_usage("rasterize").contains("--width"));
+        assert!(command_usage("rasterize").contains("--height"));
     }
 
     #[test]
@@ -393,15 +438,69 @@ mod tests {
         let args = vec![
             "simply".to_string(),
             "convert".to_string(),
+            "in.png".to_string(),
+            "out.jpg".to_string(),
+        ];
+
+        let parsed = parse_command(&args).expect("failed to parse convert command");
+        match parsed {
+            ParsedCommand::Convert { args } => {
+                assert_eq!(args, vec!["in.png", "out.jpg"]);
+            }
+            _ => panic!("unexpected parsed command variant"),
+        }
+    }
+
+    #[test]
+    fn test_command_help_vectorize() {
+        let args = vec!["simply".into(), "vectorize".into(), "--help".into()];
+        match parse_command(&args).unwrap() {
+            ParsedCommand::CommandHelp(cmd) => assert_eq!(cmd, "vectorize"),
+            _ => panic!("expected CommandHelp"),
+        }
+    }
+
+    #[test]
+    fn test_command_help_rasterize() {
+        let args = vec!["simply".into(), "rasterize".into(), "--help".into()];
+        match parse_command(&args).unwrap() {
+            ParsedCommand::CommandHelp(cmd) => assert_eq!(cmd, "rasterize"),
+            _ => panic!("expected CommandHelp"),
+        }
+    }
+
+    #[test]
+    fn test_parse_command_vectorize_collects_rest_args() {
+        let args = vec![
+            "simply".to_string(),
+            "vectorize".to_string(),
+            "in.png".to_string(),
+            "out.svg".to_string(),
+        ];
+
+        let parsed = parse_command(&args).expect("failed to parse vectorize command");
+        match parsed {
+            ParsedCommand::Vectorize { args } => {
+                assert_eq!(args, vec!["in.png", "out.svg"]);
+            }
+            _ => panic!("unexpected parsed command variant"),
+        }
+    }
+
+    #[test]
+    fn test_parse_command_rasterize_collects_rest_args() {
+        let args = vec![
+            "simply".to_string(),
+            "rasterize".to_string(),
             "-s".to_string(),
             "2".to_string(),
             "in.svg".to_string(),
             "out.png".to_string(),
         ];
 
-        let parsed = parse_command(&args).expect("failed to parse convert command");
+        let parsed = parse_command(&args).expect("failed to parse rasterize command");
         match parsed {
-            ParsedCommand::Convert { args } => {
+            ParsedCommand::Rasterize { args } => {
                 assert_eq!(args, vec!["-s", "2", "in.svg", "out.png"]);
             }
             _ => panic!("unexpected parsed command variant"),

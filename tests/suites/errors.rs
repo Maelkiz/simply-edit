@@ -142,38 +142,45 @@ fn test_rotate_interactive_non_tty_invalid_input_rejected() {
 }
 
 #[test]
-fn test_convert_missing_value_for_scale_rejected() {
-    let output = run(&["convert", "-s"]);
+fn test_rasterize_missing_value_for_scale_rejected() {
+    let output = run(&["rasterize", "-s"]);
     assert!(!output.status.success());
     assert!(stderr(&output).contains("missing value for --scale"));
 }
 
 #[test]
-fn test_convert_missing_value_for_width_rejected() {
-    let output = run(&["convert", "-w"]);
+fn test_rasterize_missing_value_for_width_rejected() {
+    let output = run(&["rasterize", "-w"]);
     assert!(!output.status.success());
     assert!(stderr(&output).contains("missing value for --width"));
 }
 
 #[test]
-fn test_convert_invalid_scale_rejected() {
-    let output = run(&["convert", "-s", "abc", "in.svg", "out.png"]);
+fn test_rasterize_invalid_scale_rejected() {
+    let output = run(&["rasterize", "-s", "abc", "in.svg", "out.png"]);
     assert!(!output.status.success());
     assert!(stderr(&output).contains("invalid value 'abc' for --scale"));
 }
 
 #[test]
-fn test_convert_zero_width_rejected() {
-    let output = run(&["convert", "-w", "0", "in.svg", "out.png"]);
+fn test_rasterize_zero_width_rejected() {
+    let output = run(&["rasterize", "-w", "0", "in.svg", "out.png"]);
     assert!(!output.status.success());
     assert!(stderr(&output).contains("invalid value '0' for --width"));
 }
 
 #[test]
-fn test_convert_negative_scale_rejected() {
-    let output = run(&["convert", "-s", "-5", "in.svg", "out.png"]);
+fn test_rasterize_negative_scale_rejected() {
+    let output = run(&["rasterize", "-s", "-5", "in.svg", "out.png"]);
     assert!(!output.status.success());
     assert!(stderr(&output).contains("invalid value '-5' for --scale"));
+}
+
+#[test]
+fn test_rasterize_unknown_flag_rejected() {
+    let output = run(&["rasterize", "--unknown", "in.svg", "out.png"]);
+    assert!(!output.status.success());
+    assert!(stderr(&output).contains("unrecognized rasterize flag '--unknown'"));
 }
 
 #[test]
@@ -181,6 +188,13 @@ fn test_convert_unknown_flag_rejected() {
     let output = run(&["convert", "--unknown", "in.svg", "out.png"]);
     assert!(!output.status.success());
     assert!(stderr(&output).contains("unrecognized convert flag '--unknown'"));
+}
+
+#[test]
+fn test_vectorize_unknown_flag_rejected() {
+    let output = run(&["vectorize", "--unknown", "in.png", "out.svg"]);
+    assert!(!output.status.success());
+    assert!(stderr(&output).contains("unrecognized vectorize flag '--unknown'"));
 }
 
 #[test]

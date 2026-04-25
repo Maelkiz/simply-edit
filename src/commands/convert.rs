@@ -6,60 +6,53 @@ use resvg::usvg::{Options, Tree};
 use vtracer::Config;
 
 pub(crate) fn run_convert(args: &[String]) -> Result<(), String> {
-    let ConvertArgs { options, src, dst } = parse_convert_args(args)?;
-    let dst = crate::io::enumerate_if_exists(Path::new(&dst))
+    let mut positionals = Vec::new();
+
+    for arg in args {
+        if arg.starts_with('-') {
+            return Err(format!("unrecognized convert flag '{arg}'"));
+        }
+        positionals.push(arg.as_str());
+    }
+
+    let (src, dst) = match positionals.as_slice() {
+        [src, dst] => (*src, *dst),
+        _ => return Err(crate::usage()),
+    };
+
+    let dst = crate::io::enumerate_if_exists(Path::new(dst))
         .to_string_lossy()
         .to_string();
 
     if is_svg_path(&dst) {
-        if !options.is_empty() {
-            return Err(
-                "scale and width/height flags are only supported for SVG to image conversion"
-                    .to_string(),
-            );
-        }
-
-        return convert_image_to_svg(&src, &dst);
+        return vectorize(src, &dst);
     }
 
-    if is_svg_path(&src) {
-        return convert_svg_to_image(&src, &dst, options);
+    if is_svg_path(src) {
+        return rasterize(src, &dst, RasterizeOptions::default());
     }
 
-    if !options.is_empty() {
-        return Err(
-            "scale and width/height flags are only supported for SVG to image conversion"
-                .to_string(),
-        );
-    }
-
-    let img = image::open(&src).map_err(|e| format!("failed to open image '{src}': {e}"))?;
+    let img = image::open(src).map_err(|e| format!("failed to open image '{src}': {e}"))?;
     crate::io::save_image(img, &dst)?;
     println!("Converted image to {}", dst);
     Ok(())
 }
 
 #[derive(Default)]
-pub(crate) struct ConvertOptions {
+pub(crate) struct RasterizeOptions {
     pub(crate) scale: Option<f32>,
     pub(crate) width: Option<u32>,
     pub(crate) height: Option<u32>,
 }
 
-impl ConvertOptions {
-    fn is_empty(&self) -> bool {
-        self.scale.is_none() && self.width.is_none() && self.height.is_none()
-    }
-}
-
-pub(crate) struct ConvertArgs {
-    pub(crate) options: ConvertOptions,
+pub(crate) struct RasterizeArgs {
+    pub(crate) options: RasterizeOptions,
     pub(crate) src: String,
     pub(crate) dst: String,
 }
 
-pub(crate) fn parse_convert_args(args: &[String]) -> Result<ConvertArgs, String> {
-    let mut options = ConvertOptions::default();
+pub(crate) fn parse_rasterize_args(args: &[String]) -> Result<RasterizeArgs, String> {
+    let mut options = RasterizeOptions::default();
     let mut positionals = Vec::new();
     let mut index = 0;
 
@@ -87,7 +80,7 @@ pub(crate) fn parse_convert_args(args: &[String]) -> Result<ConvertArgs, String>
                 index += 2;
             }
             value if value.starts_with('-') => {
-                return Err(format!("unrecognized convert flag '{value}'"));
+                return Err(format!("unrecognized rasterize flag '{value}'"));
             }
             value => {
                 positionals.push(value.to_string());
@@ -97,13 +90,68 @@ pub(crate) fn parse_convert_args(args: &[String]) -> Result<ConvertArgs, String>
     }
 
     match positionals.as_slice() {
-        [src, dst] => Ok(ConvertArgs {
+        [src, dst] => Ok(RasterizeArgs {
             options,
             src: src.clone(),
             dst: dst.clone(),
         }),
+        [src] => Ok(RasterizeArgs {
+            options,
+            src: src.clone(),
+            dst: replace_extension(src, "png"),
+        }),
         _ => Err(crate::usage()),
     }
+}
+
+#[derive(Debug)]
+pub(crate) struct VectorizeArgs {
+    pub(crate) src: String,
+    pub(crate) dst: String,
+}
+
+pub(crate) fn parse_vectorize_args(args: &[String]) -> Result<VectorizeArgs, String> {
+    let mut positionals = Vec::new();
+
+    for arg in args {
+        if arg.starts_with('-') {
+            return Err(format!("unrecognized vectorize flag '{arg}'"));
+        }
+        positionals.push(arg.as_str());
+    }
+
+    match positionals.as_slice() {
+        [src, dst] => Ok(VectorizeArgs {
+            src: src.to_string(),
+            dst: dst.to_string(),
+        }),
+        [src] => Ok(VectorizeArgs {
+            src: src.to_string(),
+            dst: replace_extension(src, "svg"),
+        }),
+        _ => Err(crate::usage()),
+    }
+}
+
+pub(crate) fn run_vectorize(args: &[String]) -> Result<(), String> {
+    let VectorizeArgs { src, dst } = parse_vectorize_args(args)?;
+    let dst = crate::io::enumerate_if_exists(Path::new(&dst))
+        .to_string_lossy()
+        .to_string();
+    vectorize(&src, &dst)
+}
+
+pub(crate) fn run_rasterize(args: &[String]) -> Result<(), String> {
+    let RasterizeArgs { options, src, dst } = parse_rasterize_args(args)?;
+    let dst = crate::io::enumerate_if_exists(Path::new(&dst))
+        .to_string_lossy()
+        .to_string();
+    rasterize(&src, &dst, options)
+}
+
+fn replace_extension(path: &str, new_ext: &str) -> String {
+    let p = Path::new(path);
+    p.with_extension(new_ext).to_string_lossy().to_string()
 }
 
 fn parse_positive_f32(value: &str, flag: &str) -> Result<f32, String> {
@@ -134,7 +182,7 @@ fn parse_positive_u32(value: &str, flag: &str) -> Result<u32, String> {
     Ok(parsed)
 }
 
-fn convert_image_to_svg(src: &str, dst: &str) -> Result<(), String> {
+fn vectorize(src: &str, dst: &str) -> Result<(), String> {
     let src_path = Path::new(src);
     let dst_path = Path::new(dst);
     vtracer::convert_image_to_svg(src_path, dst_path, Config::default()).map_err(|e| {
@@ -148,11 +196,7 @@ fn convert_image_to_svg(src: &str, dst: &str) -> Result<(), String> {
     Ok(())
 }
 
-pub(crate) fn convert_svg_to_image(
-    src: &str,
-    dst: &str,
-    options: ConvertOptions,
-) -> Result<(), String> {
+fn rasterize(src: &str, dst: &str, options: RasterizeOptions) -> Result<(), String> {
     let src_path = Path::new(src);
     let dst_path = Path::new(dst);
     let svg_data = fs::read(src_path)
@@ -187,9 +231,9 @@ pub(crate) fn convert_svg_to_image(
     Ok(())
 }
 
-pub(crate) fn compute_render_dimensions(
+fn compute_render_dimensions(
     size: resvg::usvg::Size,
-    options: &ConvertOptions,
+    options: &RasterizeOptions,
 ) -> Result<(u32, u32, f32, f32), String> {
     let source_width = size.width();
     let source_height = size.height();
@@ -265,7 +309,7 @@ mod tests {
     }
 
     #[test]
-    fn test_convert_svg_to_image_creates_png() {
+    fn test_rasterize_creates_png() {
         let temp_root = std::env::temp_dir().join(format!(
             "simply-edit-svg-test-{}-{}",
             std::process::id(),
@@ -286,10 +330,10 @@ mod tests {
         )
         .expect("failed to write svg");
 
-        convert_svg_to_image(
+        rasterize(
             input_path.to_str().expect("invalid input path"),
             output_path.to_str().expect("invalid output path"),
-            ConvertOptions::default(),
+            RasterizeOptions::default(),
         )
         .expect("svg conversion failed");
 
@@ -407,7 +451,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_convert_args_accepts_scale_and_resolution_flags() {
+    fn test_parse_rasterize_args_accepts_scale_and_resolution_flags() {
         let args = vec![
             "-s".to_string(),
             "2.5".to_string(),
@@ -419,7 +463,7 @@ mod tests {
             "output.png".to_string(),
         ];
 
-        let parsed = parse_convert_args(&args).expect("failed to parse convert args");
+        let parsed = parse_rasterize_args(&args).expect("failed to parse rasterize args");
         assert_eq!(parsed.src, "input.svg");
         assert_eq!(parsed.dst, "output.png");
         assert_eq!(parsed.options.scale, Some(2.5));
@@ -428,9 +472,28 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_vectorize_args_accepts_positionals() {
+        let args = vec!["input.png".to_string(), "output.svg".to_string()];
+        let parsed = parse_vectorize_args(&args).expect("failed to parse vectorize args");
+        assert_eq!(parsed.src, "input.png");
+        assert_eq!(parsed.dst, "output.svg");
+    }
+
+    #[test]
+    fn test_parse_vectorize_args_rejects_flags() {
+        let args = vec![
+            "--unknown".to_string(),
+            "input.png".to_string(),
+            "output.svg".to_string(),
+        ];
+        let err = parse_vectorize_args(&args).expect_err("expected flag rejection");
+        assert!(err.contains("unrecognized vectorize flag"));
+    }
+
+    #[test]
     fn test_compute_render_dimensions_uses_scale_when_no_resolution_is_set() {
         let size = resvg::usvg::Size::from_wh(10.0, 20.0).expect("valid size");
-        let options = ConvertOptions {
+        let options = RasterizeOptions {
             scale: Some(2.0),
             width: None,
             height: None,
@@ -446,7 +509,7 @@ mod tests {
     #[test]
     fn test_compute_render_dimensions_uses_explicit_width_and_height() {
         let size = resvg::usvg::Size::from_wh(10.0, 20.0).expect("valid size");
-        let options = ConvertOptions {
+        let options = RasterizeOptions {
             scale: Some(5.0),
             width: Some(80),
             height: Some(60),

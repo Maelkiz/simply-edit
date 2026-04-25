@@ -49,6 +49,8 @@ fn run() -> Result<(), String> {
             commands::transforms::run_grayscale(&path, to_output_mode(output, "grayscale"))
         }
         cli::ParsedCommand::Convert { args } => commands::convert::run_convert(&args),
+        cli::ParsedCommand::Vectorize { args } => commands::convert::run_vectorize(&args),
+        cli::ParsedCommand::Rasterize { args } => commands::convert::run_rasterize(&args),
     }
 }
 
