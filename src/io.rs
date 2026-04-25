@@ -72,6 +72,7 @@ pub(crate) fn save_image<P: AsRef<Path>>(
             let new_height = (height as f32 * ratio) as u32;
             img = img.resize(new_width, new_height, image::imageops::FilterType::Lanczos3);
         }
+        img = image::DynamicImage::ImageRgba8(img.to_rgba8());
     }
 
     img.save(output_path)
