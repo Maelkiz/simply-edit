@@ -1,10 +1,27 @@
-use clap::{Parser, Subcommand};
+use std::path::PathBuf;
+
+use clap::{Args, Parser, Subcommand};
 
 #[derive(Parser)]
 #[command(name = "simply", about = "simply-edit", version)]
 pub(crate) struct Cli {
     #[command(subcommand)]
     pub command: Command,
+}
+
+#[derive(Debug, Clone, Args)]
+pub(crate) struct BatchArgs {
+    /// Regex pattern to filter filenames (batch mode)
+    #[arg(long)]
+    pub pattern: Option<String>,
+
+    /// Output directory for batch results
+    #[arg(long)]
+    pub output_dir: Option<PathBuf>,
+
+    /// Process subdirectories recursively (batch mode)
+    #[arg(short = 'R', long)]
+    pub recursive: bool,
 }
 
 #[derive(Debug, Subcommand)]
@@ -23,7 +40,10 @@ pub(crate) enum Command {
         #[arg(short, long)]
         replace: bool,
 
-        /// Path to image file
+        #[command(flatten)]
+        batch: BatchArgs,
+
+        /// Path to image file or directory
         path: String,
 
         /// Output path (auto-generated if omitted)
@@ -40,7 +60,10 @@ pub(crate) enum Command {
         #[arg(short, long)]
         replace: bool,
 
-        /// Path to image file
+        #[command(flatten)]
+        batch: BatchArgs,
+
+        /// Path to image file or directory
         path: String,
 
         /// Output path (auto-generated if omitted)
@@ -53,7 +76,10 @@ pub(crate) enum Command {
         #[arg(short, long)]
         replace: bool,
 
-        /// Path to image file
+        #[command(flatten)]
+        batch: BatchArgs,
+
+        /// Path to image file or directory
         path: String,
 
         /// Output path (auto-generated if omitted)
@@ -66,7 +92,10 @@ pub(crate) enum Command {
         #[arg(short, long)]
         replace: bool,
 
-        /// Path to image file
+        #[command(flatten)]
+        batch: BatchArgs,
+
+        /// Path to image file or directory
         path: String,
 
         /// Output path (auto-generated if omitted)
@@ -75,11 +104,18 @@ pub(crate) enum Command {
 
     /// Convert between image formats (PNG, JPG, ICO, SVG, WebP)
     Convert {
-        /// Source image path
+        /// Output format for batch mode (e.g. png, jpg, webp)
+        #[arg(long)]
+        format: Option<String>,
+
+        #[command(flatten)]
+        batch: BatchArgs,
+
+        /// Source image path or directory
         src: String,
 
-        /// Output path (format determined by extension)
-        dst: String,
+        /// Output path (required for single-file mode)
+        dst: Option<String>,
     },
 
     /// Convert a raster image to SVG
@@ -88,7 +124,10 @@ pub(crate) enum Command {
         #[arg(long)]
         fast: bool,
 
-        /// Source image path
+        #[command(flatten)]
+        batch: BatchArgs,
+
+        /// Source image path or directory
         src: String,
 
         /// Output SVG path (auto-generated if omitted)
@@ -109,7 +148,10 @@ pub(crate) enum Command {
         #[arg(short = 'H', long)]
         height: Option<u32>,
 
-        /// Source SVG path
+        #[command(flatten)]
+        batch: BatchArgs,
+
+        /// Source SVG path or directory
         src: String,
 
         /// Output path (auto-generated if omitted)
@@ -160,6 +202,7 @@ mod tests {
                 replace: false,
                 path,
                 output: None,
+                ..
             } => assert_eq!(path, "image.png"),
             other => panic!("unexpected: {other:?}"),
         }
@@ -264,6 +307,7 @@ mod tests {
                 replace: false,
                 path,
                 output: None,
+                ..
             } => assert_eq!(path, "image.png"),
             other => panic!("unexpected: {other:?}"),
         }
@@ -303,6 +347,7 @@ mod tests {
                 replace: false,
                 path,
                 output: None,
+                ..
             } => assert_eq!(path, "image.png"),
             other => panic!("unexpected: {other:?}"),
         }
@@ -323,7 +368,7 @@ mod tests {
     #[test]
     fn test_convert() {
         match parse(&["simply", "convert", "in.png", "out.jpg"]) {
-            Command::Convert { src, dst } => {
+            Command::Convert { src, dst: Some(dst), .. } => {
                 assert_eq!(src, "in.png");
                 assert_eq!(dst, "out.jpg");
             }
@@ -338,6 +383,7 @@ mod tests {
                 fast: false,
                 src,
                 dst: Some(dst),
+                ..
             } => {
                 assert_eq!(src, "in.png");
                 assert_eq!(dst, "out.svg");
@@ -353,6 +399,7 @@ mod tests {
                 fast: true,
                 src,
                 dst: None,
+                ..
             } => assert_eq!(src, "in.png"),
             other => panic!("unexpected: {other:?}"),
         }
@@ -367,6 +414,7 @@ mod tests {
                 height: None,
                 src,
                 dst: Some(dst),
+                ..
             } => {
                 assert_eq!(src, "in.svg");
                 assert_eq!(dst, "out.png");
@@ -395,6 +443,7 @@ mod tests {
                 height: Some(100),
                 src,
                 dst: Some(dst),
+                ..
             } => {
                 assert!((s - 2.5).abs() < f32::EPSILON);
                 assert_eq!(src, "in.svg");
@@ -414,4 +463,29 @@ mod tests {
         }
     }
 
+    #[test]
+    fn test_batch_flags_on_invert() {
+        match parse(&[
+            "simply", "invert", "--pattern", ".*\\.jpg$", "--output-dir", "/tmp/out", "--recursive", "image.png",
+        ]) {
+            Command::Invert { batch, path, .. } => {
+                assert_eq!(batch.pattern.as_deref(), Some(".*\\.jpg$"));
+                assert_eq!(batch.output_dir, Some(PathBuf::from("/tmp/out")));
+                assert!(batch.recursive);
+                assert_eq!(path, "image.png");
+            }
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_convert_with_format_flag() {
+        match parse(&["simply", "convert", "--format", "webp", "/photos"]) {
+            Command::Convert { format: Some(fmt), src, dst: None, .. } => {
+                assert_eq!(fmt, "webp");
+                assert_eq!(src, "/photos");
+            }
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
 }
