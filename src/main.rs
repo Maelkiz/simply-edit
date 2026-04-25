@@ -2,7 +2,9 @@ mod cli;
 mod commands;
 mod io;
 
-use std::env;
+use clap::Parser;
+
+use cli::{Cli, Command};
 
 enum OutputMode<'a> {
     Generated(&'a str),
@@ -18,65 +20,94 @@ fn main() {
 }
 
 fn run() -> Result<(), String> {
-    let args: Vec<String> = env::args().collect();
-    match cli::parse_command(&args)? {
-        cli::ParsedCommand::Help => {
-            println!("{}", usage());
-            Ok(())
-        }
-        cli::ParsedCommand::CommandHelp(cmd) => {
-            println!("{}", cli::command_usage(&cmd));
-            Ok(())
-        }
-        cli::ParsedCommand::Flip { path, output, axis } => commands::transforms::run_flip(
-            &path,
-            to_output_mode(output, "flip"),
-            to_flip_axis(axis),
-        ),
-        cli::ParsedCommand::Rotate {
-            mode,
+    let cli = Cli::parse();
+    match cli.command {
+        Command::Flip {
+            horizontal,
+            vertical,
+            replace,
             path,
             output,
-        } => commands::transforms::run_rotate(
-            &path,
-            to_output_mode(output, "rotate"),
-            to_rotate_degrees(mode),
-        ),
-        cli::ParsedCommand::Invert { path, output } => {
-            commands::transforms::run_invert(&path, to_output_mode(output, "invert"))
+        } => {
+            let axis = cli::flip_axis_from_flags(horizontal, vertical)?;
+            let output = output_mode(replace, output, "flip");
+            commands::transforms::run_flip(&path, output, axis)
         }
-        cli::ParsedCommand::Grayscale { path, output } => {
-            commands::transforms::run_grayscale(&path, to_output_mode(output, "grayscale"))
+        Command::Rotate {
+            angle,
+            replace,
+            path,
+            output,
+        } => {
+            let output = output_mode(replace, output, "rotate");
+            commands::transforms::run_rotate(&path, output, angle)
         }
-        cli::ParsedCommand::Convert { args } => commands::convert::run_convert(&args),
-        cli::ParsedCommand::Vectorize { args } => commands::convert::run_vectorize(&args),
-        cli::ParsedCommand::Rasterize { args } => commands::convert::run_rasterize(&args),
+        Command::Invert {
+            replace,
+            path,
+            output,
+        } => {
+            let output = output_mode(replace, output, "invert");
+            commands::transforms::run_invert(&path, output)
+        }
+        Command::Grayscale {
+            replace,
+            path,
+            output,
+        } => {
+            let output = output_mode(replace, output, "grayscale");
+            commands::transforms::run_grayscale(&path, output)
+        }
+        Command::Convert { src, dst } => {
+            commands::convert::run_convert(&[src, dst])
+        }
+        Command::Vectorize { fast, src, dst } => {
+            let mut args = Vec::new();
+            if fast {
+                args.push("--fast".to_string());
+            }
+            args.push(src);
+            if let Some(d) = dst {
+                args.push(d);
+            }
+            commands::convert::run_vectorize(&args)
+        }
+        Command::Rasterize {
+            scale,
+            width,
+            height,
+            src,
+            dst,
+        } => {
+            let mut args = Vec::new();
+            if let Some(s) = scale {
+                args.push("-s".to_string());
+                args.push(s.to_string());
+            }
+            if let Some(w) = width {
+                args.push("-w".to_string());
+                args.push(w.to_string());
+            }
+            if let Some(h) = height {
+                args.push("-h".to_string());
+                args.push(h.to_string());
+            }
+            args.push(src);
+            if let Some(d) = dst {
+                args.push(d);
+            }
+            commands::convert::run_rasterize(&args)
+        }
     }
 }
 
-fn usage() -> String {
-    cli::usage()
-}
-
-fn to_output_mode<'a>(output: cli::ParsedOutput, generated_suffix: &'a str) -> OutputMode<'a> {
-    match output {
-        cli::ParsedOutput::Generated => OutputMode::Generated(generated_suffix),
-        cli::ParsedOutput::Explicit(path) => OutputMode::Explicit(path),
-        cli::ParsedOutput::Replace(target) => OutputMode::Replace(target),
-    }
-}
-
-fn to_flip_axis(axis: cli::ParsedFlipAxis) -> Option<commands::transforms::FlipAxis> {
-    match axis {
-        cli::ParsedFlipAxis::Prompt => None,
-        cli::ParsedFlipAxis::Horizontal => Some(commands::transforms::FlipAxis::Horizontal),
-        cli::ParsedFlipAxis::Vertical => Some(commands::transforms::FlipAxis::Vertical),
-    }
-}
-
-fn to_rotate_degrees(mode: cli::ParsedRotateMode) -> Option<u16> {
-    match mode {
-        cli::ParsedRotateMode::Prompt => None,
-        cli::ParsedRotateMode::Explicit(degrees) => Some(degrees),
+fn output_mode<'a>(replace: bool, output: Option<String>, suffix: &'a str) -> OutputMode<'a> {
+    if replace {
+        OutputMode::Replace(output)
+    } else {
+        match output {
+            Some(path) => OutputMode::Explicit(path),
+            None => OutputMode::Generated(suffix),
+        }
     }
 }

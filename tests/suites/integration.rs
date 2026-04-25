@@ -113,6 +113,7 @@ fn test_rotate_explicit_output_mode() {
 
     let output = run(&[
         "rotate",
+        "--angle",
         "90",
         input.to_str().expect("valid input path"),
         out.to_str().expect("valid output path"),
@@ -207,7 +208,7 @@ fn test_rasterize_svg_to_png_with_height_preserves_aspect_ratio() {
 
     let output = run(&[
         "rasterize",
-        "-h",
+        "-H",
         "15",
         src.to_str().expect("valid source path"),
         dst.to_str().expect("valid destination path"),
@@ -230,7 +231,7 @@ fn test_rasterize_svg_to_png_with_width_and_height() {
         "rasterize",
         "-w",
         "12",
-        "-h",
+        "-H",
         "9",
         src.to_str().expect("valid source path"),
         dst.to_str().expect("valid destination path"),

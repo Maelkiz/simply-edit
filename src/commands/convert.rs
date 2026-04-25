@@ -29,7 +29,7 @@ pub(crate) fn run_convert(args: &[String]) -> Result<(), String> {
 
     let (src, dst) = match positionals.as_slice() {
         [src, dst] => (*src, *dst),
-        _ => return Err(crate::usage()),
+        _ => return Err("usage: simply convert <src> <dst>".to_string()),
     };
 
     let dst = crate::io::enumerate_if_exists(Path::new(dst))
@@ -112,7 +112,7 @@ pub(crate) fn parse_rasterize_args(args: &[String]) -> Result<RasterizeArgs, Str
             src: src.clone(),
             dst: replace_extension(src, "png"),
         }),
-        _ => Err(crate::usage()),
+        _ => Err("usage: simply convert <src> <dst>".to_string()),
     }
 }
 
@@ -155,7 +155,7 @@ pub(crate) fn parse_vectorize_args(args: &[String]) -> Result<VectorizeArgs, Str
             dst: replace_extension(src, "svg"),
             fast,
         }),
-        _ => Err(crate::usage()),
+        _ => Err("usage: simply convert <src> <dst>".to_string()),
     }
 }
 

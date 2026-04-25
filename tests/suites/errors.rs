@@ -80,12 +80,12 @@ fn test_flip_unknown_flag_rejected() {
     ]);
 
     assert!(!output.status.success());
-    assert!(stderr(&output).contains("unrecognized flag '--fast'"));
+    assert!(stderr(&output).contains("--fast"));
 }
 
 #[test]
 fn test_rotate_missing_path_prints_usage() {
-    let output = run(&["rotate", "90"]);
+    let output = run(&["rotate"]);
     assert!(!output.status.success());
     assert!(stderr(&output).contains("Usage:"));
 }
@@ -94,14 +94,13 @@ fn test_rotate_missing_path_prints_usage() {
 fn test_rotate_invalid_degrees_rejected() {
     let temp = TestDir::new("simply-phase1-errors");
     let input = temp.path().join("input.png");
-    let output_path = temp.path().join("out.png");
     create_png(&input, 2, 2, [255, 0, 0, 255]);
 
     let output = run(&[
         "rotate",
+        "--angle",
         "45",
         input.to_str().expect("valid input path"),
-        output_path.to_str().expect("valid output path"),
     ]);
 
     assert!(!output.status.success());
@@ -112,14 +111,13 @@ fn test_rotate_invalid_degrees_rejected() {
 fn test_rotate_non_numeric_degrees_rejected() {
     let temp = TestDir::new("simply-phase1-errors");
     let input = temp.path().join("input.png");
-    let output_path = temp.path().join("out.png");
     create_png(&input, 2, 2, [255, 0, 0, 255]);
 
     let output = run(&[
         "rotate",
+        "--angle",
         "abc",
         input.to_str().expect("valid input path"),
-        output_path.to_str().expect("valid output path"),
     ]);
 
     assert!(!output.status.success());
@@ -145,21 +143,24 @@ fn test_rotate_interactive_non_tty_invalid_input_rejected() {
 fn test_rasterize_missing_value_for_scale_rejected() {
     let output = run(&["rasterize", "-s"]);
     assert!(!output.status.success());
-    assert!(stderr(&output).contains("missing value for --scale"));
+    let err = stderr(&output);
+    assert!(err.contains("--scale") || err.contains("-s"));
 }
 
 #[test]
 fn test_rasterize_missing_value_for_width_rejected() {
     let output = run(&["rasterize", "-w"]);
     assert!(!output.status.success());
-    assert!(stderr(&output).contains("missing value for --width"));
+    let err = stderr(&output);
+    assert!(err.contains("--width") || err.contains("-w"));
 }
 
 #[test]
 fn test_rasterize_invalid_scale_rejected() {
     let output = run(&["rasterize", "-s", "abc", "in.svg", "out.png"]);
     assert!(!output.status.success());
-    assert!(stderr(&output).contains("invalid value 'abc' for --scale"));
+    let err = stderr(&output);
+    assert!(err.contains("abc"));
 }
 
 #[test]
@@ -173,28 +174,27 @@ fn test_rasterize_zero_width_rejected() {
 fn test_rasterize_negative_scale_rejected() {
     let output = run(&["rasterize", "-s", "-5", "in.svg", "out.png"]);
     assert!(!output.status.success());
-    assert!(stderr(&output).contains("invalid value '-5' for --scale"));
 }
 
 #[test]
 fn test_rasterize_unknown_flag_rejected() {
     let output = run(&["rasterize", "--unknown", "in.svg", "out.png"]);
     assert!(!output.status.success());
-    assert!(stderr(&output).contains("unrecognized rasterize flag '--unknown'"));
+    assert!(stderr(&output).contains("--unknown"));
 }
 
 #[test]
 fn test_convert_unknown_flag_rejected() {
     let output = run(&["convert", "--unknown", "in.svg", "out.png"]);
     assert!(!output.status.success());
-    assert!(stderr(&output).contains("unrecognized convert flag '--unknown'"));
+    assert!(stderr(&output).contains("--unknown"));
 }
 
 #[test]
 fn test_vectorize_unknown_flag_rejected() {
     let output = run(&["vectorize", "--unknown", "in.png", "out.svg"]);
     assert!(!output.status.success());
-    assert!(stderr(&output).contains("unrecognized vectorize flag '--unknown'"));
+    assert!(stderr(&output).contains("--unknown"));
 }
 
 #[test]

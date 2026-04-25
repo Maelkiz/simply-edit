@@ -124,10 +124,6 @@ pub(crate) fn enumerate_if_exists(path: &Path) -> PathBuf {
     }
 }
 
-pub(crate) fn is_replace_flag(value: &str) -> bool {
-    matches!(value, "-r" | "--replace")
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -170,42 +166,6 @@ mod tests {
         let path_str = path.to_string_lossy();
         assert!(path_str.contains("simple-edit-tmp"));
         assert!(path_str.contains("dir/"));
-    }
-
-    #[test]
-    fn test_is_replace_flag_short() {
-        assert!(is_replace_flag("-r"));
-    }
-
-    #[test]
-    fn test_is_replace_flag_long() {
-        assert!(is_replace_flag("--replace"));
-    }
-
-    #[test]
-    fn test_is_replace_flag_rejects_other_short() {
-        assert!(!is_replace_flag("-f"));
-        assert!(!is_replace_flag("-x"));
-    }
-
-    #[test]
-    fn test_is_replace_flag_rejects_other_long() {
-        assert!(!is_replace_flag("--foo"));
-        assert!(!is_replace_flag("--other"));
-    }
-
-    #[test]
-    fn test_is_replace_flag_rejects_close_matches() {
-        assert!(!is_replace_flag("replace"));
-        assert!(!is_replace_flag("-replace"));
-        assert!(!is_replace_flag("--r"));
-    }
-
-    #[test]
-    fn test_is_replace_flag_case_sensitive() {
-        assert!(!is_replace_flag("-R"));
-        assert!(!is_replace_flag("--Replace"));
-        assert!(!is_replace_flag("--REPLACE"));
     }
 
     fn temp_dir(name: &str) -> PathBuf {

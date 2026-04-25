@@ -94,7 +94,7 @@ fn test_rasterize_height_minimum_value_one_is_valid() {
 
     let output = run(&[
         "rasterize",
-        "-h",
+        "-H",
         "1",
         src.to_str().expect("valid source path"),
         dst.to_str().expect("valid destination path"),
@@ -130,6 +130,7 @@ fn test_rotate_rejects_overflow_degrees_value() {
 
     let output = run(&[
         "rotate",
+        "--angle",
         "999999999999999",
         input.to_str().expect("valid input path"),
         output_path.to_str().expect("valid output path"),

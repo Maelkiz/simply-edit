@@ -39,6 +39,7 @@ fn test_rotate_90_swaps_non_square_dimensions() {
 
     let result = run(&[
         "rotate",
+        "--angle",
         "90",
         input.to_str().expect("valid input path"),
         output.to_str().expect("valid output path"),
