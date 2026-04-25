@@ -107,14 +107,15 @@ fn test_generated_mode_uses_expected_suffix_name() {
 }
 
 #[test]
-fn test_explicit_mode_overwrites_existing_file() {
+fn test_explicit_mode_enumerates_existing_file() {
     let temp = TestDir::new("simply-phase2");
     let input = temp.path().join("input.png");
     let output = temp.path().join("output.png");
+    let enumerated = temp.path().join("output1.png");
 
     create_png(&input, 1, 1, [10, 20, 30, 255]);
     create_png(&output, 1, 1, [250, 240, 230, 255]);
-    let before = pixel(&output, 0, 0);
+    let original = pixel(&output, 0, 0);
 
     let result = run(&[
         "invert",
@@ -123,9 +124,9 @@ fn test_explicit_mode_overwrites_existing_file() {
     ]);
     assert!(result.status.success());
 
-    let after = pixel(&output, 0, 0);
-    assert_ne!(before, after);
-    assert_eq!(after, [245, 235, 225, 255]);
+    assert_eq!(pixel(&output, 0, 0), original);
+    assert!(enumerated.exists());
+    assert_eq!(pixel(&enumerated, 0, 0), [245, 235, 225, 255]);
 }
 
 #[test]

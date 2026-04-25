@@ -7,6 +7,9 @@ use vtracer::Config;
 
 pub(crate) fn run_convert(args: &[String]) -> Result<(), String> {
     let ConvertArgs { options, src, dst } = parse_convert_args(args)?;
+    let dst = crate::io::enumerate_if_exists(Path::new(&dst))
+        .to_string_lossy()
+        .to_string();
 
     if is_svg_path(&dst) {
         if !options.is_empty() {

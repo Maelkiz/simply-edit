@@ -14,16 +14,18 @@ pub(crate) fn save_transformed_image(
     match output {
         OutputMode::Generated(suffix) => {
             let output_path = output_path_with_suffix(source_path, suffix);
+            let output_path = enumerate_if_exists(&output_path);
             save_image(img, output_path.as_path())?;
             Ok(output_path.to_string_lossy().to_string())
         }
         OutputMode::Explicit(output_path) => {
-            save_image(img, output_path.as_str())?;
-            Ok(output_path)
+            let output_path = enumerate_if_exists(Path::new(&output_path));
+            save_image(img, output_path.as_path())?;
+            Ok(output_path.to_string_lossy().to_string())
         }
         OutputMode::Replace => {
             let temp_path = replacement_temp_path(source_path, default_suffix);
-            save_image(img, temp_path.as_path())?;
+            save_image_replacing(img, temp_path.as_path())?;
             fs::rename(&temp_path, source_path).map_err(|e| {
                 format!(
                     "failed to replace image '{}' with '{}': {e}",
@@ -34,6 +36,13 @@ pub(crate) fn save_transformed_image(
             Ok(source_path.to_string())
         }
     }
+}
+
+pub(crate) fn save_image_replacing<P: AsRef<Path>>(
+    img: image::DynamicImage,
+    output_path: P,
+) -> Result<(), String> {
+    save_image(img, output_path)
 }
 
 pub(crate) fn save_image<P: AsRef<Path>>(
@@ -88,6 +97,29 @@ pub(crate) fn output_path_with_suffix(input: &str, suffix: &str) -> PathBuf {
         .unwrap_or("output");
     let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("png");
     parent.join(format!("{stem}_{suffix}.{ext}"))
+}
+
+pub(crate) fn enumerate_if_exists(path: &Path) -> PathBuf {
+    if !path.exists() {
+        return path.to_path_buf();
+    }
+    let parent = path.parent().unwrap_or_else(|| Path::new("."));
+    let stem = path
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("output");
+    let ext = path.extension().and_then(|e| e.to_str());
+    let mut counter = 1u32;
+    loop {
+        let candidate = match ext {
+            Some(ext) => parent.join(format!("{stem}{counter}.{ext}")),
+            None => parent.join(format!("{stem}{counter}")),
+        };
+        if !candidate.exists() {
+            return candidate;
+        }
+        counter += 1;
+    }
 }
 
 pub(crate) fn is_replace_flag(value: &str) -> bool {
@@ -172,5 +204,54 @@ mod tests {
         assert!(!is_replace_flag("-R"));
         assert!(!is_replace_flag("--Replace"));
         assert!(!is_replace_flag("--REPLACE"));
+    }
+
+    fn temp_dir(name: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!(
+            "simply-edit-{name}-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("system time before unix epoch")
+                .as_nanos()
+        ));
+        fs::create_dir_all(&dir).expect("failed to create temp dir");
+        dir
+    }
+
+    #[test]
+    fn test_enumerate_if_exists_returns_original_when_no_conflict() {
+        let dir = temp_dir("enum-no-conflict");
+        let path = dir.join("image.png");
+        assert_eq!(enumerate_if_exists(&path), path);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_enumerate_if_exists_returns_stem1_when_original_exists() {
+        let dir = temp_dir("enum-one");
+        let path = dir.join("image.png");
+        fs::write(&path, b"").expect("failed to write");
+        assert_eq!(enumerate_if_exists(&path), dir.join("image1.png"));
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_enumerate_if_exists_skips_existing_numbered_files() {
+        let dir = temp_dir("enum-skip");
+        let path = dir.join("image.png");
+        fs::write(&path, b"").expect("failed to write");
+        fs::write(dir.join("image1.png"), b"").expect("failed to write");
+        assert_eq!(enumerate_if_exists(&path), dir.join("image2.png"));
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_enumerate_if_exists_handles_no_extension() {
+        let dir = temp_dir("enum-noext");
+        let path = dir.join("imagefile");
+        fs::write(&path, b"").expect("failed to write");
+        assert_eq!(enumerate_if_exists(&path), dir.join("imagefile1"));
+        let _ = fs::remove_dir_all(&dir);
     }
 }
