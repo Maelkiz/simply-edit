@@ -3,6 +3,7 @@ use std::io::IsTerminal;
 use std::path::{Path, PathBuf};
 
 use indicatif::{ProgressBar, ProgressStyle};
+use rayon::prelude::*;
 use regex::Regex;
 
 use crate::cli::BatchArgs;
@@ -118,7 +119,7 @@ pub(crate) fn run_batch<F>(
     process_file: F,
 ) -> Result<BatchResult, String>
 where
-    F: Fn(&Path) -> Result<String, String>,
+    F: Fn(&Path) -> Result<String, String> + Sync + Send,
 {
     run_batch_with_extensions(dir, options, RASTER_EXTENSIONS, process_file)
 }
@@ -129,7 +130,7 @@ pub(crate) fn run_batch_svg<F>(
     process_file: F,
 ) -> Result<BatchResult, String>
 where
-    F: Fn(&Path) -> Result<String, String>,
+    F: Fn(&Path) -> Result<String, String> + Sync + Send,
 {
     run_batch_with_extensions(dir, options, SVG_EXTENSIONS, process_file)
 }
@@ -141,7 +142,7 @@ fn run_batch_with_extensions<F>(
     process_file: F,
 ) -> Result<BatchResult, String>
 where
-    F: Fn(&Path) -> Result<String, String>,
+    F: Fn(&Path) -> Result<String, String> + Sync + Send,
 {
     if !dir.is_dir() {
         return Err(format!("'{}' is not a directory", dir.display()));
@@ -158,18 +159,28 @@ where
 
     let pb = create_progress_bar(files.len() as u64);
 
-    let mut succeeded = 0usize;
-    let mut failed: Vec<(PathBuf, String)> = Vec::new();
-
-    for file in &files {
-        match process_file(file) {
-            Ok(_) => succeeded += 1,
-            Err(e) => failed.push((file.clone(), e)),
-        }
-        pb.inc(1);
-    }
+    let results: Vec<Result<(), (PathBuf, String)>> = files
+        .par_iter()
+        .map(|file| {
+            let res = process_file(file);
+            pb.inc(1);
+            match res {
+                Ok(_) => Ok(()),
+                Err(e) => Err((file.clone(), e)),
+            }
+        })
+        .collect();
 
     pb.finish_and_clear();
+
+    let mut succeeded = 0usize;
+    let mut failed: Vec<(PathBuf, String)> = Vec::new();
+    for r in results {
+        match r {
+            Ok(()) => succeeded += 1,
+            Err(pair) => failed.push(pair),
+        }
+    }
 
     Ok(BatchResult { succeeded, failed })
 }

@@ -1731,6 +1731,7 @@ dependencies = [
  "indicatif",
  "inquire",
  "palette",
+ "rayon",
  "regex",
  "resvg",
  "vtracer",
