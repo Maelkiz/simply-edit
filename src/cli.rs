@@ -289,7 +289,14 @@ mod tests {
 
     #[test]
     fn test_rotate_replace() {
-        match parse(&["simply", "rotate", "--replace", "--angle", "180", "image.png"]) {
+        match parse(&[
+            "simply",
+            "rotate",
+            "--replace",
+            "--angle",
+            "180",
+            "image.png",
+        ]) {
             Command::Rotate {
                 angle: Some(180),
                 replace: true,
@@ -368,7 +375,11 @@ mod tests {
     #[test]
     fn test_convert() {
         match parse(&["simply", "convert", "in.png", "out.jpg"]) {
-            Command::Convert { src, dst: Some(dst), .. } => {
+            Command::Convert {
+                src,
+                dst: Some(dst),
+                ..
+            } => {
                 assert_eq!(src, "in.png");
                 assert_eq!(dst, "out.jpg");
             }
@@ -456,9 +467,7 @@ mod tests {
     #[test]
     fn test_rasterize_no_output() {
         match parse(&["simply", "rasterize", "in.svg"]) {
-            Command::Rasterize {
-                src, dst: None, ..
-            } => assert_eq!(src, "in.svg"),
+            Command::Rasterize { src, dst: None, .. } => assert_eq!(src, "in.svg"),
             other => panic!("unexpected: {other:?}"),
         }
     }
@@ -466,7 +475,14 @@ mod tests {
     #[test]
     fn test_batch_flags_on_invert() {
         match parse(&[
-            "simply", "invert", "--pattern", ".*\\.jpg$", "--output-dir", "/tmp/out", "--recursive", "image.png",
+            "simply",
+            "invert",
+            "--pattern",
+            ".*\\.jpg$",
+            "--output-dir",
+            "/tmp/out",
+            "--recursive",
+            "image.png",
         ]) {
             Command::Invert { batch, path, .. } => {
                 assert_eq!(batch.pattern.as_deref(), Some(".*\\.jpg$"));
@@ -481,7 +497,12 @@ mod tests {
     #[test]
     fn test_convert_with_format_flag() {
         match parse(&["simply", "convert", "--format", "webp", "/photos"]) {
-            Command::Convert { format: Some(fmt), src, dst: None, .. } => {
+            Command::Convert {
+                format: Some(fmt),
+                src,
+                dst: None,
+                ..
+            } => {
                 assert_eq!(fmt, "webp");
                 assert_eq!(src, "/photos");
             }

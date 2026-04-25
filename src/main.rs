@@ -37,7 +37,7 @@ fn run() -> Result<(), String> {
             if is_batch(&path, &batch) {
                 if axis.is_none() {
                     return Err(
-                        "flip: --horizontal or --vertical required in batch mode".to_string(),
+                        "flip: --horizontal or --vertical required in batch mode".to_string()
                     );
                 }
                 let axis = axis.unwrap();
@@ -49,8 +49,7 @@ fn run() -> Result<(), String> {
                         commands::transforms::FlipAxis::Horizontal => (img.fliph(), "fliph"),
                         commands::transforms::FlipAxis::Vertical => (img.flipv(), "flipv"),
                     };
-                    let out_path =
-                        batch::resolve_output_path(file, suffix, &options)?;
+                    let out_path = batch::resolve_output_path(file, suffix, &options)?;
                     io::save_image(flipped, &out_path)?;
                     Ok(out_path.to_string_lossy().to_string())
                 })?;
@@ -81,13 +80,10 @@ fn run() -> Result<(), String> {
                         90 => img.rotate90(),
                         180 => img.rotate180(),
                         270 => img.rotate270(),
-                        _ => {
-                            return Err(format!("invalid rotation '{deg}': use 90, 180, or 270"))
-                        }
+                        _ => return Err(format!("invalid rotation '{deg}': use 90, 180, or 270")),
                     };
                     let suffix = format!("rotate{deg}");
-                    let out_path =
-                        batch::resolve_output_path(file, &suffix, &options)?;
+                    let out_path = batch::resolve_output_path(file, &suffix, &options)?;
                     io::save_image(rotated, &out_path)?;
                     Ok(out_path.to_string_lossy().to_string())
                 })?;
@@ -110,8 +106,7 @@ fn run() -> Result<(), String> {
                     let img = image::open(file)
                         .map_err(|e| format!("failed to open image '{}': {e}", file.display()))?;
                     let inverted = commands::transforms::invert_colors(img);
-                    let out_path =
-                        batch::resolve_output_path(file, "invert", &options)?;
+                    let out_path = batch::resolve_output_path(file, "invert", &options)?;
                     io::save_image(inverted, &out_path)?;
                     Ok(out_path.to_string_lossy().to_string())
                 })?;
@@ -134,8 +129,7 @@ fn run() -> Result<(), String> {
                     let img = image::open(file)
                         .map_err(|e| format!("failed to open image '{}': {e}", file.display()))?;
                     let gray = img.grayscale();
-                    let out_path =
-                        batch::resolve_output_path(file, "grayscale", &options)?;
+                    let out_path = batch::resolve_output_path(file, "grayscale", &options)?;
                     io::save_image(gray, &out_path)?;
                     Ok(out_path.to_string_lossy().to_string())
                 })?;
@@ -158,8 +152,7 @@ fn run() -> Result<(), String> {
                 })?;
                 let options = batch::to_batch_options(&batch)?;
                 let result = batch::run_batch(Path::new(&src), &options, |file| {
-                    let out_path =
-                        batch::resolve_output_path_with_ext(file, &fmt, &options)?;
+                    let out_path = batch::resolve_output_path_with_ext(file, &fmt, &options)?;
                     let out_str = out_path.to_string_lossy().to_string();
                     let src_str = file.to_string_lossy().to_string();
                     commands::convert::run_convert(&[src_str, out_str.clone()])?;
@@ -184,8 +177,7 @@ fn run() -> Result<(), String> {
             if is_batch(&src, &batch) {
                 let options = batch::to_batch_options(&batch)?;
                 let result = batch::run_batch(Path::new(&src), &options, |file| {
-                    let out_path =
-                        batch::resolve_output_path_with_ext(file, "svg", &options)?;
+                    let out_path = batch::resolve_output_path_with_ext(file, "svg", &options)?;
                     let out_str = out_path.to_string_lossy().to_string();
                     let src_str = file.to_string_lossy().to_string();
                     let mut args = Vec::new();
@@ -221,31 +213,28 @@ fn run() -> Result<(), String> {
         } => {
             if is_batch(&src, &batch) {
                 let options = batch::to_batch_options(&batch)?;
-                let result =
-                    batch::run_batch_svg(Path::new(&src), &options, |file| {
-                        let out_path = batch::resolve_output_path_with_ext(
-                            file, "png", &options,
-                        )?;
-                        let out_str = out_path.to_string_lossy().to_string();
-                        let src_str = file.to_string_lossy().to_string();
-                        let mut args = Vec::new();
-                        if let Some(s) = scale {
-                            args.push("-s".to_string());
-                            args.push(s.to_string());
-                        }
-                        if let Some(w) = width {
-                            args.push("-w".to_string());
-                            args.push(w.to_string());
-                        }
-                        if let Some(h) = height {
-                            args.push("-h".to_string());
-                            args.push(h.to_string());
-                        }
-                        args.push(src_str);
-                        args.push(out_str.clone());
-                        commands::convert::run_rasterize(&args)?;
-                        Ok(out_str)
-                    })?;
+                let result = batch::run_batch_svg(Path::new(&src), &options, |file| {
+                    let out_path = batch::resolve_output_path_with_ext(file, "png", &options)?;
+                    let out_str = out_path.to_string_lossy().to_string();
+                    let src_str = file.to_string_lossy().to_string();
+                    let mut args = Vec::new();
+                    if let Some(s) = scale {
+                        args.push("-s".to_string());
+                        args.push(s.to_string());
+                    }
+                    if let Some(w) = width {
+                        args.push("-w".to_string());
+                        args.push(w.to_string());
+                    }
+                    if let Some(h) = height {
+                        args.push("-h".to_string());
+                        args.push(h.to_string());
+                    }
+                    args.push(src_str);
+                    args.push(out_str.clone());
+                    commands::convert::run_rasterize(&args)?;
+                    Ok(out_str)
+                })?;
                 batch::print_summary(&result);
                 Ok(())
             } else {
@@ -273,7 +262,10 @@ fn run() -> Result<(), String> {
 }
 
 fn is_batch(path: &str, batch: &BatchArgs) -> bool {
-    Path::new(path).is_dir() || batch.pattern.is_some() || batch.output_dir.is_some() || batch.recursive
+    Path::new(path).is_dir()
+        || batch.pattern.is_some()
+        || batch.output_dir.is_some()
+        || batch.recursive
 }
 
 fn output_mode<'a>(replace: bool, output: Option<String>, suffix: &'a str) -> OutputMode<'a> {

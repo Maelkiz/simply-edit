@@ -78,11 +78,7 @@ fn test_invert_replace_mode() {
     let before = image::open(&input).expect("failed to load initial image");
     let before_px = before.to_rgba8().get_pixel(0, 0).0;
 
-    let output = run(&[
-        "invert",
-        "-r",
-        input.to_str().expect("valid input path"),
-    ]);
+    let output = run(&["invert", "-r", input.to_str().expect("valid input path")]);
     assert!(output.status.success());
     assert!(input.exists());
 
@@ -133,7 +129,10 @@ fn test_rotate_interactive_generated_output_mode() {
     let generated = temp.path().join("img_rotate180.png");
     create_png(&input, 3, 2, [0, 180, 180, 255]);
 
-    let output = run_with_stdin(&["rotate", input.to_str().expect("valid input path")], "2\n");
+    let output = run_with_stdin(
+        &["rotate", input.to_str().expect("valid input path")],
+        "2\n",
+    );
     assert!(output.status.success());
     assert!(generated.exists());
 

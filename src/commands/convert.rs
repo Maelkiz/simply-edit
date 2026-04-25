@@ -218,16 +218,13 @@ fn vectorize(src: &str, dst: &str, fast: bool) -> Result<(), String> {
     };
     let spinner = start_spinner("Vectorizing image...");
 
-    let result =
-        vtracer::convert_image_to_svg(src_path, dst_path, config).map_err(
-            |e| {
-                format!(
-                    "failed to vectorize image '{}' to '{}': {e}",
-                    src_path.display(),
-                    dst_path.display()
-                )
-            },
-        );
+    let result = vtracer::convert_image_to_svg(src_path, dst_path, config).map_err(|e| {
+        format!(
+            "failed to vectorize image '{}' to '{}': {e}",
+            src_path.display(),
+            dst_path.display()
+        )
+    });
 
     if let Some(pb) = spinner {
         pb.finish_and_clear();

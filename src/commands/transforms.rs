@@ -53,19 +53,17 @@ fn prompt_flip_axis() -> Result<FlipAxis, String> {
         return prompt_flip_axis_non_tty();
     }
 
-    let mode = CustomType::<u8>::new(
-        "Choose flip direction:\n (1) Horizontal\n (2) Vertical\n",
-    )
-    .with_error_message("Please enter 1 or 2")
-    .with_validator(|value: &u8| {
-        if matches!(*value, 1..=2) {
-            Ok(Validation::Valid)
-        } else {
-            Ok(Validation::Invalid("Enter 1 or 2".into()))
-        }
-    })
-    .prompt()
-    .map_err(|e| format!("failed to read flip direction: {e}"))?;
+    let mode = CustomType::<u8>::new("Choose flip direction:\n (1) Horizontal\n (2) Vertical\n")
+        .with_error_message("Please enter 1 or 2")
+        .with_validator(|value: &u8| {
+            if matches!(*value, 1..=2) {
+                Ok(Validation::Valid)
+            } else {
+                Ok(Validation::Invalid("Enter 1 or 2".into()))
+            }
+        })
+        .prompt()
+        .map_err(|e| format!("failed to read flip direction: {e}"))?;
 
     match mode {
         1 => Ok(FlipAxis::Horizontal),

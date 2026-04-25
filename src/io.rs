@@ -59,7 +59,11 @@ pub(crate) fn save_image<P: AsRef<Path>>(
 
     match ext.as_str() {
         "jpg" | "jpeg" | "png" | "ico" | "webp" => {}
-        _ => return Err(format!("unsupported format '{ext}': use jpg, png, ico, or webp")),
+        _ => {
+            return Err(format!(
+                "unsupported format '{ext}': use jpg, png, ico, or webp"
+            ));
+        }
     };
 
     // Resize for ICO format (max 256x256 pixels)

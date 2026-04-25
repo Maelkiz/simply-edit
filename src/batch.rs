@@ -17,6 +17,7 @@ pub(crate) struct BatchOptions {
     pub recursive: bool,
 }
 
+#[derive(Debug)]
 pub(crate) struct BatchResult {
     pub succeeded: usize,
     pub failed: Vec<(PathBuf, String)>,
@@ -25,21 +26,18 @@ pub(crate) struct BatchResult {
 pub(crate) fn to_batch_options(args: &BatchArgs) -> Result<BatchOptions, String> {
     let pattern = match &args.pattern {
         Some(pat) => {
-            let re = Regex::new(pat).map_err(|e| format!("invalid --pattern regex '{pat}': {e}"))?;
+            let re =
+                Regex::new(pat).map_err(|e| format!("invalid --pattern regex '{pat}': {e}"))?;
             Some(re)
         }
         None => None,
     };
 
-    if let Some(dir) = &args.output_dir {
-        if !dir.exists() {
-            fs::create_dir_all(dir).map_err(|e| {
-                format!(
-                    "failed to create output directory '{}': {e}",
-                    dir.display()
-                )
-            })?;
-        }
+    if let Some(dir) = &args.output_dir
+        && !dir.exists()
+    {
+        fs::create_dir_all(dir)
+            .map_err(|e| format!("failed to create output directory '{}': {e}", dir.display()))?;
     }
 
     Ok(BatchOptions {
@@ -98,10 +96,7 @@ fn walk_dir(
         }
 
         if let Some(re) = pattern {
-            let filename = path
-                .file_name()
-                .and_then(|n| n.to_str())
-                .unwrap_or("");
+            let filename = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
             if !re.is_match(filename) {
                 continue;
             }
@@ -206,15 +201,15 @@ pub(crate) fn resolve_output_path(
         .file_stem()
         .and_then(|s| s.to_str())
         .unwrap_or("output");
-    let ext = input
-        .extension()
-        .and_then(|e| e.to_str())
-        .unwrap_or("png");
+    let ext = input.extension().and_then(|e| e.to_str()).unwrap_or("png");
     let filename = format!("{stem}_{suffix}.{ext}");
 
     let dir = match &options.output_dir {
         Some(d) => d.clone(),
-        None => input.parent().unwrap_or_else(|| Path::new(".")).to_path_buf(),
+        None => input
+            .parent()
+            .unwrap_or_else(|| Path::new("."))
+            .to_path_buf(),
     };
 
     Ok(dir.join(filename))
@@ -233,7 +228,10 @@ pub(crate) fn resolve_output_path_with_ext(
 
     let dir = match &options.output_dir {
         Some(d) => d.clone(),
-        None => input.parent().unwrap_or_else(|| Path::new(".")).to_path_buf(),
+        None => input
+            .parent()
+            .unwrap_or_else(|| Path::new("."))
+            .to_path_buf(),
     };
 
     Ok(dir.join(filename))
@@ -439,5 +437,199 @@ mod tests {
             recursive: false,
         };
         assert!(to_batch_options(&args).is_err());
+    }
+
+    #[test]
+    fn test_collect_files_no_matching_extension() {
+        let dir = temp_dir("collect-nomatch-ext");
+        touch(&dir, "readme.txt");
+        touch(&dir, "notes.md");
+        touch(&dir, "data.csv");
+
+        let files = collect_files(&dir, false, None, RASTER_EXTENSIONS).unwrap();
+        assert!(files.is_empty());
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_collect_files_regex_matches_none() {
+        let dir = temp_dir("collect-nomatch-regex");
+        touch(&dir, "alpha.png");
+        touch(&dir, "beta.jpg");
+
+        let re = Regex::new(r"^gamma").unwrap();
+        let files = collect_files(&dir, false, Some(&re), RASTER_EXTENSIONS).unwrap();
+        assert!(files.is_empty());
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_collect_files_case_insensitive_extension() {
+        let dir = temp_dir("collect-case");
+        touch(&dir, "photo.PNG");
+        touch(&dir, "shot.JpG");
+
+        let files = collect_files(&dir, false, None, RASTER_EXTENSIONS).unwrap();
+        assert_eq!(files.len(), 2);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_collect_files_recursive_deep_nesting() {
+        let dir = temp_dir("collect-deep");
+        let sub1 = dir.join("a");
+        let sub2 = sub1.join("b");
+        let sub3 = sub2.join("c");
+        fs::create_dir_all(&sub3).unwrap();
+        touch(&dir, "root.png");
+        touch(&sub1, "level1.png");
+        touch(&sub2, "level2.png");
+        touch(&sub3, "level3.png");
+
+        let files = collect_files(&dir, true, None, RASTER_EXTENSIONS).unwrap();
+        assert_eq!(files.len(), 4);
+
+        let files_flat = collect_files(&dir, false, None, RASTER_EXTENSIONS).unwrap();
+        assert_eq!(files_flat.len(), 1);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_run_batch_all_succeed() {
+        let dir = temp_dir("batch-allok");
+        touch(&dir, "a.png");
+        touch(&dir, "b.jpg");
+        touch(&dir, "c.webp");
+
+        let options = BatchOptions {
+            pattern: None,
+            output_dir: None,
+            recursive: false,
+        };
+        let result = run_batch(&dir, &options, |_| Ok("done".to_string())).unwrap();
+        assert_eq!(result.succeeded, 3);
+        assert!(result.failed.is_empty());
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_run_batch_all_fail() {
+        let dir = temp_dir("batch-allfail");
+        touch(&dir, "x.png");
+        touch(&dir, "y.png");
+
+        let options = BatchOptions {
+            pattern: None,
+            output_dir: None,
+            recursive: false,
+        };
+        let result = run_batch(&dir, &options, |_| Err("boom".to_string())).unwrap();
+        assert_eq!(result.succeeded, 0);
+        assert_eq!(result.failed.len(), 2);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_run_batch_svg_filters_svg_only() {
+        let dir = temp_dir("batch-svg-filter");
+        touch(&dir, "icon.svg");
+        touch(&dir, "photo.png");
+        touch(&dir, "pic.jpg");
+
+        let options = BatchOptions {
+            pattern: None,
+            output_dir: None,
+            recursive: false,
+        };
+        let result = run_batch_svg(&dir, &options, |_| Ok("ok".to_string())).unwrap();
+        assert_eq!(result.succeeded, 1);
+        assert!(result.failed.is_empty());
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_run_batch_not_a_directory() {
+        let dir = temp_dir("batch-notdir");
+        let file = dir.join("file.png");
+        touch(&dir, "file.png");
+
+        let options = BatchOptions {
+            pattern: None,
+            output_dir: None,
+            recursive: false,
+        };
+        let result = run_batch(&file, &options, |_| Ok("ok".to_string()));
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("is not a directory"));
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_run_batch_with_pattern() {
+        let dir = temp_dir("batch-pattern");
+        touch(&dir, "photo_a.png");
+        touch(&dir, "photo_b.png");
+        touch(&dir, "screenshot.png");
+
+        let options = BatchOptions {
+            pattern: Some(Regex::new(r"^photo_").unwrap()),
+            output_dir: None,
+            recursive: false,
+        };
+        let result = run_batch(&dir, &options, |_| Ok("ok".to_string())).unwrap();
+        assert_eq!(result.succeeded, 2);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_to_batch_options_creates_output_dir() {
+        let dir = temp_dir("batch-mkdir");
+        let out = dir.join("new_subdir");
+        assert!(!out.exists());
+
+        let args = BatchArgs {
+            pattern: None,
+            output_dir: Some(out.clone()),
+            recursive: false,
+        };
+        let opts = to_batch_options(&args).unwrap();
+        assert!(out.exists());
+        assert_eq!(opts.output_dir, Some(out));
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_to_batch_options_valid_regex() {
+        let args = BatchArgs {
+            pattern: Some(r"^\d+\.png$".to_string()),
+            output_dir: None,
+            recursive: false,
+        };
+        let opts = to_batch_options(&args).unwrap();
+        assert!(opts.pattern.is_some());
+        assert!(opts.pattern.unwrap().is_match("123.png"));
+    }
+
+    #[test]
+    fn test_resolve_output_path_preserves_extension() {
+        let options = BatchOptions {
+            pattern: None,
+            output_dir: None,
+            recursive: false,
+        };
+        let result = resolve_output_path(Path::new("/dir/photo.jpg"), "flip", &options).unwrap();
+        assert_eq!(result, PathBuf::from("/dir/photo_flip.jpg"));
+    }
+
+    #[test]
+    fn test_resolve_output_path_with_ext_no_output_dir() {
+        let options = BatchOptions {
+            pattern: None,
+            output_dir: None,
+            recursive: false,
+        };
+        let result =
+            resolve_output_path_with_ext(Path::new("/dir/photo.png"), "webp", &options).unwrap();
+        assert_eq!(result, PathBuf::from("/dir/photo.webp"));
     }
 }

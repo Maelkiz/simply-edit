@@ -73,11 +73,7 @@ fn test_flip_unknown_flag_rejected() {
     let input = temp.path().join("input.png");
     create_png(&input, 2, 2, [255, 0, 0, 255]);
 
-    let output = run(&[
-        "flip",
-        "--fast",
-        input.to_str().expect("valid input path"),
-    ]);
+    let output = run(&["flip", "--fast", input.to_str().expect("valid input path")]);
 
     assert!(!output.status.success());
     assert!(stderr(&output).contains("--fast"));
