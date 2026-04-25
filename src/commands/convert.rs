@@ -303,6 +303,110 @@ mod tests {
     }
 
     #[test]
+    fn test_convert_png_to_webp() {
+        let temp_root = std::env::temp_dir().join(format!(
+            "simply-edit-webp-test-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("system time before unix epoch")
+                .as_nanos()
+        ));
+        fs::create_dir_all(&temp_root).expect("failed to create temp dir");
+
+        let input_path = temp_root.join("input.png");
+        let output_path = temp_root.join("output.webp");
+
+        let img = image::ImageBuffer::from_pixel(2, 2, image::Rgba([255, 0, 0, 255]));
+        image::DynamicImage::ImageRgba8(img)
+            .save(&input_path)
+            .expect("failed to save test png");
+
+        run_convert(&[
+            input_path.to_str().unwrap().to_string(),
+            output_path.to_str().unwrap().to_string(),
+        ])
+        .expect("png to webp conversion failed");
+
+        assert!(output_path.exists());
+        let converted = image::open(&output_path).expect("failed to open converted webp");
+        assert_eq!(converted.width(), 2);
+        assert_eq!(converted.height(), 2);
+
+        let _ = fs::remove_dir_all(&temp_root);
+    }
+
+    #[test]
+    fn test_convert_webp_to_png() {
+        let temp_root = std::env::temp_dir().join(format!(
+            "simply-edit-webp-to-png-test-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("system time before unix epoch")
+                .as_nanos()
+        ));
+        fs::create_dir_all(&temp_root).expect("failed to create temp dir");
+
+        let input_path = temp_root.join("input.webp");
+        let output_path = temp_root.join("output.png");
+
+        let img = image::ImageBuffer::from_pixel(2, 2, image::Rgba([0, 255, 0, 255]));
+        image::DynamicImage::ImageRgba8(img)
+            .save(&input_path)
+            .expect("failed to save test webp");
+
+        run_convert(&[
+            input_path.to_str().unwrap().to_string(),
+            output_path.to_str().unwrap().to_string(),
+        ])
+        .expect("webp to png conversion failed");
+
+        assert!(output_path.exists());
+        let converted = image::open(&output_path).expect("failed to open converted png");
+        assert_eq!(converted.width(), 2);
+        assert_eq!(converted.height(), 2);
+
+        let _ = fs::remove_dir_all(&temp_root);
+    }
+
+    #[test]
+    fn test_convert_svg_to_webp() {
+        let temp_root = std::env::temp_dir().join(format!(
+            "simply-edit-svg-to-webp-test-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("system time before unix epoch")
+                .as_nanos()
+        ));
+        fs::create_dir_all(&temp_root).expect("failed to create temp dir");
+
+        let input_path = temp_root.join("input.svg");
+        let output_path = temp_root.join("output.webp");
+        fs::write(
+            &input_path,
+            r#"<svg xmlns="http://www.w3.org/2000/svg" width="4" height="4" viewBox="0 0 4 4">
+  <rect width="4" height="4" fill="blue"/>
+</svg>"#,
+        )
+        .expect("failed to write svg");
+
+        run_convert(&[
+            input_path.to_str().unwrap().to_string(),
+            output_path.to_str().unwrap().to_string(),
+        ])
+        .expect("svg to webp conversion failed");
+
+        assert!(output_path.exists());
+        let converted = image::open(&output_path).expect("failed to open converted webp");
+        assert_eq!(converted.width(), 4);
+        assert_eq!(converted.height(), 4);
+
+        let _ = fs::remove_dir_all(&temp_root);
+    }
+
+    #[test]
     fn test_parse_convert_args_accepts_scale_and_resolution_flags() {
         let args = vec![
             "-s".to_string(),

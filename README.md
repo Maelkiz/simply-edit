@@ -2,7 +2,7 @@
 
 > A simple CLI tool for manipulating images.
 
-simply-edit is a convenient command-line utility for everyday image tasks: flip, rotate, invert, grayscale, and convert between common formats like PNG, JPG, ICO, and SVG. It is designed to be easy to use with sensible defaults, optional in-place replacement, and straightforward commands that help you process images quickly.
+simply-edit is a convenient command-line utility for everyday image tasks: flip, rotate, invert, grayscale, and convert between common formats like PNG, JPG, ICO, SVG, and WebP. It is designed to be easy to use with sensible defaults, optional in-place replacement, and straightforward commands that help you process images quickly.
 
 ---
 
@@ -49,7 +49,7 @@ simply <command> <args>
 | `rotate` | Rotate image (interactive by default, or explicit `90`/`180`/`270`) |
 | `invert` | Invert image colors |
 | `grayscale` | Convert image to grayscale |
-| `convert` | Convert between PNG/JPG/ICO/SVG |
+| `convert` | Convert between PNG/JPG/ICO/SVG/WebP |
 
 ### Available Flags
 
@@ -75,7 +75,7 @@ simply <command> <args>
 
 ### Output Path
 
-If you omit the output path, the tool generates one automatically based on the command — for example, `image.png` becomes `image_fliph.png` after a horizontal flip. The output file type is determined by the extension you provide (for example, `.png`, `.jpg`, `.ico`, or `.svg`).
+If you omit the output path, the tool generates one automatically based on the command — for example, `image.png` becomes `image_fliph.png` after a horizontal flip. The output file type is determined by the extension you provide (for example, `.png`, `.jpg`, `.ico`, `.svg`, or `.webp`).
 
 ### Common Examples
 
@@ -101,6 +101,7 @@ simply rotate 180 --replace ./image.png
 - **PNG**: Full support, preserves transparency
 - **JPG/JPEG**: Supported for input and output
 - **ICO**: Supported for input and output. Images larger than 256×256 pixels are automatically resized while maintaining aspect ratio
+- **WebP**: Supported for input and output
 - **SVG**: Supported as a `convert` output format via vector tracing (raster image -> SVG)
 - **SVG input**: Supported for `convert` output to raster formats via `resvg` at 1.0 scale
 

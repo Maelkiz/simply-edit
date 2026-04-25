@@ -203,7 +203,7 @@ pub(crate) fn command_usage(command: &str) -> String {
         ]
         .join("\n"),
         "convert" => [
-            "simply convert — Convert between image formats (PNG, JPG, ICO, SVG)",
+            "simply convert — Convert between image formats (PNG, JPG, ICO, SVG, WebP)",
             "",
             "Usage:",
             "  simply convert [options] <path-to-image> <output-path>",
