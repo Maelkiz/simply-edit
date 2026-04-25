@@ -241,8 +241,10 @@ fn rasterize(src: &str, dst: &str, options: RasterizeOptions) -> Result<(), Stri
     let svg_data = fs::read(src_path)
         .map_err(|e| format!("failed to read SVG '{}': {e}", src_path.display()))?;
 
-    let mut usvg_options = Options::default();
-    usvg_options.resources_dir = src_path.parent().map(Path::to_path_buf);
+    let usvg_options = Options {
+        resources_dir: src_path.parent().map(Path::to_path_buf),
+        ..Options::default()
+    };
 
     let tree = Tree::from_data(&svg_data, &usvg_options)
         .map_err(|e| format!("failed to parse SVG '{}': {e}", src_path.display()))?;

@@ -137,7 +137,7 @@ fn prompt_rotate_degrees() -> Result<u16, String> {
     )
     .with_error_message("Please enter 1, 2, or 3")
     .with_validator(|value: &u16| {
-        if matches!(*value, 1 | 2 | 3) {
+        if matches!(*value, 1..=3) {
             Ok(Validation::Valid)
         } else {
             Ok(Validation::Invalid("Enter 1, 2, or 3".into()))

@@ -26,7 +26,7 @@ pub(crate) fn save_transformed_image(
         OutputMode::Replace(target) => {
             let target = target.as_deref().unwrap_or(source_path);
             let temp_path = replacement_temp_path(target, default_suffix);
-            save_image_replacing(img, temp_path.as_path())?;
+            save_image(img, temp_path.as_path())?;
             fs::rename(&temp_path, target).map_err(|e| {
                 format!(
                     "failed to replace image '{}' with '{}': {e}",
@@ -37,13 +37,6 @@ pub(crate) fn save_transformed_image(
             Ok(target.to_string())
         }
     }
-}
-
-pub(crate) fn save_image_replacing<P: AsRef<Path>>(
-    img: image::DynamicImage,
-    output_path: P,
-) -> Result<(), String> {
-    save_image(img, output_path)
 }
 
 pub(crate) fn save_image<P: AsRef<Path>>(

@@ -50,6 +50,8 @@ simply <command> <args>
 | `invert` | Invert image colors |
 | `grayscale` | Convert image to grayscale |
 | `convert` | Convert between PNG/JPG/ICO/SVG/WebP |
+| `vectorize` | Convert a raster image to SVG |
+| `rasterize` | Convert an SVG to a raster image |
 
 ### Available Flags
 
@@ -62,16 +64,26 @@ simply <command> <args>
 - `--horizontal`: Flip horizontally without interactive prompt.
 - `--vertical`: Flip vertically without interactive prompt.
 
-**`rotate` input modes:**
+**`rotate` flags:**
 
-- `rotate <path> [output]`: Interactive degree selection (`1` = 90deg, `2` = 180deg, `3` = 270deg).
-- `rotate <90|180|270> <path> [output]`: Non-interactive explicit degree.
+- `--angle <90|180|270>`: Rotation angle (interactive prompt if omitted).
 
-**`convert` flags:**
+**`vectorize` flags:**
 
-- `-s`, `--scale <factor>`: Scale SVG rasterization output.
-- `-w`, `--width <px>`: Set raster output width (for SVG input).
-- `-h`, `--height <px>`: Set raster output height (for SVG input).
+- `--fast`: Faster conversion with lower fidelity.
+
+**`rasterize` flags:**
+
+- `-s`, `--scale <factor>`: Scale factor for rasterization.
+- `-w`, `--width <px>`: Output width in pixels.
+- `-H`, `--height <px>`: Output height in pixels.
+
+**Batch flags (available on all commands):**
+
+- `--pattern <regex>`: Regex pattern to filter filenames.
+- `--output-dir <path>`: Output directory for batch results.
+- `-R`, `--recursive`: Process subdirectories recursively.
+- `--format <fmt>`: Output format for batch convert (e.g. `png`, `jpg`, `webp`).
 
 ### Output Path
 
@@ -90,10 +102,25 @@ simply flip --vertical ./image.png
 simply rotate ./image.png
 
 # Rotate bypassing interactive mode
-simply rotate 90 ./image.png
+simply rotate --angle 90 ./image.png
 
 # Replace original file after transform
-simply rotate 180 --replace ./image.png
+simply rotate --angle 180 --replace ./image.png
+
+# Convert raster image to SVG
+simply vectorize ./image.png
+
+# Convert SVG to raster image with scale
+simply rasterize -s 2 ./icon.svg ./icon.png
+
+# Batch: invert all images in a directory
+simply invert ./photos/
+
+# Batch: convert all JPGs to WebP with output directory
+simply convert --format webp ./photos/ --output-dir ./converted/
+
+# Batch: process only matching files recursively
+simply grayscale ./photos/ -R --pattern "^photo_"
 ```
 
 ### Format Support
