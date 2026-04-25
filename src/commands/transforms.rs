@@ -32,7 +32,7 @@ pub(crate) fn run_flip(
         let selected_output = match output {
             OutputMode::Generated(_) => OutputMode::Generated(suffix),
             OutputMode::Explicit(path) => OutputMode::Explicit(path),
-            OutputMode::Replace => OutputMode::Replace,
+            OutputMode::Replace(target) => OutputMode::Replace(target),
         };
 
         let output_path = save_transformed_image(flipped, path, selected_output, suffix)?;
@@ -113,7 +113,7 @@ pub(crate) fn run_rotate(
         let selected_output = match output {
             OutputMode::Generated(_) => OutputMode::Generated(rotate_suffix.as_str()),
             OutputMode::Explicit(path) => OutputMode::Explicit(path),
-            OutputMode::Replace => OutputMode::Replace,
+            OutputMode::Replace(target) => OutputMode::Replace(target),
         };
 
         let output_path = save_transformed_image(rotated, path, selected_output, &rotate_suffix)?;

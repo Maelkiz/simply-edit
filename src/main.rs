@@ -7,7 +7,7 @@ use std::env;
 enum OutputMode<'a> {
     Generated(&'a str),
     Explicit(String),
-    Replace,
+    Replace(Option<String>),
 }
 
 fn main() {
@@ -60,7 +60,7 @@ fn to_output_mode<'a>(output: cli::ParsedOutput, generated_suffix: &'a str) -> O
     match output {
         cli::ParsedOutput::Generated => OutputMode::Generated(generated_suffix),
         cli::ParsedOutput::Explicit(path) => OutputMode::Explicit(path),
-        cli::ParsedOutput::Replace => OutputMode::Replace,
+        cli::ParsedOutput::Replace(target) => OutputMode::Replace(target),
     }
 }
 

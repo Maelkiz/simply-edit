@@ -29,7 +29,7 @@ pub(crate) enum ParsedCommand {
 pub(crate) enum ParsedOutput {
     Generated,
     Explicit(String),
-    Replace,
+    Replace(Option<String>),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -70,7 +70,15 @@ pub(crate) fn parse_command(args: &[String]) -> Result<ParsedCommand, String> {
         [_, command, flag, path] if command == "invert" && crate::io::is_replace_flag(flag) => {
             Ok(ParsedCommand::Invert {
                 path: path.clone(),
-                output: ParsedOutput::Replace,
+                output: ParsedOutput::Replace(None),
+            })
+        }
+        [_, command, flag, path, output]
+            if command == "invert" && crate::io::is_replace_flag(flag) =>
+        {
+            Ok(ParsedCommand::Invert {
+                path: path.clone(),
+                output: ParsedOutput::Replace(Some(output.clone())),
             })
         }
         [_, command, path] if command == "invert" => Ok(ParsedCommand::Invert {
@@ -88,7 +96,15 @@ pub(crate) fn parse_command(args: &[String]) -> Result<ParsedCommand, String> {
         [_, command, flag, path] if command == "grayscale" && crate::io::is_replace_flag(flag) => {
             Ok(ParsedCommand::Grayscale {
                 path: path.clone(),
-                output: ParsedOutput::Replace,
+                output: ParsedOutput::Replace(None),
+            })
+        }
+        [_, command, flag, path, output]
+            if command == "grayscale" && crate::io::is_replace_flag(flag) =>
+        {
+            Ok(ParsedCommand::Grayscale {
+                path: path.clone(),
+                output: ParsedOutput::Replace(Some(output.clone())),
             })
         }
         [_, command, path] if command == "grayscale" => Ok(ParsedCommand::Grayscale {
@@ -143,7 +159,7 @@ pub(crate) fn command_usage(command: &str) -> String {
             "Options:",
             "  --horizontal    Flip horizontally (bypasses interactive prompt)",
             "  --vertical      Flip vertically (bypasses interactive prompt)",
-            "  -r, --replace   Replace the source file instead of writing a new one",
+            "  -r, --replace   Overwrite target file (source if no output path given)",
             "",
             "Without --horizontal or --vertical, an interactive prompt lets you choose.",
             "If no output path is given, one is generated automatically (e.g. image_fliph.png).",
@@ -156,7 +172,7 @@ pub(crate) fn command_usage(command: &str) -> String {
             "  simply rotate [90|180|270] [options] <path-to-image> [output-path]",
             "",
             "Options:",
-            "  -r, --replace   Replace the source file instead of writing a new one",
+            "  -r, --replace   Overwrite target file (source if no output path given)",
             "",
             "Without a degree argument, an interactive prompt lets you choose.",
             "If no output path is given, one is generated automatically (e.g. image_rotate.png).",
@@ -169,7 +185,7 @@ pub(crate) fn command_usage(command: &str) -> String {
             "  simply invert [options] <path-to-image> [output-path]",
             "",
             "Options:",
-            "  -r, --replace   Replace the source file instead of writing a new one",
+            "  -r, --replace   Overwrite target file (source if no output path given)",
             "",
             "If no output path is given, one is generated automatically (e.g. image_invert.png).",
         ]
@@ -181,7 +197,7 @@ pub(crate) fn command_usage(command: &str) -> String {
             "  simply grayscale [options] <path-to-image> [output-path]",
             "",
             "Options:",
-            "  -r, --replace   Replace the source file instead of writing a new one",
+            "  -r, --replace   Overwrite target file (source if no output path given)",
             "",
             "If no output path is given, one is generated automatically (e.g. image_grayscale.png).",
         ]
@@ -302,7 +318,7 @@ mod tests {
         match parsed {
             ParsedCommand::Flip {
                 path,
-                output: ParsedOutput::Replace,
+                output: ParsedOutput::Replace(None),
                 axis: ParsedFlipAxis::Prompt,
             } => {
                 assert_eq!(path, "image.png");
@@ -349,7 +365,7 @@ mod tests {
         match parsed {
             ParsedCommand::Flip {
                 path,
-                output: ParsedOutput::Replace,
+                output: ParsedOutput::Replace(None),
                 axis: ParsedFlipAxis::Vertical,
             } => {
                 assert_eq!(path, "image.png");
@@ -488,10 +504,11 @@ fn parse_flip_command(rest: &[String]) -> Result<ParsedCommand, String> {
     }
 
     let output = if replace {
-        if positionals.len() != 1 {
-            return Err("flip: output-path is not allowed with -r/--replace".to_string());
+        match positionals.len() {
+            1 => ParsedOutput::Replace(None),
+            2 => ParsedOutput::Replace(Some(positionals[1].clone())),
+            _ => return Err(usage()),
         }
-        ParsedOutput::Replace
     } else {
         match positionals.len() {
             1 => ParsedOutput::Generated,
@@ -565,10 +582,10 @@ fn parse_rotate_command(rest: &[String]) -> Result<ParsedCommand, String> {
     };
 
     let output = if replace {
-        if output_path.is_some() {
-            return Err("rotate: output-path is not allowed with -r/--replace".to_string());
+        match output_path {
+            Some(path) => ParsedOutput::Replace(Some(path)),
+            None => ParsedOutput::Replace(None),
         }
-        ParsedOutput::Replace
     } else {
         match output_path {
             Some(path) => ParsedOutput::Explicit(path),

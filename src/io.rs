@@ -23,17 +23,18 @@ pub(crate) fn save_transformed_image(
             save_image(img, output_path.as_path())?;
             Ok(output_path.to_string_lossy().to_string())
         }
-        OutputMode::Replace => {
-            let temp_path = replacement_temp_path(source_path, default_suffix);
+        OutputMode::Replace(target) => {
+            let target = target.as_deref().unwrap_or(source_path);
+            let temp_path = replacement_temp_path(target, default_suffix);
             save_image_replacing(img, temp_path.as_path())?;
-            fs::rename(&temp_path, source_path).map_err(|e| {
+            fs::rename(&temp_path, target).map_err(|e| {
                 format!(
                     "failed to replace image '{}' with '{}': {e}",
-                    source_path,
+                    target,
                     temp_path.display()
                 )
             })?;
-            Ok(source_path.to_string())
+            Ok(target.to_string())
         }
     }
 }

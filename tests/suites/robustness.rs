@@ -182,6 +182,29 @@ fn test_replace_mode_cleans_up_tmp_file() {
 }
 
 #[test]
+fn test_replace_mode_overwrites_explicit_target() {
+    let temp = TestDir::new("simply-phase2");
+    let input = temp.path().join("input.png");
+    let target = temp.path().join("target.png");
+
+    create_png(&input, 1, 1, [10, 20, 30, 255]);
+    create_png(&target, 1, 1, [250, 240, 230, 255]);
+    let before = pixel(&target, 0, 0);
+
+    let result = run(&[
+        "invert",
+        "-r",
+        input.to_str().expect("valid input path"),
+        target.to_str().expect("valid target path"),
+    ]);
+    assert!(result.status.success());
+
+    let after = pixel(&target, 0, 0);
+    assert_ne!(before, after);
+    assert_eq!(after, [245, 235, 225, 255]);
+}
+
+#[test]
 fn test_multiple_generated_operations_do_not_conflict() {
     let temp = TestDir::new("simply-phase2");
     let input = temp.path().join("chain.png");

@@ -84,24 +84,6 @@ fn test_flip_unknown_flag_rejected() {
 }
 
 #[test]
-fn test_flip_replace_with_output_path_rejected() {
-    let temp = TestDir::new("simply-phase1-errors");
-    let input = temp.path().join("input.png");
-    let out = temp.path().join("out.png");
-    create_png(&input, 2, 2, [255, 0, 0, 255]);
-
-    let output = run(&[
-        "flip",
-        "--replace",
-        input.to_str().expect("valid input path"),
-        out.to_str().expect("valid output path"),
-    ]);
-
-    assert!(!output.status.success());
-    assert!(stderr(&output).contains("output-path is not allowed"));
-}
-
-#[test]
 fn test_rotate_missing_path_prints_usage() {
     let output = run(&["rotate", "90"]);
     assert!(!output.status.success());
@@ -157,25 +139,6 @@ fn test_rotate_interactive_non_tty_invalid_input_rejected() {
 
     assert!(!output.status.success());
     assert!(stderr(&output).contains("invalid rotation '45'"));
-}
-
-#[test]
-fn test_rotate_replace_with_output_path_rejected() {
-    let temp = TestDir::new("simply-phase1-errors");
-    let input = temp.path().join("input.png");
-    let out = temp.path().join("out.png");
-    create_png(&input, 2, 2, [255, 0, 0, 255]);
-
-    let output = run(&[
-        "rotate",
-        "--replace",
-        "90",
-        input.to_str().expect("valid input path"),
-        out.to_str().expect("valid output path"),
-    ]);
-
-    assert!(!output.status.success());
-    assert!(stderr(&output).contains("output-path is not allowed"));
 }
 
 #[test]
