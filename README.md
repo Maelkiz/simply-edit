@@ -14,7 +14,7 @@ simply-edit is a convenient command-line utility for everyday image tasks: flip,
 
 ### Install from Source
 
-Install `simply-edit` to your PATH so you can run `simply` from anywhere:
+Install simply-edit so you can run the `simply` commands from anywhere:
 
 ```bash
 git clone https://github.com/Maelkiz/simply-edit.git
@@ -22,13 +22,20 @@ cd simply-edit
 cargo install --path .
 ```
 
-The binary is installed to `~/.cargo/bin/`, which is usually already in your `$PATH`.
-
 ### Verify Installation
 
 ```bash
+command -v simply
 simply --help
 ```
+
+Cargo installs binaries to: 
+
+```
+$HOME/.cargo/bin
+```
+
+If `simply` is not found, add this directory to your PATH and refresh your shell.
 
 ---
 
