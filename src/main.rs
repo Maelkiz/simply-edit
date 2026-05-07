@@ -144,24 +144,39 @@ fn run() -> Result<(), String> {
         Command::Resize {
             width,
             height,
+            scale,
             replace,
             batch,
             path,
             output,
         } => {
+            if width.is_some() && scale.is_some() || height.is_some() && scale.is_some() {
+                return Err(
+                    "resize: --scale cannot be combined with --width or --height".to_string(),
+                );
+            }
             if is_batch(&path, &batch) {
-                let w = width.ok_or_else(|| {
-                    "resize: --width required in batch mode".to_string()
-                })?;
-                let h = height.ok_or_else(|| {
-                    "resize: --height required in batch mode".to_string()
-                })?;
                 let options = batch::to_batch_options(&batch)?;
+                let scale = scale;
+                if scale.is_none() && (width.is_none() || height.is_none()) {
+                    return Err(
+                        "resize: --scale or both --width and --height required in batch mode"
+                            .to_string(),
+                    );
+                }
                 let result = batch::run_batch(Path::new(&path), &options, |file| {
                     let img = image::open(file)
                         .map_err(|e| format!("failed to open image '{}': {e}", file.display()))?;
+                    let (w, h) = if let Some(s) = scale {
+                        (
+                            (img.width() as f64 * s as f64).round() as u32,
+                            (img.height() as f64 * s as f64).round() as u32,
+                        )
+                    } else {
+                        (width.unwrap(), height.unwrap())
+                    };
                     let resized =
-                        img.resize_exact(w, h, image::imageops::FilterType::Lanczos3);
+                        img.resize_exact(w.max(1), h.max(1), image::imageops::FilterType::Lanczos3);
                     let suffix = format!("resize{w}x{h}");
                     let out_path = batch::resolve_output_path(file, &suffix, &options)?;
                     io::save_image(resized, &out_path)?;
@@ -171,7 +186,7 @@ fn run() -> Result<(), String> {
                 Ok(())
             } else {
                 let output = output_mode(replace, output, "resize");
-                commands::transforms::run_resize(&path, output, width, height)
+                commands::transforms::run_resize(&path, output, width, height, scale)
             }
         }
         Command::Convert {

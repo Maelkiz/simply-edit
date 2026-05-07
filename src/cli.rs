@@ -112,6 +112,10 @@ pub(crate) enum Command {
         #[arg(short = 'H', long, value_parser = parse_positive_u32)]
         height: Option<u32>,
 
+        /// Scale factor (e.g. 0.5 to halve, 2.0 to double)
+        #[arg(short, long, value_parser = parse_positive_f32)]
+        scale: Option<f32>,
+
         /// Overwrite target file (source if no output path given)
         #[arg(short, long)]
         replace: bool,

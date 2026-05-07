@@ -174,14 +174,23 @@ pub(crate) fn run_resize(
     output: OutputMode<'_>,
     width: Option<u32>,
     height: Option<u32>,
+    scale: Option<f32>,
 ) -> Result<(), String> {
-    let (w, h) = match (width, height) {
-        (Some(w), Some(h)) => (w, h),
-        (None, None) => prompt_resize_dimensions()?,
-        (partial_w, partial_h) => {
-            let (orig_w, orig_h) = image::image_dimensions(path)
-                .map_err(|e| format!("failed to read image '{path}': {e}"))?;
-            resolve_partial_resize(partial_w, partial_h, orig_w, orig_h)?
+    let (w, h) = if let Some(s) = scale {
+        let (orig_w, orig_h) = image::image_dimensions(path)
+            .map_err(|e| format!("failed to read image '{path}': {e}"))?;
+        let w = (orig_w as f64 * s as f64).round() as u32;
+        let h = (orig_h as f64 * s as f64).round() as u32;
+        (w.max(1), h.max(1))
+    } else {
+        match (width, height) {
+            (Some(w), Some(h)) => (w, h),
+            (None, None) => prompt_resize_dimensions()?,
+            (partial_w, partial_h) => {
+                let (orig_w, orig_h) = image::image_dimensions(path)
+                    .map_err(|e| format!("failed to read image '{path}': {e}"))?;
+                resolve_partial_resize(partial_w, partial_h, orig_w, orig_h)?
+            }
         }
     };
 
