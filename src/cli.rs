@@ -102,6 +102,30 @@ pub(crate) enum Command {
         output: Option<String>,
     },
 
+    /// Resize an image to specified dimensions
+    Resize {
+        /// Target width in pixels
+        #[arg(short, long, value_parser = parse_positive_u32)]
+        width: Option<u32>,
+
+        /// Target height in pixels
+        #[arg(short = 'H', long, value_parser = parse_positive_u32)]
+        height: Option<u32>,
+
+        /// Overwrite target file (source if no output path given)
+        #[arg(short, long)]
+        replace: bool,
+
+        #[command(flatten)]
+        batch: BatchArgs,
+
+        /// Path to image file or directory
+        path: String,
+
+        /// Output path (auto-generated if omitted)
+        output: Option<String>,
+    },
+
     /// Convert between image formats (PNG, JPG, ICO, SVG, WebP)
     Convert {
         /// Output format for batch mode (e.g. png, jpg, webp)
@@ -516,6 +540,71 @@ mod tests {
             }
             other => panic!("unexpected: {other:?}"),
         }
+    }
+
+    #[test]
+    fn test_resize_with_dimensions() {
+        match parse(&["simply", "resize", "--width", "800", "-H", "600", "image.png"]) {
+            Command::Resize {
+                width: Some(800),
+                height: Some(600),
+                replace: false,
+                path,
+                output: None,
+                ..
+            } => assert_eq!(path, "image.png"),
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_resize_no_dimensions() {
+        match parse(&["simply", "resize", "image.png"]) {
+            Command::Resize {
+                width: None,
+                height: None,
+                path,
+                ..
+            } => assert_eq!(path, "image.png"),
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_resize_replace() {
+        match parse(&["simply", "resize", "-r", "--width", "100", "-H", "100", "image.png"]) {
+            Command::Resize {
+                replace: true,
+                width: Some(100),
+                height: Some(100),
+                path,
+                ..
+            } => assert_eq!(path, "image.png"),
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_resize_with_output() {
+        match parse(&["simply", "resize", "--width", "50", "-H", "50", "in.png", "out.png"]) {
+            Command::Resize {
+                width: Some(50),
+                height: Some(50),
+                path,
+                output: Some(out),
+                ..
+            } => {
+                assert_eq!(path, "in.png");
+                assert_eq!(out, "out.png");
+            }
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_resize_zero_width_rejected() {
+        let result = try_parse(&["simply", "resize", "--width", "0", "-H", "100", "image.png"]);
+        assert!(result.is_err());
     }
 
     #[test]

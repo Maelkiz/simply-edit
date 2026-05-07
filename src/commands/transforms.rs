@@ -169,6 +169,104 @@ fn prompt_rotate_degrees_non_tty() -> Result<u16, String> {
     }
 }
 
+pub(crate) fn run_resize(
+    path: &str,
+    output: OutputMode<'_>,
+    width: Option<u32>,
+    height: Option<u32>,
+) -> Result<(), String> {
+    let (w, h) = match (width, height) {
+        (Some(w), Some(h)) => (w, h),
+        (None, None) => prompt_resize_dimensions()?,
+        _ => return Err("resize: both --width and --height required (or omit both for interactive mode)".to_string()),
+    };
+
+    let spinner = start_spinner("Processing resize...");
+
+    let result = (|| {
+        let img = image::open(path).map_err(|e| format!("failed to open image '{path}': {e}"))?;
+        let resized = img.resize_exact(w, h, image::imageops::FilterType::Lanczos3);
+
+        let resize_suffix = format!("resize{w}x{h}");
+        let selected_output = match output {
+            OutputMode::Generated(_) => OutputMode::Generated(resize_suffix.as_str()),
+            OutputMode::Explicit(path) => OutputMode::Explicit(path),
+            OutputMode::Replace(target) => OutputMode::Replace(target),
+        };
+
+        let output_path = save_transformed_image(resized, path, selected_output, &resize_suffix)?;
+        Ok::<String, String>(output_path)
+    })();
+
+    if let Some(pb) = spinner {
+        pb.finish_and_clear();
+    }
+
+    let output_path = result?;
+    println!("Saved resized image to {}", output_path);
+    Ok(())
+}
+
+fn prompt_resize_dimensions() -> Result<(u32, u32), String> {
+    if !stdin().is_terminal() {
+        return prompt_resize_dimensions_non_tty();
+    }
+
+    let width = CustomType::<u32>::new("Enter new width in pixels:")
+        .with_error_message("Please enter a positive integer")
+        .with_validator(|value: &u32| {
+            if *value > 0 {
+                Ok(Validation::Valid)
+            } else {
+                Ok(Validation::Invalid("Width must be greater than 0".into()))
+            }
+        })
+        .prompt()
+        .map_err(|e| format!("failed to read width: {e}"))?;
+
+    let height = CustomType::<u32>::new("Enter new height in pixels:")
+        .with_error_message("Please enter a positive integer")
+        .with_validator(|value: &u32| {
+            if *value > 0 {
+                Ok(Validation::Valid)
+            } else {
+                Ok(Validation::Invalid("Height must be greater than 0".into()))
+            }
+        })
+        .prompt()
+        .map_err(|e| format!("failed to read height: {e}"))?;
+
+    Ok((width, height))
+}
+
+fn prompt_resize_dimensions_non_tty() -> Result<(u32, u32), String> {
+    let mut input = String::new();
+    stdin()
+        .read_line(&mut input)
+        .map_err(|e| format!("failed to read width from stdin: {e}"))?;
+    let width: u32 = input
+        .trim()
+        .parse()
+        .map_err(|_| format!("invalid width '{}': use a positive integer", input.trim()))?;
+    if width == 0 {
+        return Err("width must be greater than 0".to_string());
+    }
+
+    input.clear();
+    stdin()
+        .read_line(&mut input)
+        .map_err(|e| format!("failed to read height from stdin: {e}"))?;
+    let height: u32 = input
+        .trim()
+        .parse()
+        .map_err(|_| format!("invalid height '{}': use a positive integer", input.trim()))?;
+    if height == 0 {
+        return Err("height must be greater than 0".to_string());
+    }
+
+    Ok((width, height))
+}
+
 pub(crate) fn run_invert(path: &str, output: OutputMode<'_>) -> Result<(), String> {
     let img = image::open(path).map_err(|e| format!("failed to open image '{path}': {e}"))?;
     let inverted = invert_colors(img);

@@ -141,6 +141,39 @@ fn run() -> Result<(), String> {
                 commands::transforms::run_grayscale(&path, output)
             }
         }
+        Command::Resize {
+            width,
+            height,
+            replace,
+            batch,
+            path,
+            output,
+        } => {
+            if is_batch(&path, &batch) {
+                let w = width.ok_or_else(|| {
+                    "resize: --width required in batch mode".to_string()
+                })?;
+                let h = height.ok_or_else(|| {
+                    "resize: --height required in batch mode".to_string()
+                })?;
+                let options = batch::to_batch_options(&batch)?;
+                let result = batch::run_batch(Path::new(&path), &options, |file| {
+                    let img = image::open(file)
+                        .map_err(|e| format!("failed to open image '{}': {e}", file.display()))?;
+                    let resized =
+                        img.resize_exact(w, h, image::imageops::FilterType::Lanczos3);
+                    let suffix = format!("resize{w}x{h}");
+                    let out_path = batch::resolve_output_path(file, &suffix, &options)?;
+                    io::save_image(resized, &out_path)?;
+                    Ok(out_path.to_string_lossy().to_string())
+                })?;
+                batch::print_summary(&result);
+                Ok(())
+            } else {
+                let output = output_mode(replace, output, "resize");
+                commands::transforms::run_resize(&path, output, width, height)
+            }
+        }
         Command::Convert {
             format,
             batch,
