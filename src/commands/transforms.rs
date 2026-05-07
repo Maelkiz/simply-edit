@@ -178,7 +178,11 @@ pub(crate) fn run_resize(
     let (w, h) = match (width, height) {
         (Some(w), Some(h)) => (w, h),
         (None, None) => prompt_resize_dimensions()?,
-        _ => return Err("resize: both --width and --height required (or omit both for interactive mode)".to_string()),
+        (partial_w, partial_h) => {
+            let (orig_w, orig_h) = image::image_dimensions(path)
+                .map_err(|e| format!("failed to read image '{path}': {e}"))?;
+            resolve_partial_resize(partial_w, partial_h, orig_w, orig_h)?
+        }
     };
 
     let spinner = start_spinner("Processing resize...");
@@ -205,6 +209,82 @@ pub(crate) fn run_resize(
     let output_path = result?;
     println!("Saved resized image to {}", output_path);
     Ok(())
+}
+
+fn resolve_partial_resize(
+    width: Option<u32>,
+    height: Option<u32>,
+    orig_w: u32,
+    orig_h: u32,
+) -> Result<(u32, u32), String> {
+    let (given_label, stretch_label) = match (width, height) {
+        (Some(_), None) => ("width", "Stretch horizontally"),
+        (None, Some(_)) => ("height", "Stretch vertically"),
+        _ => unreachable!(),
+    };
+
+    let prompt = format!(
+        "Only {given_label} provided:\n (1) Preserve aspect ratio\n (2) {stretch_label}\n"
+    );
+    let mode = prompt_resize_mode(&prompt)?;
+
+    match (mode, width, height) {
+        (ResizeMode::Preserve, Some(w), None) => {
+            let h = (orig_h as f64 * w as f64 / orig_w as f64).round() as u32;
+            Ok((w, h.max(1)))
+        }
+        (ResizeMode::Preserve, None, Some(h)) => {
+            let w = (orig_w as f64 * h as f64 / orig_h as f64).round() as u32;
+            Ok((w.max(1), h))
+        }
+        (ResizeMode::Stretch, Some(w), None) => Ok((w, orig_h)),
+        (ResizeMode::Stretch, None, Some(h)) => Ok((orig_w, h)),
+        _ => unreachable!(),
+    }
+}
+
+enum ResizeMode {
+    Preserve,
+    Stretch,
+}
+
+fn prompt_resize_mode(message: &str) -> Result<ResizeMode, String> {
+    if !stdin().is_terminal() {
+        return prompt_resize_mode_non_tty();
+    }
+
+    let mode = CustomType::<u8>::new(message)
+        .with_error_message("Please enter 1 or 2")
+        .with_validator(|value: &u8| {
+            if matches!(*value, 1..=2) {
+                Ok(Validation::Valid)
+            } else {
+                Ok(Validation::Invalid("Enter 1 or 2".into()))
+            }
+        })
+        .prompt()
+        .map_err(|e| format!("failed to read resize mode: {e}"))?;
+
+    match mode {
+        1 => Ok(ResizeMode::Preserve),
+        2 => Ok(ResizeMode::Stretch),
+        _ => Err("invalid resize mode: use 1 or 2".to_string()),
+    }
+}
+
+fn prompt_resize_mode_non_tty() -> Result<ResizeMode, String> {
+    let mut input = String::new();
+    stdin()
+        .read_line(&mut input)
+        .map_err(|e| format!("failed to read resize mode from stdin: {e}"))?;
+
+    match input.trim() {
+        "1" => Ok(ResizeMode::Preserve),
+        "2" => Ok(ResizeMode::Stretch),
+        other => Err(format!(
+            "invalid resize mode '{other}': use 1 (preserve) or 2 (stretch)"
+        )),
+    }
 }
 
 fn prompt_resize_dimensions() -> Result<(u32, u32), String> {
