@@ -28,11 +28,15 @@ pub(crate) fn save_transformed_image(
             let temp_path = replacement_temp_path(target, default_suffix);
             save_image(img, temp_path.as_path())?;
             fs::rename(&temp_path, target).map_err(|e| {
-                format!(
-                    "failed to replace image '{}' with '{}': {e}",
-                    target,
-                    temp_path.display()
-                )
+                if fs::remove_file(&temp_path).is_err() {
+                    format!(
+                        "failed to replace '{}': {e}; could not remove temporary file '{}'",
+                        target,
+                        temp_path.display()
+                    )
+                } else {
+                    format!("failed to replace '{}': {e}", target)
+                }
             })?;
             Ok(target.to_string())
         }
