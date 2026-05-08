@@ -162,6 +162,12 @@ pub(crate) enum Command {
         dst: Option<String>,
     },
 
+    /// Display an image in the terminal using the Kitty graphics protocol
+    View {
+        /// Path to the image file
+        path: String,
+    },
+
     /// Convert an SVG to a raster image
     Rasterize {
         /// Scale factor for rasterization

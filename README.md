@@ -59,6 +59,7 @@ simply <command> <args>
 | `convert` | Convert between PNG/JPG/ICO/SVG/WebP |
 | `vectorize` | Convert a raster image to SVG |
 | `rasterize` | Convert an SVG to a raster image |
+| `view` | Display an image inline in the terminal (Kitty protocol) |
 
 ### Available Flags
 
@@ -84,6 +85,12 @@ simply <command> <args>
 - `-s`, `--scale <factor>`: Scale factor for rasterization.
 - `-w`, `--width <px>`: Output width in pixels.
 - `-H`, `--height <px>`: Output height in pixels.
+
+**`view` flags:**
+
+No additional flags. Provide the image path as the only argument.
+
+Supported terminals: **Kitty**, **WezTerm**, **Ghostty**. In other terminals, image metadata (dimensions, color type) is printed as plain text instead.
 
 **Batch flags (available on all commands):**
 
@@ -128,6 +135,9 @@ simply convert --format webp ./photos/ --output-dir ./converted/
 
 # Batch: process only matching files recursively
 simply grayscale ./photos/ -R --pattern "^photo_"
+
+# View an image inline (Kitty, WezTerm, Ghostty)
+simply view ./photo.png
 ```
 
 ### Format Support

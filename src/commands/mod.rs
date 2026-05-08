@@ -1,5 +1,6 @@
 pub mod convert;
 pub mod transforms;
+pub mod view;
 
 use indicatif::{ProgressBar, ProgressStyle};
 use std::io::{IsTerminal, stderr};
