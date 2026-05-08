@@ -119,6 +119,30 @@ pub(crate) enum Command {
         batch: BatchArgs,
     },
 
+    /// Convert an image to pure black and white at a brightness cutoff
+    Binarize {
+        /// Threshold value 0-255 (default: 128). Pixels brighter than this become white, others black
+        #[arg(short, long, value_parser = parse_threshold)]
+        threshold: Option<u8>,
+
+        /// Overwrite target file (source if no output path given)
+        #[arg(short, long)]
+        replace: bool,
+
+        /// Preview the result in the terminal without saving (requires Kitty, WezTerm, or Ghostty)
+        #[arg(short = 'p', long)]
+        preview: bool,
+
+        /// Path to image file or directory
+        path: String,
+
+        /// Output path (auto-generated if omitted)
+        output: Option<String>,
+
+        #[command(flatten)]
+        batch: BatchArgs,
+    },
+
     /// Resize an image to specified dimensions
     Resize {
         /// Target width in pixels
@@ -226,6 +250,11 @@ pub(crate) enum Command {
         #[command(flatten)]
         batch: BatchArgs,
     },
+}
+
+fn parse_threshold(s: &str) -> Result<u8, String> {
+    s.parse()
+        .map_err(|_| format!("invalid threshold '{s}': use an integer from 0 to 255"))
 }
 
 fn parse_positive_f32(s: &str) -> Result<f32, String> {

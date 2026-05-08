@@ -416,6 +416,34 @@ pub(crate) fn run_grayscale(path: &str, output: OutputMode) -> Result<(), String
     Ok(())
 }
 
+pub(crate) fn run_binarize(path: &str, output: OutputMode, threshold: u8) -> Result<(), String> {
+    let img = image::open(path)
+        .map_err(|e| format!("binarize: failed to open image '{path}': {e}"))?;
+    let binarized = binarize_image(img, threshold);
+    let save_mode = match output {
+        OutputMode::Preview => return crate::commands::view::display_image(binarized),
+        OutputMode::Generated => SaveMode::Generated("binarize"),
+        OutputMode::Explicit(p) => SaveMode::Explicit(p),
+        OutputMode::Replace(t) => SaveMode::Replace(t),
+    };
+    let output_path = save_transformed_image(binarized, path, save_mode, "binarize")?;
+    println!("Saved binarized image to {}", output_path);
+    Ok(())
+}
+
+pub(crate) fn binarize_image(img: image::DynamicImage, threshold: u8) -> image::DynamicImage {
+    let gray = img.to_luma8();
+    let mut rgba = img.to_rgba8();
+    for (i, pixel) in rgba.pixels_mut().enumerate() {
+        let luma = gray.as_raw()[i];
+        let bw = if luma > threshold { 255 } else { 0 };
+        pixel[0] = bw;
+        pixel[1] = bw;
+        pixel[2] = bw;
+    }
+    image::DynamicImage::ImageRgba8(rgba)
+}
+
 pub(crate) fn invert_colors(img: image::DynamicImage) -> image::DynamicImage {
     let mut rgba_image = img.to_rgba8();
 

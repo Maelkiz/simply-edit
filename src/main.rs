@@ -164,6 +164,35 @@ fn run() -> Result<(), String> {
                 commands::transforms::run_grayscale(&path, output)
             }
         }
+        Command::Binarize {
+            threshold,
+            replace,
+            preview,
+            batch,
+            path,
+            output,
+        } => {
+            let threshold = threshold.unwrap_or(128);
+            if is_batch(&path, &batch) {
+                if preview {
+                    return Err("binarize: --preview cannot be used in batch mode".to_string());
+                }
+                let options = batch::to_batch_options(&batch)?;
+                let result = batch::run_batch(Path::new(&path), &options, |file| {
+                    let img = image::open(file)
+                        .map_err(|e| format!("binarize: failed to open image '{}': {e}", file.display()))?;
+                    let binarized = commands::transforms::binarize_image(img, threshold);
+                    let out_path = batch::resolve_output_path(file, "binarize", &options);
+                    io::save_image(binarized, &out_path)?;
+                    Ok(out_path.to_string_lossy().to_string())
+                })?;
+                batch::print_summary(&result);
+                Ok(())
+            } else {
+                let output = output_mode(replace, preview, output);
+                commands::transforms::run_binarize(&path, output, threshold)
+            }
+        }
         Command::Resize {
             width,
             height,
