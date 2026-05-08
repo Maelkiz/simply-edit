@@ -363,6 +363,56 @@ fn test_batch_resize_scale_cannot_be_combined_with_dimensions() {
 }
 
 #[test]
+fn test_batch_binarize_processes_all_files() {
+    let temp = batch_dir_with_images("batch-binarize", 3);
+    let out = TestDir::new("batch-binarize-out");
+
+    let output = run(&[
+        "binarize",
+        temp.path().to_str().unwrap(),
+        "--output-dir",
+        out.path().to_str().unwrap(),
+    ]);
+    assert!(output.status.success());
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("3 succeeded"));
+    assert!(stdout.contains("0 failed"));
+
+    let files: Vec<_> = fs::read_dir(out.path())
+        .unwrap()
+        .filter_map(|e| e.ok())
+        .collect();
+    assert_eq!(files.len(), 3);
+}
+
+#[test]
+fn test_batch_binarize_with_threshold() {
+    let temp = batch_dir_with_images("batch-binarize-thresh", 2);
+    let out = TestDir::new("batch-binarize-thresh-out");
+
+    let output = run(&[
+        "binarize",
+        "--threshold",
+        "50",
+        temp.path().to_str().unwrap(),
+        "--output-dir",
+        out.path().to_str().unwrap(),
+    ]);
+    assert!(output.status.success());
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("2 succeeded"));
+
+    for entry in fs::read_dir(out.path()).unwrap() {
+        let path = entry.unwrap().path();
+        let img = image::open(&path).expect("output should be valid image");
+        let pixel = img.to_rgba8().get_pixel(0, 0).0;
+        assert!(pixel[0] == 0 || pixel[0] == 255);
+    }
+}
+
+#[test]
 fn test_single_file_still_works_after_batch_changes() {
     let temp = TestDir::new("single-regression");
     let input = temp.path().join("img.png");

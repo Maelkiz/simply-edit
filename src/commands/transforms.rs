@@ -515,4 +515,81 @@ mod tests {
         assert!(pixel[1] >= 126 && pixel[1] <= 128);
         assert!(pixel[2] >= 126 && pixel[2] <= 128);
     }
+
+    #[test]
+    fn test_binarize_white_stays_white() {
+        let img = image::ImageBuffer::from_pixel(1, 1, image::Rgba([255, 255, 255, 255]));
+        let dynamic_img = image::DynamicImage::ImageRgba8(img);
+
+        let result = binarize_image(dynamic_img, 128);
+        let pixel = result.to_rgba8().get_pixel(0, 0).0;
+
+        assert_eq!(pixel, [255, 255, 255, 255]);
+    }
+
+    #[test]
+    fn test_binarize_black_stays_black() {
+        let img = image::ImageBuffer::from_pixel(1, 1, image::Rgba([0, 0, 0, 255]));
+        let dynamic_img = image::DynamicImage::ImageRgba8(img);
+
+        let result = binarize_image(dynamic_img, 128);
+        let pixel = result.to_rgba8().get_pixel(0, 0).0;
+
+        assert_eq!(pixel, [0, 0, 0, 255]);
+    }
+
+    #[test]
+    fn test_binarize_dark_gray_becomes_black() {
+        let img = image::ImageBuffer::from_pixel(1, 1, image::Rgba([100, 100, 100, 255]));
+        let dynamic_img = image::DynamicImage::ImageRgba8(img);
+
+        let result = binarize_image(dynamic_img, 128);
+        let pixel = result.to_rgba8().get_pixel(0, 0).0;
+
+        assert_eq!(pixel, [0, 0, 0, 255]);
+    }
+
+    #[test]
+    fn test_binarize_light_gray_becomes_white() {
+        let img = image::ImageBuffer::from_pixel(1, 1, image::Rgba([200, 200, 200, 255]));
+        let dynamic_img = image::DynamicImage::ImageRgba8(img);
+
+        let result = binarize_image(dynamic_img, 128);
+        let pixel = result.to_rgba8().get_pixel(0, 0).0;
+
+        assert_eq!(pixel, [255, 255, 255, 255]);
+    }
+
+    #[test]
+    fn test_binarize_preserves_alpha() {
+        let img = image::ImageBuffer::from_pixel(1, 1, image::Rgba([200, 200, 200, 128]));
+        let dynamic_img = image::DynamicImage::ImageRgba8(img);
+
+        let result = binarize_image(dynamic_img, 128);
+        let pixel = result.to_rgba8().get_pixel(0, 0).0;
+
+        assert_eq!(pixel[3], 128);
+    }
+
+    #[test]
+    fn test_binarize_threshold_zero() {
+        let img = image::ImageBuffer::from_pixel(1, 1, image::Rgba([1, 1, 1, 255]));
+        let dynamic_img = image::DynamicImage::ImageRgba8(img);
+
+        let result = binarize_image(dynamic_img, 0);
+        let pixel = result.to_rgba8().get_pixel(0, 0).0;
+
+        assert_eq!(pixel, [255, 255, 255, 255]);
+    }
+
+    #[test]
+    fn test_binarize_threshold_255_everything_black() {
+        let img = image::ImageBuffer::from_pixel(1, 1, image::Rgba([255, 255, 255, 255]));
+        let dynamic_img = image::DynamicImage::ImageRgba8(img);
+
+        let result = binarize_image(dynamic_img, 255);
+        let pixel = result.to_rgba8().get_pixel(0, 0).0;
+
+        assert_eq!(pixel, [0, 0, 0, 255]);
+    }
 }

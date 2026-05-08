@@ -676,6 +676,83 @@ mod tests {
     }
 
     #[test]
+    fn test_binarize_default() {
+        match parse(&["simply", "binarize", "image.png"]) {
+            Command::Binarize {
+                threshold: None,
+                replace: false,
+                path,
+                output: None,
+                ..
+            } => assert_eq!(path, "image.png"),
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_binarize_with_threshold() {
+        match parse(&["simply", "binarize", "--threshold", "200", "image.png"]) {
+            Command::Binarize {
+                threshold: Some(200),
+                path,
+                ..
+            } => assert_eq!(path, "image.png"),
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_binarize_short_threshold() {
+        match parse(&["simply", "binarize", "-t", "100", "image.png"]) {
+            Command::Binarize {
+                threshold: Some(100),
+                path,
+                ..
+            } => assert_eq!(path, "image.png"),
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_binarize_replace() {
+        match parse(&["simply", "binarize", "-r", "image.png"]) {
+            Command::Binarize {
+                replace: true,
+                path,
+                ..
+            } => assert_eq!(path, "image.png"),
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_binarize_with_output() {
+        match parse(&["simply", "binarize", "in.png", "out.png"]) {
+            Command::Binarize {
+                path,
+                output: Some(out),
+                ..
+            } => {
+                assert_eq!(path, "in.png");
+                assert_eq!(out, "out.png");
+            }
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_binarize_invalid_threshold() {
+        let result = try_parse(&["simply", "binarize", "--threshold", "999", "image.png"]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_binarize_non_numeric_threshold() {
+        let result = try_parse(&["simply", "binarize", "--threshold", "abc", "image.png"]);
+        assert!(result.is_err());
+    }
+
+    #[test]
     fn test_resize_zero_width_rejected() {
         let result = try_parse(&["simply", "resize", "--width", "0", "-H", "100", "image.png"]);
         assert!(result.is_err());

@@ -560,6 +560,79 @@ fn test_info_color_fields_rgb_png() {
 }
 
 #[test]
+fn test_binarize_generated_output_mode() {
+    let temp = TestDir::new("simply-binarize-int");
+    let input = temp.path().join("img.png");
+    let generated = temp.path().join("img_binarize.png");
+    create_png(&input, 2, 2, [200, 200, 200, 255]);
+
+    let output = run(&["binarize", input.to_str().expect("valid input path")]);
+    assert!(output.status.success());
+    assert!(generated.exists());
+    assert_valid_image(&generated);
+}
+
+#[test]
+fn test_binarize_with_threshold_flag() {
+    let temp = TestDir::new("simply-binarize-int");
+    let input = temp.path().join("img.png");
+    let out = temp.path().join("out.png");
+    create_png(&input, 2, 2, [100, 100, 100, 255]);
+
+    let output = run(&[
+        "binarize",
+        "--threshold",
+        "50",
+        input.to_str().expect("valid input path"),
+        out.to_str().expect("valid output path"),
+    ]);
+    assert!(output.status.success());
+    assert!(out.exists());
+    assert_valid_image(&out);
+
+    let img = image::open(&out).expect("failed to open binarized image");
+    let pixel = img.to_rgba8().get_pixel(0, 0).0;
+    assert_eq!(pixel[0], 255);
+    assert_eq!(pixel[1], 255);
+    assert_eq!(pixel[2], 255);
+}
+
+#[test]
+fn test_binarize_replace_mode() {
+    let temp = TestDir::new("simply-binarize-int");
+    let input = temp.path().join("img.png");
+    create_png(&input, 1, 1, [100, 100, 100, 255]);
+
+    let before = image::open(&input).expect("failed to load initial image");
+    let before_px = before.to_rgba8().get_pixel(0, 0).0;
+
+    let output = run(&["binarize", "-r", input.to_str().expect("valid input path")]);
+    assert!(output.status.success());
+    assert!(input.exists());
+
+    let after = image::open(&input).expect("failed to load transformed image");
+    let after_px = after.to_rgba8().get_pixel(0, 0).0;
+    assert_ne!(before_px, after_px);
+}
+
+#[test]
+fn test_binarize_explicit_output() {
+    let temp = TestDir::new("simply-binarize-int");
+    let input = temp.path().join("img.png");
+    let out = temp.path().join("custom.png");
+    create_png(&input, 3, 3, [200, 200, 200, 255]);
+
+    let output = run(&[
+        "binarize",
+        input.to_str().expect("valid input path"),
+        out.to_str().expect("valid output path"),
+    ]);
+    assert!(output.status.success());
+    assert!(out.exists());
+    assert_valid_image(&out);
+}
+
+#[test]
 fn test_info_missing_file() {
     let output = run(&["info", "/nonexistent/does-not-exist.png"]);
     assert!(!output.status.success());

@@ -385,6 +385,39 @@ fn test_view_non_image_file_fails() {
 }
 
 #[test]
+fn test_binarize_missing_path_prints_usage() {
+    let output = run(&["binarize"]);
+    assert!(!output.status.success());
+    assert!(stderr(&output).contains("Usage:"));
+}
+
+#[test]
+fn test_binarize_nonexistent_file_fails() {
+    let output = run(&["binarize", "this/path/does/not/exist.png"]);
+    assert!(!output.status.success());
+    assert!(stderr(&output).contains("failed to open image"));
+}
+
+#[test]
+fn test_binarize_unknown_flag_rejected() {
+    let temp = TestDir::new("simply-binarize-err");
+    let input = temp.path().join("input.png");
+    create_png(&input, 2, 2, [255, 0, 0, 255]);
+
+    let output = run(&["binarize", "--foo", input.to_str().expect("valid input path")]);
+    assert!(!output.status.success());
+    assert!(stderr(&output).contains("--foo"));
+}
+
+#[test]
+fn test_preview_rejected_in_batch_binarize() {
+    let temp = TestDir::new("simply-preview-batch-err");
+    let output = run(&["binarize", "--preview", temp.path().to_str().unwrap()]);
+    assert!(!output.status.success());
+    assert!(stderr(&output).contains("--preview cannot be used in batch mode"));
+}
+
+#[test]
 fn test_convert_invalid_svg_parse_fails() {
     let temp = TestDir::new("simply-phase1-errors");
     let input = temp.path().join("bad.svg");
