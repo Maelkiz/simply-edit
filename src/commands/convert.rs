@@ -230,9 +230,7 @@ fn save_rendered_pixmap(pixmap: Pixmap, output_path: &Path) -> Result<(), String
             )
         })?;
 
-    image::DynamicImage::ImageRgba8(image)
-        .save(output_path)
-        .map_err(|e| format!("failed to save image '{}': {e}", output_path.display()))
+    crate::io::save_image(image::DynamicImage::ImageRgba8(image), output_path)
 }
 
 pub(crate) fn is_svg_path(path: &str) -> bool {
