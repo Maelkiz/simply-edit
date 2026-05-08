@@ -39,37 +39,50 @@ fn detect_kitty_support() -> bool {
         .unwrap_or(false)
 }
 
-/// Returns the terminal's usable pixel width, or None if unavailable.
+/// Returns the terminal's usable pixel (width, height), or None for each if unavailable.
 ///
-/// Uses TIOCGWINSZ to read ws_xpixel. Falls back to None on non-Unix platforms
-/// or when the terminal doesn't report pixel dimensions.
+/// Height has 2 rows subtracted to leave room for the shell prompt below the image.
+/// Falls back to (None, None) on non-Unix platforms or when the terminal doesn't report pixels.
 #[cfg(unix)]
-fn terminal_pixel_width() -> Option<u32> {
+fn terminal_pixel_size() -> (Option<u32>, Option<u32>) {
     use std::os::unix::io::AsRawFd;
 
     let mut ws: libc::winsize = unsafe { std::mem::zeroed() };
     let fd = io::stdout().as_raw_fd();
     let ret = unsafe { libc::ioctl(fd, libc::TIOCGWINSZ, &mut ws) };
-    if ret == 0 && ws.ws_xpixel > 0 {
-        Some(ws.ws_xpixel as u32)
+    if ret != 0 {
+        return (None, None);
+    }
+    let w = if ws.ws_xpixel > 0 { Some(ws.ws_xpixel as u32) } else { None };
+    let h = if ws.ws_ypixel > 0 && ws.ws_row > 0 {
+        let row_px = ws.ws_ypixel as u32 / ws.ws_row as u32;
+        Some((ws.ws_ypixel as u32).saturating_sub(row_px * 2))
     } else {
         None
-    }
+    };
+    (w, h)
 }
 
 #[cfg(not(unix))]
-fn terminal_pixel_width() -> Option<u32> {
-    None
+fn terminal_pixel_size() -> (Option<u32>, Option<u32>) {
+    (None, None)
 }
 
 fn fit_to_terminal(img: DynamicImage) -> (DynamicImage, Option<u16>) {
-    // Primary: pixel-accurate resize — scale down if image is wider than terminal
-    if let Some(px_width) = terminal_pixel_width() {
-        if img.width() > px_width {
-            return (
-                img.resize(px_width, u32::MAX, FilterType::Lanczos3),
-                None,
-            );
+    let (px_w, px_h) = terminal_pixel_size();
+    if px_w.is_some() || px_h.is_some() {
+        let scale_w = px_w.filter(|&w| img.width() > w).map(|w| w as f32 / img.width() as f32);
+        let scale_h = px_h.filter(|&h| img.height() > h).map(|h| h as f32 / img.height() as f32);
+        let scale = match (scale_w, scale_h) {
+            (Some(sw), Some(sh)) => Some(sw.min(sh)),
+            (Some(sw), None) => Some(sw),
+            (None, Some(sh)) => Some(sh),
+            (None, None) => None,
+        };
+        if let Some(s) = scale {
+            let new_w = ((img.width() as f32 * s).round() as u32).max(1);
+            let new_h = ((img.height() as f32 * s).round() as u32).max(1);
+            return (img.resize(new_w, new_h, FilterType::Lanczos3), None);
         }
         return (img, None);
     }
