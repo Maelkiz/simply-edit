@@ -2,7 +2,7 @@
 
 > A simple CLI tool for manipulating images.
 
-simply-edit is a convenient command-line utility for everyday image tasks: flip, rotate, invert, grayscale, resize, and convert between common formats like PNG, JPG, ICO, SVG, and WebP. It is designed to be easy to use with sensible defaults, optional in-place replacement, and straightforward commands that help you process images quickly.
+simply-edit is a convenient command-line utility for everyday image tasks: flip, rotate, invert, grayscale, binarize, resize, and convert between common formats like PNG, JPG, ICO, SVG, and WebP. It is designed to be easy to use with sensible defaults, optional in-place replacement, and straightforward commands that help you process images quickly.
 
 ---
 
@@ -56,6 +56,7 @@ simply <command> <args>
 | `rotate` | Rotate image (interactive by default, or explicit `90`/`180`/`270`) |
 | `invert` | Invert image colors |
 | `grayscale` | Convert image to grayscale |
+| `binarize` | Convert image to pure black and white at a brightness cutoff |
 | `convert` | Convert between PNG/JPG/ICO/WebP formats |
 | `vectorize` | Convert a raster image to SVG |
 | `rasterize` | Convert an SVG to a raster image |
@@ -91,11 +92,20 @@ simply rotate --angle 90 ./image.png
 
 # Replace original file in-place
 simply rotate --angle 180 --replace ./image.png
+
+# Binarize with default threshold (128)
+simply binarize ./image.png
+
+# Binarize with custom threshold
+simply binarize --threshold 200 ./image.png
 ```
 
 #### Format Conversion
 
 ```bash
+# Convert between formats
+simply convert ./photo.png ./photo.jpg
+
 # Convert a raster image to SVG
 simply vectorize ./image.png
 
@@ -114,6 +124,9 @@ simply convert --format webp ./photos/ --output-dir ./converted/
 
 # Grayscale only matching files, recursively
 simply grayscale ./photos/ -R --pattern "^photo_"
+
+# Binarize all images in a directory with a custom threshold
+simply binarize --threshold 100 ./scans/ --output-dir ./cleaned/
 ```
 
 #### View & Preview
@@ -126,6 +139,7 @@ simply view ./photo.png
 simply flip --horizontal --preview ./photo.png
 simply rotate --angle 90 --preview ./photo.png
 simply grayscale --preview ./photo.png
+simply binarize --preview ./photo.png
 simply vectorize --preview ./photo.png
 ```
 
