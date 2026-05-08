@@ -2,7 +2,7 @@
 
 > A simple CLI tool for manipulating images.
 
-simply-edit is a convenient command-line utility for everyday image tasks: flip, rotate, invert, grayscale, and convert between common formats like PNG, JPG, ICO, SVG, and WebP. It is designed to be easy to use with sensible defaults, optional in-place replacement, and straightforward commands that help you process images quickly.
+simply-edit is a convenient command-line utility for everyday image tasks: flip, rotate, invert, grayscale, resize, and convert between common formats like PNG, JPG, ICO, SVG, and WebP. It is designed to be easy to use with sensible defaults, optional in-place replacement, and straightforward commands that help you process images quickly.
 
 ---
 
@@ -10,7 +10,7 @@ simply-edit is a convenient command-line utility for everyday image tasks: flip,
 
 ### Prerequisites
 
-- **Rust (stable, edition 2024 compatible)** — Install from [rustup.rs](https://rustup.rs/)
+- **Rust 1.85 or later** — Install from [rustup.rs](https://rustup.rs/)
 
 ### Install from Source
 
@@ -56,59 +56,24 @@ simply <command> <args>
 | `rotate` | Rotate image (interactive by default, or explicit `90`/`180`/`270`) |
 | `invert` | Invert image colors |
 | `grayscale` | Convert image to grayscale |
-| `convert` | Convert between PNG/JPG/ICO/SVG/WebP |
+| `convert` | Convert between PNG/JPG/ICO/WebP formats |
 | `vectorize` | Convert a raster image to SVG |
 | `rasterize` | Convert an SVG to a raster image |
-| `view` | Display an image inline in the terminal (Kitty protocol) |
+| `view` | Display an image inline in the terminal (Kitty, WezTerm, or Ghostty) |
 
-### Available Flags
+To get an more detailed description of any given command and its available flags run:
 
-**Common transform flag (`flip`, `rotate`, `invert`, `grayscale`):**
-
-- `-r`, `--replace`: Replace the source file after a successful write.
-
-**`flip` flags:**
-
-- `--horizontal`: Flip horizontally without interactive prompt.
-- `--vertical`: Flip vertically without interactive prompt.
-
-**`rotate` flags:**
-
-- `--angle <90|180|270>`: Rotation angle (interactive prompt if omitted).
-
-**`vectorize` flags:**
-
-- `--fast`: Faster conversion with lower fidelity.
-
-**`rasterize` flags:**
-
-- `-s`, `--scale <factor>`: Scale factor for rasterization.
-- `-w`, `--width <px>`: Output width in pixels.
-- `-H`, `--height <px>`: Output height in pixels.
-
-**`view` flags:**
-
-No additional flags. Provide the image path as the only argument.
-
-Supported terminals: **Kitty**, **WezTerm**, **Ghostty**. In other terminals, image metadata (dimensions, color type) is printed as plain text instead.
-
-**`--preview / -p` flag (flip, rotate, invert, grayscale, resize, rasterize, vectorize):**
-
-- `-p`, `--preview`: Display the transformed image directly in the terminal without writing any file. Uses the same Kitty graphics protocol as the `view` command. Requires **Kitty**, **WezTerm**, or **Ghostty**; returns an error on unsupported terminals.
-- Cannot be combined with batch mode (`--preview` on a directory input is an error).
-
-**Batch flags (available on all commands):**
-
-- `--pattern <regex>`: Regex pattern to filter filenames.
-- `--output-dir <path>`: Output directory for batch results.
-- `-R`, `--recursive`: Process subdirectories recursively.
-- `--format <fmt>`: Output format for batch convert (e.g. `png`, `jpg`, `webp`).
+```bash
+simply <command> --help
+```
 
 ### Output Path
 
-If you omit the output path, the tool generates one automatically based on the command — for example, `image.png` becomes `image_fliph.png` after a horizontal flip. The output file type is determined by the extension you provide (for example, `.png`, `.jpg`, `.ico`, `.svg`, or `.webp`).
+If you omit the output path, the tool generates one automatically: transforms keep the source format (e.g. `image.png` → `image_fliph.png`), while `vectorize` and `rasterize` switch to `.svg` and `.png` respectively. When you provide an explicit output path, the format is determined by its extension.
 
 ### Common Examples
+
+#### Transforms
 
 ```bash
 # Flip (interactive: choose horizontal or vertical)
@@ -123,28 +88,40 @@ simply rotate ./image.png
 # Rotate bypassing interactive mode
 simply rotate --angle 90 ./image.png
 
-# Replace original file after transform
+# Replace original file in-place
 simply rotate --angle 180 --replace ./image.png
+```
 
-# Convert raster image to SVG
+#### Format Conversion
+
+```bash
+# Convert a raster image to SVG
 simply vectorize ./image.png
 
-# Convert SVG to raster image with scale
+# Convert an SVG to a raster image at 2× scale
 simply rasterize -s 2 ./icon.svg ./icon.png
+```
 
-# Batch: invert all images in a directory
+#### Batch Processing
+
+```bash
+# Invert all images in a directory
 simply invert ./photos/
 
-# Batch: convert all JPGs to WebP with output directory
+# Convert all JPGs to WebP, writing results to a separate directory
 simply convert --format webp ./photos/ --output-dir ./converted/
 
-# Batch: process only matching files recursively
+# Grayscale only matching files, recursively
 simply grayscale ./photos/ -R --pattern "^photo_"
+```
 
-# View an image inline (Kitty, WezTerm, Ghostty)
+#### View & Preview
+
+```bash
+# Display an image inline in the terminal
 simply view ./photo.png
 
-# Preview a transform without saving (Kitty, WezTerm, Ghostty)
+# Preview a transform without saving
 simply flip --horizontal --preview ./photo.png
 simply rotate --angle 90 --preview ./photo.png
 simply grayscale --preview ./photo.png
@@ -157,46 +134,7 @@ simply vectorize --preview ./photo.png
 - **JPG/JPEG**: Supported for input and output
 - **ICO**: Supported for input and output. Images larger than 256×256 pixels are automatically resized while maintaining aspect ratio
 - **WebP**: Supported for input and output
-- **SVG**: Supported as a `convert` output format via vector tracing (raster image -> SVG)
-- **SVG input**: Supported for `convert` output to raster formats via `resvg` at 1.0 scale
+- **SVG output**: Raster images can be vectorized to SVG via `vectorize` (or `convert` with an `.svg` destination)
+- **SVG input**: SVG files can be rasterized via `rasterize` (supports `--scale`, `--width`, `--height`) or `convert` (at native resolution)
 
 ---
-
-## Contributing / Development Setup
-
-This section is for contributors and local development.
-
-### Clone the Repository
-
-```bash
-git clone https://github.com/Maelkiz/simply-edit.git
-cd simply-edit
-```
-
-### Build
-
-**Development build:**
-
-```bash
-cargo build
-./target/debug/simply <command> <args>
-```
-
-**Release build:**
-
-```bash
-cargo build --release
-./target/release/simply <command> <args>
-```
-
-### Run Without Installing
-
-```bash
-cargo run -- <command> <args>
-```
-
-### Run Tests
-
-```bash
-cargo test
-```
