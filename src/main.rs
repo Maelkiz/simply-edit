@@ -10,11 +10,17 @@ use clap::Parser;
 use cli::{BatchArgs, Cli, Command};
 use commands::convert::{RasterizeArgs, RasterizeOptions, VectorizeArgs};
 
-enum OutputMode<'a> {
-    Generated(&'a str),
+enum OutputMode {
+    Generated,
     Explicit(String),
     Replace(Option<String>),
     Preview,
+}
+
+pub(crate) enum SaveMode<'a> {
+    Generated(&'a str),
+    Explicit(String),
+    Replace(Option<String>),
 }
 
 fn main() {
@@ -62,7 +68,7 @@ fn run() -> Result<(), String> {
                 batch::print_summary(&result);
                 Ok(())
             } else {
-                let output = output_mode(replace, preview, output, "flip");
+                let output = output_mode(replace, preview, output);
                 commands::transforms::run_flip(&path, output, axis)
             }
         }
@@ -100,7 +106,7 @@ fn run() -> Result<(), String> {
                 batch::print_summary(&result);
                 Ok(())
             } else {
-                let output = output_mode(replace, preview, output, "rotate");
+                let output = output_mode(replace, preview, output);
                 commands::transforms::run_rotate(&path, output, angle)
             }
         }
@@ -127,7 +133,7 @@ fn run() -> Result<(), String> {
                 batch::print_summary(&result);
                 Ok(())
             } else {
-                let output = output_mode(replace, preview, output, "invert");
+                let output = output_mode(replace, preview, output);
                 commands::transforms::run_invert(&path, output)
             }
         }
@@ -154,7 +160,7 @@ fn run() -> Result<(), String> {
                 batch::print_summary(&result);
                 Ok(())
             } else {
-                let output = output_mode(replace, preview, output, "grayscale");
+                let output = output_mode(replace, preview, output);
                 commands::transforms::run_grayscale(&path, output)
             }
         }
@@ -206,7 +212,7 @@ fn run() -> Result<(), String> {
                 batch::print_summary(&result);
                 Ok(())
             } else {
-                let output = output_mode(replace, preview, output, "resize");
+                let output = output_mode(replace, preview, output);
                 commands::transforms::run_resize(&path, output, width, height, scale)
             }
         }
@@ -338,7 +344,7 @@ fn is_batch(path: &str, batch: &BatchArgs) -> bool {
         || batch.recursive
 }
 
-fn output_mode<'a>(replace: bool, preview: bool, output: Option<String>, suffix: &'a str) -> OutputMode<'a> {
+fn output_mode(replace: bool, preview: bool, output: Option<String>) -> OutputMode {
     if preview {
         OutputMode::Preview
     } else if replace {
@@ -346,7 +352,7 @@ fn output_mode<'a>(replace: bool, preview: bool, output: Option<String>, suffix:
     } else {
         match output {
             Some(path) => OutputMode::Explicit(path),
-            None => OutputMode::Generated(suffix),
+            None => OutputMode::Generated,
         }
     }
 }

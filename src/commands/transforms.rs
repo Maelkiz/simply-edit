@@ -1,4 +1,4 @@
-use crate::{OutputMode, io::save_transformed_image};
+use crate::{OutputMode, SaveMode, io::save_transformed_image};
 use inquire::{CustomType, validator::Validation};
 use std::io::{IsTerminal, stdin};
 
@@ -12,7 +12,7 @@ pub(crate) enum FlipAxis {
 
 pub(crate) fn run_flip(
     path: &str,
-    output: OutputMode<'_>,
+    output: OutputMode,
     axis: Option<FlipAxis>,
 ) -> Result<(), String> {
     let axis = match axis {
@@ -32,19 +32,17 @@ pub(crate) fn run_flip(
             FlipAxis::Vertical => (img.flipv(), "flipv", "vertically"),
         };
 
-        if matches!(output, OutputMode::Preview) {
-            crate::commands::view::display_image(flipped)?;
-            return Ok(None);
-        }
-
-        let selected_output = match output {
-            OutputMode::Generated(_) => OutputMode::Generated(suffix),
-            OutputMode::Explicit(path) => OutputMode::Explicit(path),
-            OutputMode::Replace(target) => OutputMode::Replace(target),
-            OutputMode::Preview => unreachable!(),
+        let save_mode = match output {
+            OutputMode::Preview => {
+                crate::commands::view::display_image(flipped)?;
+                return Ok(None);
+            }
+            OutputMode::Generated => SaveMode::Generated(suffix),
+            OutputMode::Explicit(p) => SaveMode::Explicit(p),
+            OutputMode::Replace(t) => SaveMode::Replace(t),
         };
 
-        let output_path = save_transformed_image(flipped, path, selected_output, suffix)?;
+        let output_path = save_transformed_image(flipped, path, save_mode, suffix)?;
         Ok(Some((output_path, axis_label)))
     })();
 
@@ -99,7 +97,7 @@ fn prompt_flip_axis_non_tty() -> Result<FlipAxis, String> {
 
 pub(crate) fn run_rotate(
     path: &str,
-    output: OutputMode<'_>,
+    output: OutputMode,
     degrees: Option<u16>,
 ) -> Result<(), String> {
     let deg = match degrees {
@@ -121,20 +119,18 @@ pub(crate) fn run_rotate(
             _ => return Err(format!("invalid rotation '{deg}': use 90, 180, or 270")),
         };
 
-        if matches!(output, OutputMode::Preview) {
-            crate::commands::view::display_image(rotated)?;
-            return Ok(None);
-        }
-
         let rotate_suffix = format!("rotate{deg}");
-        let selected_output = match output {
-            OutputMode::Generated(_) => OutputMode::Generated(rotate_suffix.as_str()),
-            OutputMode::Explicit(path) => OutputMode::Explicit(path),
-            OutputMode::Replace(target) => OutputMode::Replace(target),
-            OutputMode::Preview => unreachable!(),
+        let save_mode = match output {
+            OutputMode::Preview => {
+                crate::commands::view::display_image(rotated)?;
+                return Ok(None);
+            }
+            OutputMode::Generated => SaveMode::Generated(rotate_suffix.as_str()),
+            OutputMode::Explicit(p) => SaveMode::Explicit(p),
+            OutputMode::Replace(t) => SaveMode::Replace(t),
         };
 
-        let output_path = save_transformed_image(rotated, path, selected_output, &rotate_suffix)?;
+        let output_path = save_transformed_image(rotated, path, save_mode, &rotate_suffix)?;
         Ok(Some(output_path))
     })();
 
@@ -193,7 +189,7 @@ fn prompt_rotate_degrees_non_tty() -> Result<u16, String> {
 
 pub(crate) fn run_resize(
     path: &str,
-    output: OutputMode<'_>,
+    output: OutputMode,
     width: Option<u32>,
     height: Option<u32>,
     scale: Option<f32>,
@@ -226,20 +222,18 @@ pub(crate) fn run_resize(
         let img = image::open(path).map_err(|e| format!("failed to open image '{path}': {e}"))?;
         let resized = img.resize_exact(w, h, image::imageops::FilterType::Lanczos3);
 
-        if matches!(output, OutputMode::Preview) {
-            crate::commands::view::display_image(resized)?;
-            return Ok(None);
-        }
-
         let resize_suffix = format!("resize{w}x{h}");
-        let selected_output = match output {
-            OutputMode::Generated(_) => OutputMode::Generated(resize_suffix.as_str()),
-            OutputMode::Explicit(path) => OutputMode::Explicit(path),
-            OutputMode::Replace(target) => OutputMode::Replace(target),
-            OutputMode::Preview => unreachable!(),
+        let save_mode = match output {
+            OutputMode::Preview => {
+                crate::commands::view::display_image(resized)?;
+                return Ok(None);
+            }
+            OutputMode::Generated => SaveMode::Generated(resize_suffix.as_str()),
+            OutputMode::Explicit(p) => SaveMode::Explicit(p),
+            OutputMode::Replace(t) => SaveMode::Replace(t),
         };
 
-        let output_path = save_transformed_image(resized, path, selected_output, &resize_suffix)?;
+        let output_path = save_transformed_image(resized, path, save_mode, &resize_suffix)?;
         Ok(Some(output_path))
     })();
 
@@ -389,24 +383,30 @@ fn prompt_resize_dimensions_non_tty() -> Result<(u32, u32), String> {
     Ok((width, height))
 }
 
-pub(crate) fn run_invert(path: &str, output: OutputMode<'_>) -> Result<(), String> {
+pub(crate) fn run_invert(path: &str, output: OutputMode) -> Result<(), String> {
     let img = image::open(path).map_err(|e| format!("failed to open image '{path}': {e}"))?;
     let inverted = invert_colors(img);
-    if matches!(output, OutputMode::Preview) {
-        return crate::commands::view::display_image(inverted);
-    }
-    let output_path = save_transformed_image(inverted, path, output, "invert")?;
+    let save_mode = match output {
+        OutputMode::Preview => return crate::commands::view::display_image(inverted),
+        OutputMode::Generated => SaveMode::Generated("invert"),
+        OutputMode::Explicit(p) => SaveMode::Explicit(p),
+        OutputMode::Replace(t) => SaveMode::Replace(t),
+    };
+    let output_path = save_transformed_image(inverted, path, save_mode, "invert")?;
     println!("Saved inverted image to {}", output_path);
     Ok(())
 }
 
-pub(crate) fn run_grayscale(path: &str, output: OutputMode<'_>) -> Result<(), String> {
+pub(crate) fn run_grayscale(path: &str, output: OutputMode) -> Result<(), String> {
     let img = image::open(path).map_err(|e| format!("failed to open image '{path}': {e}"))?;
     let grayscale = img.grayscale();
-    if matches!(output, OutputMode::Preview) {
-        return crate::commands::view::display_image(grayscale);
-    }
-    let output_path = save_transformed_image(grayscale, path, output, "grayscale")?;
+    let save_mode = match output {
+        OutputMode::Preview => return crate::commands::view::display_image(grayscale),
+        OutputMode::Generated => SaveMode::Generated("grayscale"),
+        OutputMode::Explicit(p) => SaveMode::Explicit(p),
+        OutputMode::Replace(t) => SaveMode::Replace(t),
+    };
+    let output_path = save_transformed_image(grayscale, path, save_mode, "grayscale")?;
     println!("Saved grayscale image to {}", output_path);
     Ok(())
 }
