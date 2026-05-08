@@ -206,19 +206,19 @@ pub(crate) fn resolve_output_path(
     input: &Path,
     suffix: &str,
     options: &BatchOptions,
-) -> Result<PathBuf, String> {
+) -> PathBuf {
     let stem = input.file_stem().and_then(|s| s.to_str()).unwrap_or("output");
     let ext = input.extension().and_then(|e| e.to_str()).unwrap_or("png");
-    Ok(output_dir(input, options).join(format!("{stem}_{suffix}.{ext}")))
+    output_dir(input, options).join(format!("{stem}_{suffix}.{ext}"))
 }
 
 pub(crate) fn resolve_output_path_with_ext(
     input: &Path,
     ext: &str,
     options: &BatchOptions,
-) -> Result<PathBuf, String> {
+) -> PathBuf {
     let stem = input.file_stem().and_then(|s| s.to_str()).unwrap_or("output");
-    Ok(output_dir(input, options).join(format!("{stem}.{ext}")))
+    output_dir(input, options).join(format!("{stem}.{ext}"))
 }
 
 pub(crate) fn print_summary(result: &BatchResult) {
@@ -346,7 +346,7 @@ mod tests {
             output_dir: None,
             recursive: false,
         };
-        let result = resolve_output_path(Path::new("/photos/img.png"), "invert", &options).unwrap();
+        let result = resolve_output_path(Path::new("/photos/img.png"), "invert", &options);
         assert_eq!(result, PathBuf::from("/photos/img_invert.png"));
     }
 
@@ -357,7 +357,7 @@ mod tests {
             output_dir: Some(PathBuf::from("/out")),
             recursive: false,
         };
-        let result = resolve_output_path(Path::new("/photos/img.png"), "invert", &options).unwrap();
+        let result = resolve_output_path(Path::new("/photos/img.png"), "invert", &options);
         assert_eq!(result, PathBuf::from("/out/img_invert.png"));
     }
 
@@ -369,7 +369,7 @@ mod tests {
             recursive: false,
         };
         let result =
-            resolve_output_path_with_ext(Path::new("/photos/img.png"), "webp", &options).unwrap();
+            resolve_output_path_with_ext(Path::new("/photos/img.png"), "webp", &options);
         assert_eq!(result, PathBuf::from("/out/img.webp"));
     }
 
@@ -601,7 +601,7 @@ mod tests {
             output_dir: None,
             recursive: false,
         };
-        let result = resolve_output_path(Path::new("/dir/photo.jpg"), "flip", &options).unwrap();
+        let result = resolve_output_path(Path::new("/dir/photo.jpg"), "flip", &options);
         assert_eq!(result, PathBuf::from("/dir/photo_flip.jpg"));
     }
 
@@ -613,7 +613,7 @@ mod tests {
             recursive: false,
         };
         let result =
-            resolve_output_path_with_ext(Path::new("/dir/photo.png"), "webp", &options).unwrap();
+            resolve_output_path_with_ext(Path::new("/dir/photo.png"), "webp", &options);
         assert_eq!(result, PathBuf::from("/dir/photo.webp"));
     }
 }

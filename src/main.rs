@@ -61,7 +61,7 @@ fn run() -> Result<(), String> {
                         commands::transforms::FlipAxis::Horizontal => (img.fliph(), "fliph"),
                         commands::transforms::FlipAxis::Vertical => (img.flipv(), "flipv"),
                     };
-                    let out_path = batch::resolve_output_path(file, suffix, &options)?;
+                    let out_path = batch::resolve_output_path(file, suffix, &options);
                     io::save_image(flipped, &out_path)?;
                     Ok(out_path.to_string_lossy().to_string())
                 })?;
@@ -99,7 +99,7 @@ fn run() -> Result<(), String> {
                         _ => return Err(format!("invalid rotation '{deg}': use 90, 180, or 270")),
                     };
                     let suffix = format!("rotate{deg}");
-                    let out_path = batch::resolve_output_path(file, &suffix, &options)?;
+                    let out_path = batch::resolve_output_path(file, &suffix, &options);
                     io::save_image(rotated, &out_path)?;
                     Ok(out_path.to_string_lossy().to_string())
                 })?;
@@ -126,7 +126,7 @@ fn run() -> Result<(), String> {
                     let img = image::open(file)
                         .map_err(|e| format!("failed to open image '{}': {e}", file.display()))?;
                     let inverted = commands::transforms::invert_colors(img);
-                    let out_path = batch::resolve_output_path(file, "invert", &options)?;
+                    let out_path = batch::resolve_output_path(file, "invert", &options);
                     io::save_image(inverted, &out_path)?;
                     Ok(out_path.to_string_lossy().to_string())
                 })?;
@@ -153,7 +153,7 @@ fn run() -> Result<(), String> {
                     let img = image::open(file)
                         .map_err(|e| format!("failed to open image '{}': {e}", file.display()))?;
                     let gray = img.grayscale();
-                    let out_path = batch::resolve_output_path(file, "grayscale", &options)?;
+                    let out_path = batch::resolve_output_path(file, "grayscale", &options);
                     io::save_image(gray, &out_path)?;
                     Ok(out_path.to_string_lossy().to_string())
                 })?;
@@ -205,7 +205,7 @@ fn run() -> Result<(), String> {
                     let resized =
                         img.resize_exact(w.max(1), h.max(1), image::imageops::FilterType::Lanczos3);
                     let suffix = format!("resize{w}x{h}");
-                    let out_path = batch::resolve_output_path(file, &suffix, &options)?;
+                    let out_path = batch::resolve_output_path(file, &suffix, &options);
                     io::save_image(resized, &out_path)?;
                     Ok(out_path.to_string_lossy().to_string())
                 })?;
@@ -228,7 +228,7 @@ fn run() -> Result<(), String> {
                 })?;
                 let options = batch::to_batch_options(&batch)?;
                 let result = batch::run_batch(Path::new(&src), &options, |file| {
-                    let out_path = batch::resolve_output_path_with_ext(file, &fmt, &options)?;
+                    let out_path = batch::resolve_output_path_with_ext(file, &fmt, &options);
                     let out_str = out_path.to_string_lossy().to_string();
                     let src_str = file.to_string_lossy().to_string();
                     commands::convert::run_convert(&src_str, &out_str)?;
@@ -257,7 +257,7 @@ fn run() -> Result<(), String> {
                 }
                 let options = batch::to_batch_options(&batch)?;
                 let result = batch::run_batch(Path::new(&src), &options, |file| {
-                    let out_path = batch::resolve_output_path_with_ext(file, "svg", &options)?;
+                    let out_path = batch::resolve_output_path_with_ext(file, "svg", &options);
                     let out_str = out_path.to_string_lossy().to_string();
                     let src_str = file.to_string_lossy().to_string();
                     commands::convert::run_vectorize(VectorizeArgs {
@@ -302,7 +302,7 @@ fn run() -> Result<(), String> {
                 let options = batch::to_batch_options(&batch)?;
                 let result = batch::run_batch_svg(Path::new(&src), &options, |file| {
                     let out_path =
-                        batch::resolve_output_path_with_ext(file, "png", &options)?;
+                        batch::resolve_output_path_with_ext(file, "png", &options);
                     let out_str = out_path.to_string_lossy().to_string();
                     let src_str = file.to_string_lossy().to_string();
                     commands::convert::run_rasterize(RasterizeArgs {
