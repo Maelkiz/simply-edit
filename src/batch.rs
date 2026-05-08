@@ -96,7 +96,13 @@ fn walk_dir(
         }
 
         if let Some(re) = pattern {
-            let filename = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+            let Some(filename) = path.file_name().and_then(|n| n.to_str()) else {
+                eprintln!(
+                    "warning: skipping '{}': filename is not valid UTF-8",
+                    path.display()
+                );
+                continue;
+            };
             if !re.is_match(filename) {
                 continue;
             }
