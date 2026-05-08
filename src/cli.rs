@@ -187,6 +187,12 @@ pub(crate) enum Command {
         batch: BatchArgs,
     },
 
+    /// Display image metadata and properties
+    Info {
+        /// Path to the image file
+        path: String,
+    },
+
     /// Display an image in the terminal (inline in Kitty, WezTerm, or Ghostty)
     View {
         /// Path to the image file

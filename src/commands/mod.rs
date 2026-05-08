@@ -1,4 +1,5 @@
 pub mod convert;
+pub mod info;
 pub mod transforms;
 pub mod view;
 

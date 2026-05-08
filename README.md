@@ -59,6 +59,7 @@ simply <command> <args>
 | `convert` | Convert between PNG/JPG/ICO/WebP formats |
 | `vectorize` | Convert a raster image to SVG |
 | `rasterize` | Convert an SVG to a raster image |
+| `info` | Display image metadata and properties |
 | `view` | Display an image inline in the terminal (Kitty, WezTerm, or Ghostty) |
 
 To get an more detailed description of any given command and its available flags run:

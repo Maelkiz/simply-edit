@@ -512,3 +512,62 @@ fn test_convert_creates_output_in_nested_directory() {
     assert!(output.status.success());
     assert!(dst.exists());
 }
+
+#[test]
+fn test_info_basic_png() {
+    let temp = TestDir::new("simply-info");
+    let input = temp.path().join("photo.png");
+    create_png(&input, 3, 2, [100, 150, 200, 255]);
+
+    let output = run(&["info", input.to_str().expect("valid input path")]);
+    assert!(output.status.success());
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("File: photo.png"), "missing File line: {stdout}");
+    assert!(stdout.contains("Format: PNG"), "missing Format line: {stdout}");
+    assert!(stdout.contains("Dimensions: 3\u{00d7}2"), "missing Dimensions line: {stdout}");
+    assert!(stdout.contains("Size:"), "missing Size line: {stdout}");
+    assert!(stdout.contains("Color:"), "missing Color section: {stdout}");
+    assert!(stdout.contains("Metadata:"), "missing Metadata section: {stdout}");
+}
+
+#[test]
+fn test_info_no_exif_png() {
+    let temp = TestDir::new("simply-info");
+    let input = temp.path().join("plain.png");
+    create_png(&input, 4, 4, [255, 0, 0, 255]);
+
+    let output = run(&["info", input.to_str().expect("valid input path")]);
+    assert!(output.status.success());
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("EXIF: no"), "expected no EXIF: {stdout}");
+    assert!(stdout.contains("ICC profile: none"), "expected no ICC: {stdout}");
+}
+
+#[test]
+fn test_info_color_fields_rgb_png() {
+    let temp = TestDir::new("simply-info");
+    let input = temp.path().join("rgb.png");
+    create_png(&input, 2, 2, [10, 20, 30, 255]);
+
+    let output = run(&["info", input.to_str().expect("valid input path")]);
+    assert!(output.status.success());
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("Space: sRGB"), "expected sRGB space: {stdout}");
+    assert!(stdout.contains("Depth: 8-bit"), "expected 8-bit depth: {stdout}");
+}
+
+#[test]
+fn test_info_missing_file() {
+    let output = run(&["info", "/nonexistent/does-not-exist.png"]);
+    assert!(!output.status.success());
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("info:"), "expected 'info:' prefix in error: {stderr}");
+    assert!(
+        stderr.contains("does-not-exist.png"),
+        "expected path in error: {stderr}"
+    );
+}

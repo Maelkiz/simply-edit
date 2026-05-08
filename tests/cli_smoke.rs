@@ -45,6 +45,24 @@ fn test_cli_help_prints_usage_successfully() {
 }
 
 #[test]
+fn test_cli_info_help_flags_print_expected_sections() {
+    for flag in ["--help", "-h"] {
+        let output = Command::new(binary_path())
+            .args(["info", flag])
+            .output()
+            .expect("failed to run simply binary");
+
+        assert!(output.status.success());
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("Display image metadata and properties"));
+        assert!(stdout.contains("Usage: simply info <PATH>"));
+        assert!(stdout.contains("Arguments:"));
+        assert!(stdout.contains("Options:"));
+        assert!(stdout.contains("-h, --help"));
+    }
+}
+
+#[test]
 fn test_cli_convert_rejects_unknown_flag() {
     let output = Command::new(binary_path())
         .args(["convert", "--bogus", "in.svg", "out.png"])

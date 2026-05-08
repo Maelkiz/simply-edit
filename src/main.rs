@@ -281,6 +281,7 @@ fn run() -> Result<(), String> {
                 commands::convert::run_vectorize(VectorizeArgs { src, dst, fast, preview })
             }
         }
+        Command::Info { path } => commands::info::run_info(&path),
         Command::View { path } => commands::view::run_view(&path),
         Command::Rasterize {
             scale,
