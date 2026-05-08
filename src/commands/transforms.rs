@@ -26,7 +26,8 @@ pub(crate) fn run_flip(
     };
 
     let result: Result<Option<(String, &str)>, String> = (|| {
-        let img = image::open(path).map_err(|e| format!("failed to open image '{path}': {e}"))?;
+        let img = image::open(path)
+            .map_err(|e| format!("flip: failed to open image '{path}': {e}"))?;
         let (flipped, suffix, axis_label) = match axis {
             FlipAxis::Horizontal => (img.fliph(), "fliph", "horizontally"),
             FlipAxis::Vertical => (img.flipv(), "flipv", "vertically"),
@@ -111,12 +112,13 @@ pub(crate) fn run_rotate(
     };
 
     let result: Result<Option<String>, String> = (|| {
-        let img = image::open(path).map_err(|e| format!("failed to open image '{path}': {e}"))?;
+        let img = image::open(path)
+            .map_err(|e| format!("rotate: failed to open image '{path}': {e}"))?;
         let rotated = match deg {
             90 => img.rotate90(),
             180 => img.rotate180(),
             270 => img.rotate270(),
-            _ => return Err(format!("invalid rotation '{deg}': use 90, 180, or 270")),
+            _ => return Err(format!("rotate: invalid rotation '{deg}': use 90, 180, or 270")),
         };
 
         let rotate_suffix = format!("rotate{deg}");
@@ -196,7 +198,7 @@ pub(crate) fn run_resize(
 ) -> Result<(), String> {
     let (w, h) = if let Some(s) = scale {
         let (orig_w, orig_h) = image::image_dimensions(path)
-            .map_err(|e| format!("failed to read image '{path}': {e}"))?;
+            .map_err(|e| format!("resize: failed to read image '{path}': {e}"))?;
         let w = (orig_w as f64 * s as f64).round() as u32;
         let h = (orig_h as f64 * s as f64).round() as u32;
         (w.max(1), h.max(1))
@@ -206,7 +208,7 @@ pub(crate) fn run_resize(
             (None, None) => prompt_resize_dimensions()?,
             (partial_w, partial_h) => {
                 let (orig_w, orig_h) = image::image_dimensions(path)
-                    .map_err(|e| format!("failed to read image '{path}': {e}"))?;
+                    .map_err(|e| format!("resize: failed to read image '{path}': {e}"))?;
                 resolve_partial_resize(partial_w, partial_h, orig_w, orig_h)?
             }
         }
@@ -219,7 +221,8 @@ pub(crate) fn run_resize(
     };
 
     let result: Result<Option<String>, String> = (|| {
-        let img = image::open(path).map_err(|e| format!("failed to open image '{path}': {e}"))?;
+        let img = image::open(path)
+            .map_err(|e| format!("resize: failed to open image '{path}': {e}"))?;
         let resized = img.resize_exact(w, h, image::imageops::FilterType::Lanczos3);
 
         let resize_suffix = format!("resize{w}x{h}");
@@ -384,7 +387,8 @@ fn prompt_resize_dimensions_non_tty() -> Result<(u32, u32), String> {
 }
 
 pub(crate) fn run_invert(path: &str, output: OutputMode) -> Result<(), String> {
-    let img = image::open(path).map_err(|e| format!("failed to open image '{path}': {e}"))?;
+    let img = image::open(path)
+        .map_err(|e| format!("invert: failed to open image '{path}': {e}"))?;
     let inverted = invert_colors(img);
     let save_mode = match output {
         OutputMode::Preview => return crate::commands::view::display_image(inverted),
@@ -398,7 +402,8 @@ pub(crate) fn run_invert(path: &str, output: OutputMode) -> Result<(), String> {
 }
 
 pub(crate) fn run_grayscale(path: &str, output: OutputMode) -> Result<(), String> {
-    let img = image::open(path).map_err(|e| format!("failed to open image '{path}': {e}"))?;
+    let img = image::open(path)
+        .map_err(|e| format!("grayscale: failed to open image '{path}': {e}"))?;
     let grayscale = img.grayscale();
     let save_mode = match output {
         OutputMode::Preview => return crate::commands::view::display_image(grayscale),

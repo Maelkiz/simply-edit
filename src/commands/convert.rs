@@ -30,7 +30,7 @@ pub(crate) fn run_convert(src: &str, dst: &str) -> Result<(), String> {
         return rasterize(src, &dst, RasterizeOptions::default(), false);
     }
 
-    let img = image::open(src).map_err(|e| format!("failed to open image '{src}': {e}"))?;
+    let img = image::open(src).map_err(|e| format!("convert: failed to open image '{src}': {e}"))?;
     crate::io::save_image(img, &dst)?;
     println!("Converted image to {}", dst);
     Ok(())
@@ -88,26 +88,26 @@ fn vectorize(src: &str, dst: &str, fast: bool, preview: bool) -> Result<(), Stri
         ));
         let spinner = start_spinner("Vectorizing image for preview...");
         let result = vtracer::convert_image_to_svg(src_path, &temp_path, config).map_err(|e| {
-            format!("failed to vectorize image '{}': {e}", src_path.display())
+            format!("vectorize: failed to vectorize image '{}': {e}", src_path.display())
         });
         if let Some(pb) = spinner { pb.finish_and_clear(); }
         result?;
 
         let svg_data = fs::read(&temp_path)
-            .map_err(|e| format!("failed to read vectorized SVG for preview: {e}"));
+            .map_err(|e| format!("vectorize: failed to read vectorized SVG for preview: {e}"));
         let _ = fs::remove_file(&temp_path);
         let svg_data = svg_data?;
 
         let usvg_options = Options::default();
         let tree = Tree::from_data(&svg_data, &usvg_options)
-            .map_err(|e| format!("failed to parse vectorized SVG for preview: {e}"))?;
+            .map_err(|e| format!("vectorize: failed to parse vectorized SVG for preview: {e}"))?;
         let size = tree.size().to_int_size();
         let mut pixmap = Pixmap::new(size.width(), size.height())
-            .ok_or_else(|| "failed to create pixmap for vectorize preview".to_string())?;
+            .ok_or_else(|| "vectorize: failed to create pixmap for preview".to_string())?;
         resvg::render(&tree, Transform::default(), &mut pixmap.as_mut());
         let image = image::DynamicImage::ImageRgba8(
             image::RgbaImage::from_raw(size.width(), size.height(), pixmap.take_demultiplied())
-                .ok_or_else(|| "failed to build image buffer for vectorize preview".to_string())?,
+                .ok_or_else(|| "vectorize: failed to build image buffer for preview".to_string())?,
         );
         return crate::commands::view::display_image(image);
     }
@@ -117,7 +117,7 @@ fn vectorize(src: &str, dst: &str, fast: bool, preview: bool) -> Result<(), Stri
 
     let result = vtracer::convert_image_to_svg(src_path, dst_path, config).map_err(|e| {
         format!(
-            "failed to vectorize image '{}' to '{}': {e}",
+            "vectorize: failed to vectorize image '{}' to '{}': {e}",
             src_path.display(),
             dst_path.display()
         )
@@ -136,7 +136,7 @@ fn rasterize(src: &str, dst: &str, options: RasterizeOptions, preview: bool) -> 
     let src_path = Path::new(src);
     let dst_path = Path::new(dst);
     let svg_data = fs::read(src_path)
-        .map_err(|e| format!("failed to read SVG '{}': {e}", src_path.display()))?;
+        .map_err(|e| format!("rasterize: failed to read SVG '{}': {e}", src_path.display()))?;
 
     let usvg_options = Options {
         resources_dir: src_path.parent().map(Path::to_path_buf),
@@ -144,13 +144,13 @@ fn rasterize(src: &str, dst: &str, options: RasterizeOptions, preview: bool) -> 
     };
 
     let tree = Tree::from_data(&svg_data, &usvg_options)
-        .map_err(|e| format!("failed to parse SVG '{}': {e}", src_path.display()))?;
+        .map_err(|e| format!("rasterize: failed to parse SVG '{}': {e}", src_path.display()))?;
 
     let (render_width, render_height, scale_x, scale_y) =
         compute_render_dimensions(tree.size(), &options)?;
     let mut pixmap = Pixmap::new(render_width, render_height).ok_or_else(|| {
         format!(
-            "failed to create pixmap for '{}' with size {}x{}",
+            "rasterize: failed to create pixmap for '{}' with size {}x{}",
             src_path.display(),
             render_width,
             render_height
@@ -169,7 +169,7 @@ fn rasterize(src: &str, dst: &str, options: RasterizeOptions, preview: bool) -> 
             image::RgbaImage::from_raw(render_width, render_height, pixmap.take_demultiplied())
                 .ok_or_else(|| {
                     format!(
-                        "failed to build image buffer for preview of '{}'",
+                        "rasterize: failed to build image buffer for preview of '{}'",
                         src_path.display()
                     )
                 })?,
@@ -223,7 +223,7 @@ fn save_rendered_pixmap(pixmap: Pixmap, output_path: &Path) -> Result<(), String
     let image =
         image::RgbaImage::from_raw(width, height, pixmap.take_demultiplied()).ok_or_else(|| {
             format!(
-                "failed to build image buffer for '{}' with size {}x{}",
+                "rasterize: failed to build image buffer for '{}' with size {}x{}",
                 output_path.display(),
                 width,
                 height

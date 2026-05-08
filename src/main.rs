@@ -56,7 +56,7 @@ fn run() -> Result<(), String> {
                 let options = batch::to_batch_options(&batch)?;
                 let result = batch::run_batch(Path::new(&path), &options, |file| {
                     let img = image::open(file)
-                        .map_err(|e| format!("failed to open image '{}': {e}", file.display()))?;
+                        .map_err(|e| format!("flip: failed to open image '{}': {e}", file.display()))?;
                     let (flipped, suffix) = match axis {
                         commands::transforms::FlipAxis::Horizontal => (img.fliph(), "fliph"),
                         commands::transforms::FlipAxis::Vertical => (img.flipv(), "flipv"),
@@ -91,12 +91,12 @@ fn run() -> Result<(), String> {
                 let options = batch::to_batch_options(&batch)?;
                 let result = batch::run_batch(Path::new(&path), &options, |file| {
                     let img = image::open(file)
-                        .map_err(|e| format!("failed to open image '{}': {e}", file.display()))?;
+                        .map_err(|e| format!("rotate: failed to open image '{}': {e}", file.display()))?;
                     let rotated = match deg {
                         90 => img.rotate90(),
                         180 => img.rotate180(),
                         270 => img.rotate270(),
-                        _ => return Err(format!("invalid rotation '{deg}': use 90, 180, or 270")),
+                        _ => return Err(format!("rotate: invalid rotation '{deg}': use 90, 180, or 270")),
                     };
                     let suffix = format!("rotate{deg}");
                     let out_path = batch::resolve_output_path(file, &suffix, &options);
@@ -124,7 +124,7 @@ fn run() -> Result<(), String> {
                 let options = batch::to_batch_options(&batch)?;
                 let result = batch::run_batch(Path::new(&path), &options, |file| {
                     let img = image::open(file)
-                        .map_err(|e| format!("failed to open image '{}': {e}", file.display()))?;
+                        .map_err(|e| format!("invert: failed to open image '{}': {e}", file.display()))?;
                     let inverted = commands::transforms::invert_colors(img);
                     let out_path = batch::resolve_output_path(file, "invert", &options);
                     io::save_image(inverted, &out_path)?;
@@ -151,7 +151,7 @@ fn run() -> Result<(), String> {
                 let options = batch::to_batch_options(&batch)?;
                 let result = batch::run_batch(Path::new(&path), &options, |file| {
                     let img = image::open(file)
-                        .map_err(|e| format!("failed to open image '{}': {e}", file.display()))?;
+                        .map_err(|e| format!("grayscale: failed to open image '{}': {e}", file.display()))?;
                     let gray = img.grayscale();
                     let out_path = batch::resolve_output_path(file, "grayscale", &options);
                     io::save_image(gray, &out_path)?;
@@ -194,7 +194,7 @@ fn run() -> Result<(), String> {
                 }
                 let result = batch::run_batch(Path::new(&path), &options, |file| {
                     let img = image::open(file)
-                        .map_err(|e| format!("failed to open image '{}': {e}", file.display()))?;
+                        .map_err(|e| format!("resize: failed to open image '{}': {e}", file.display()))?;
                     let (w, h) = if let Some(s) = scale {
                         (
                             (img.width() as f64 * s as f64).round() as u32,
