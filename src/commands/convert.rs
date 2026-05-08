@@ -23,11 +23,11 @@ pub(crate) fn run_convert(src: &str, dst: &str) -> Result<(), String> {
         .to_string();
 
     if is_svg_path(&dst) {
-        return vectorize(src, &dst, false);
+        return vectorize(src, &dst, false, false);
     }
 
     if is_svg_path(src) {
-        return rasterize(src, &dst, RasterizeOptions::default());
+        return rasterize(src, &dst, RasterizeOptions::default(), false);
     }
 
     let img = image::open(src).map_err(|e| format!("failed to open image '{src}': {e}"))?;
@@ -47,6 +47,7 @@ pub(crate) struct RasterizeArgs {
     pub(crate) options: RasterizeOptions,
     pub(crate) src: String,
     pub(crate) dst: String,
+    pub(crate) preview: bool,
 }
 
 #[derive(Debug)]
@@ -54,30 +55,64 @@ pub(crate) struct VectorizeArgs {
     pub(crate) src: String,
     pub(crate) dst: String,
     pub(crate) fast: bool,
+    pub(crate) preview: bool,
 }
 
 pub(crate) fn run_vectorize(args: VectorizeArgs) -> Result<(), String> {
     let dst = crate::io::enumerate_if_exists(Path::new(&args.dst))
         .to_string_lossy()
         .to_string();
-    vectorize(&args.src, &dst, args.fast)
+    vectorize(&args.src, &dst, args.fast, args.preview)
 }
 
 pub(crate) fn run_rasterize(args: RasterizeArgs) -> Result<(), String> {
     let dst = crate::io::enumerate_if_exists(Path::new(&args.dst))
         .to_string_lossy()
         .to_string();
-    rasterize(&args.src, &dst, args.options)
+    rasterize(&args.src, &dst, args.options, args.preview)
 }
 
-fn vectorize(src: &str, dst: &str, fast: bool) -> Result<(), String> {
+fn vectorize(src: &str, dst: &str, fast: bool, preview: bool) -> Result<(), String> {
     let src_path = Path::new(src);
-    let dst_path = Path::new(dst);
     let config = if fast {
         fast_vectorize_config()
     } else {
         Config::default()
     };
+
+    if preview {
+        // Vectorize to a temp file, rasterize it, display, then clean up
+        let temp_path = std::env::temp_dir().join(format!(
+            "simply-preview-{}.svg",
+            std::process::id()
+        ));
+        let spinner = start_spinner("Vectorizing image for preview...");
+        let result = vtracer::convert_image_to_svg(src_path, &temp_path, config).map_err(|e| {
+            format!("failed to vectorize image '{}': {e}", src_path.display())
+        });
+        if let Some(pb) = spinner { pb.finish_and_clear(); }
+        result?;
+
+        let svg_data = fs::read(&temp_path)
+            .map_err(|e| format!("failed to read vectorized SVG for preview: {e}"));
+        let _ = fs::remove_file(&temp_path);
+        let svg_data = svg_data?;
+
+        let usvg_options = Options::default();
+        let tree = Tree::from_data(&svg_data, &usvg_options)
+            .map_err(|e| format!("failed to parse vectorized SVG for preview: {e}"))?;
+        let size = tree.size().to_int_size();
+        let mut pixmap = Pixmap::new(size.width(), size.height())
+            .ok_or_else(|| "failed to create pixmap for vectorize preview".to_string())?;
+        resvg::render(&tree, Transform::default(), &mut pixmap.as_mut());
+        let image = image::DynamicImage::ImageRgba8(
+            image::RgbaImage::from_raw(size.width(), size.height(), pixmap.take_demultiplied())
+                .ok_or_else(|| "failed to build image buffer for vectorize preview".to_string())?,
+        );
+        return crate::commands::view::display_image(image);
+    }
+
+    let dst_path = Path::new(dst);
     let spinner = start_spinner("Vectorizing image...");
 
     let result = vtracer::convert_image_to_svg(src_path, dst_path, config).map_err(|e| {
@@ -97,7 +132,7 @@ fn vectorize(src: &str, dst: &str, fast: bool) -> Result<(), String> {
     Ok(())
 }
 
-fn rasterize(src: &str, dst: &str, options: RasterizeOptions) -> Result<(), String> {
+fn rasterize(src: &str, dst: &str, options: RasterizeOptions, preview: bool) -> Result<(), String> {
     let src_path = Path::new(src);
     let dst_path = Path::new(dst);
     let svg_data = fs::read(src_path)
@@ -128,6 +163,19 @@ fn rasterize(src: &str, dst: &str, options: RasterizeOptions) -> Result<(), Stri
         Transform::from_scale(scale_x, scale_y),
         &mut pixmap_mut,
     );
+
+    if preview {
+        let image = image::DynamicImage::ImageRgba8(
+            image::RgbaImage::from_raw(render_width, render_height, pixmap.take_demultiplied())
+                .ok_or_else(|| {
+                    format!(
+                        "failed to build image buffer for preview of '{}'",
+                        src_path.display()
+                    )
+                })?,
+        );
+        return crate::commands::view::display_image(image);
+    }
 
     save_rendered_pixmap(pixmap, dst_path)?;
     println!("Converted image to {}", dst);
@@ -237,6 +285,7 @@ mod tests {
             input_path.to_str().expect("invalid input path"),
             output_path.to_str().expect("invalid output path"),
             RasterizeOptions::default(),
+            false,
         )
         .expect("svg conversion failed");
 

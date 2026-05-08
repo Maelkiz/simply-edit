@@ -14,6 +14,7 @@ enum OutputMode<'a> {
     Generated(&'a str),
     Explicit(String),
     Replace(Option<String>),
+    Preview,
 }
 
 fn main() {
@@ -30,12 +31,16 @@ fn run() -> Result<(), String> {
             horizontal,
             vertical,
             replace,
+            preview,
             batch,
             path,
             output,
         } => {
             let axis = cli::flip_axis_from_flags(horizontal, vertical)?;
             if is_batch(&path, &batch) {
+                if preview {
+                    return Err("flip: --preview cannot be used in batch mode".to_string());
+                }
                 if axis.is_none() {
                     return Err(
                         "flip: --horizontal or --vertical required in batch mode".to_string()
@@ -57,18 +62,22 @@ fn run() -> Result<(), String> {
                 batch::print_summary(&result);
                 Ok(())
             } else {
-                let output = output_mode(replace, output, "flip");
+                let output = output_mode(replace, preview, output, "flip");
                 commands::transforms::run_flip(&path, output, axis)
             }
         }
         Command::Rotate {
             angle,
             replace,
+            preview,
             batch,
             path,
             output,
         } => {
             if is_batch(&path, &batch) {
+                if preview {
+                    return Err("rotate: --preview cannot be used in batch mode".to_string());
+                }
                 if angle.is_none() {
                     return Err("rotate: --angle required in batch mode".to_string());
                 }
@@ -91,17 +100,21 @@ fn run() -> Result<(), String> {
                 batch::print_summary(&result);
                 Ok(())
             } else {
-                let output = output_mode(replace, output, "rotate");
+                let output = output_mode(replace, preview, output, "rotate");
                 commands::transforms::run_rotate(&path, output, angle)
             }
         }
         Command::Invert {
             replace,
+            preview,
             batch,
             path,
             output,
         } => {
             if is_batch(&path, &batch) {
+                if preview {
+                    return Err("invert: --preview cannot be used in batch mode".to_string());
+                }
                 let options = batch::to_batch_options(&batch)?;
                 let result = batch::run_batch(Path::new(&path), &options, |file| {
                     let img = image::open(file)
@@ -114,17 +127,21 @@ fn run() -> Result<(), String> {
                 batch::print_summary(&result);
                 Ok(())
             } else {
-                let output = output_mode(replace, output, "invert");
+                let output = output_mode(replace, preview, output, "invert");
                 commands::transforms::run_invert(&path, output)
             }
         }
         Command::Grayscale {
             replace,
+            preview,
             batch,
             path,
             output,
         } => {
             if is_batch(&path, &batch) {
+                if preview {
+                    return Err("grayscale: --preview cannot be used in batch mode".to_string());
+                }
                 let options = batch::to_batch_options(&batch)?;
                 let result = batch::run_batch(Path::new(&path), &options, |file| {
                     let img = image::open(file)
@@ -137,7 +154,7 @@ fn run() -> Result<(), String> {
                 batch::print_summary(&result);
                 Ok(())
             } else {
-                let output = output_mode(replace, output, "grayscale");
+                let output = output_mode(replace, preview, output, "grayscale");
                 commands::transforms::run_grayscale(&path, output)
             }
         }
@@ -146,6 +163,7 @@ fn run() -> Result<(), String> {
             height,
             scale,
             replace,
+            preview,
             batch,
             path,
             output,
@@ -156,6 +174,9 @@ fn run() -> Result<(), String> {
                 );
             }
             if is_batch(&path, &batch) {
+                if preview {
+                    return Err("resize: --preview cannot be used in batch mode".to_string());
+                }
                 let options = batch::to_batch_options(&batch)?;
                 let scale = scale;
                 if scale.is_none() && (width.is_none() || height.is_none()) {
@@ -185,7 +206,7 @@ fn run() -> Result<(), String> {
                 batch::print_summary(&result);
                 Ok(())
             } else {
-                let output = output_mode(replace, output, "resize");
+                let output = output_mode(replace, preview, output, "resize");
                 commands::transforms::run_resize(&path, output, width, height, scale)
             }
         }
@@ -219,11 +240,15 @@ fn run() -> Result<(), String> {
         }
         Command::Vectorize {
             fast,
+            preview,
             batch,
             src,
             dst,
         } => {
             if is_batch(&src, &batch) {
+                if preview {
+                    return Err("vectorize: --preview cannot be used in batch mode".to_string());
+                }
                 let options = batch::to_batch_options(&batch)?;
                 let result = batch::run_batch(Path::new(&src), &options, |file| {
                     let out_path = batch::resolve_output_path_with_ext(file, "svg", &options)?;
@@ -233,6 +258,7 @@ fn run() -> Result<(), String> {
                         src: src_str,
                         dst: out_str.clone(),
                         fast,
+                        preview: false,
                     })?;
                     Ok(out_str)
                 })?;
@@ -245,7 +271,7 @@ fn run() -> Result<(), String> {
                         .to_string_lossy()
                         .to_string()
                 });
-                commands::convert::run_vectorize(VectorizeArgs { src, dst, fast })
+                commands::convert::run_vectorize(VectorizeArgs { src, dst, fast, preview })
             }
         }
         Command::View { path } => commands::view::run_view(&path),
@@ -253,11 +279,15 @@ fn run() -> Result<(), String> {
             scale,
             width,
             height,
+            preview,
             batch,
             src,
             dst,
         } => {
             if is_batch(&src, &batch) {
+                if preview {
+                    return Err("rasterize: --preview cannot be used in batch mode".to_string());
+                }
                 let raster_opts = RasterizeOptions {
                     scale,
                     width,
@@ -273,6 +303,7 @@ fn run() -> Result<(), String> {
                         options: raster_opts,
                         src: src_str,
                         dst: out_str.clone(),
+                        preview: false,
                     })?;
                     Ok(out_str)
                 })?;
@@ -293,6 +324,7 @@ fn run() -> Result<(), String> {
                     },
                     src,
                     dst,
+                    preview,
                 })
             }
         }
@@ -306,8 +338,10 @@ fn is_batch(path: &str, batch: &BatchArgs) -> bool {
         || batch.recursive
 }
 
-fn output_mode<'a>(replace: bool, output: Option<String>, suffix: &'a str) -> OutputMode<'a> {
-    if replace {
+fn output_mode<'a>(replace: bool, preview: bool, output: Option<String>, suffix: &'a str) -> OutputMode<'a> {
+    if preview {
+        OutputMode::Preview
+    } else if replace {
         OutputMode::Replace(output)
     } else {
         match output {

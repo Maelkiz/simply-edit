@@ -19,31 +19,42 @@ pub(crate) fn run_flip(
         Some(axis) => axis,
         None => prompt_flip_axis()?,
     };
-    let spinner = start_spinner("Processing flip...");
+    let spinner = if matches!(output, OutputMode::Preview) {
+        None
+    } else {
+        start_spinner("Processing flip...")
+    };
 
-    let result = (|| {
+    let result: Result<Option<(String, &str)>, String> = (|| {
         let img = image::open(path).map_err(|e| format!("failed to open image '{path}': {e}"))?;
         let (flipped, suffix, axis_label) = match axis {
             FlipAxis::Horizontal => (img.fliph(), "fliph", "horizontally"),
             FlipAxis::Vertical => (img.flipv(), "flipv", "vertically"),
         };
 
+        if matches!(output, OutputMode::Preview) {
+            crate::commands::view::display_image(flipped)?;
+            return Ok(None);
+        }
+
         let selected_output = match output {
             OutputMode::Generated(_) => OutputMode::Generated(suffix),
             OutputMode::Explicit(path) => OutputMode::Explicit(path),
             OutputMode::Replace(target) => OutputMode::Replace(target),
+            OutputMode::Preview => unreachable!(),
         };
 
         let output_path = save_transformed_image(flipped, path, selected_output, suffix)?;
-        Ok::<(String, &'static str), String>((output_path, axis_label))
+        Ok(Some((output_path, axis_label)))
     })();
 
     if let Some(pb) = spinner {
         pb.finish_and_clear();
     }
 
-    let (output_path, axis_label) = result?;
-    println!("Saved {axis_label} flipped image to {}", output_path);
+    if let Some((output_path, axis_label)) = result? {
+        println!("Saved {axis_label} flipped image to {}", output_path);
+    }
     Ok(())
 }
 
@@ -95,9 +106,13 @@ pub(crate) fn run_rotate(
         Some(deg) => deg,
         None => prompt_rotate_degrees()?,
     };
-    let spinner = start_spinner("Processing rotation...");
+    let spinner = if matches!(output, OutputMode::Preview) {
+        None
+    } else {
+        start_spinner("Processing rotation...")
+    };
 
-    let result = (|| {
+    let result: Result<Option<String>, String> = (|| {
         let img = image::open(path).map_err(|e| format!("failed to open image '{path}': {e}"))?;
         let rotated = match deg {
             90 => img.rotate90(),
@@ -106,23 +121,30 @@ pub(crate) fn run_rotate(
             _ => return Err(format!("invalid rotation '{deg}': use 90, 180, or 270")),
         };
 
+        if matches!(output, OutputMode::Preview) {
+            crate::commands::view::display_image(rotated)?;
+            return Ok(None);
+        }
+
         let rotate_suffix = format!("rotate{deg}");
         let selected_output = match output {
             OutputMode::Generated(_) => OutputMode::Generated(rotate_suffix.as_str()),
             OutputMode::Explicit(path) => OutputMode::Explicit(path),
             OutputMode::Replace(target) => OutputMode::Replace(target),
+            OutputMode::Preview => unreachable!(),
         };
 
         let output_path = save_transformed_image(rotated, path, selected_output, &rotate_suffix)?;
-        Ok::<String, String>(output_path)
+        Ok(Some(output_path))
     })();
 
     if let Some(pb) = spinner {
         pb.finish_and_clear();
     }
 
-    let output_path = result?;
-    println!("Saved rotated image to {}", output_path);
+    if let Some(output_path) = result? {
+        println!("Saved rotated image to {}", output_path);
+    }
     Ok(())
 }
 
@@ -194,29 +216,40 @@ pub(crate) fn run_resize(
         }
     };
 
-    let spinner = start_spinner("Processing resize...");
+    let spinner = if matches!(output, OutputMode::Preview) {
+        None
+    } else {
+        start_spinner("Processing resize...")
+    };
 
-    let result = (|| {
+    let result: Result<Option<String>, String> = (|| {
         let img = image::open(path).map_err(|e| format!("failed to open image '{path}': {e}"))?;
         let resized = img.resize_exact(w, h, image::imageops::FilterType::Lanczos3);
+
+        if matches!(output, OutputMode::Preview) {
+            crate::commands::view::display_image(resized)?;
+            return Ok(None);
+        }
 
         let resize_suffix = format!("resize{w}x{h}");
         let selected_output = match output {
             OutputMode::Generated(_) => OutputMode::Generated(resize_suffix.as_str()),
             OutputMode::Explicit(path) => OutputMode::Explicit(path),
             OutputMode::Replace(target) => OutputMode::Replace(target),
+            OutputMode::Preview => unreachable!(),
         };
 
         let output_path = save_transformed_image(resized, path, selected_output, &resize_suffix)?;
-        Ok::<String, String>(output_path)
+        Ok(Some(output_path))
     })();
 
     if let Some(pb) = spinner {
         pb.finish_and_clear();
     }
 
-    let output_path = result?;
-    println!("Saved resized image to {}", output_path);
+    if let Some(output_path) = result? {
+        println!("Saved resized image to {}", output_path);
+    }
     Ok(())
 }
 
@@ -359,6 +392,9 @@ fn prompt_resize_dimensions_non_tty() -> Result<(u32, u32), String> {
 pub(crate) fn run_invert(path: &str, output: OutputMode<'_>) -> Result<(), String> {
     let img = image::open(path).map_err(|e| format!("failed to open image '{path}': {e}"))?;
     let inverted = invert_colors(img);
+    if matches!(output, OutputMode::Preview) {
+        return crate::commands::view::display_image(inverted);
+    }
     let output_path = save_transformed_image(inverted, path, output, "invert")?;
     println!("Saved inverted image to {}", output_path);
     Ok(())
@@ -367,6 +403,9 @@ pub(crate) fn run_invert(path: &str, output: OutputMode<'_>) -> Result<(), Strin
 pub(crate) fn run_grayscale(path: &str, output: OutputMode<'_>) -> Result<(), String> {
     let img = image::open(path).map_err(|e| format!("failed to open image '{path}': {e}"))?;
     let grayscale = img.grayscale();
+    if matches!(output, OutputMode::Preview) {
+        return crate::commands::view::display_image(grayscale);
+    }
     let output_path = save_transformed_image(grayscale, path, output, "grayscale")?;
     println!("Saved grayscale image to {}", output_path);
     Ok(())

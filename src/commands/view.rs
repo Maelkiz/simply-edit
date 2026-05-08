@@ -6,6 +6,15 @@ use terminal_size::{Width, terminal_size};
 
 const CHUNK_SIZE: usize = 4096;
 
+pub fn display_image(img: DynamicImage) -> Result<(), String> {
+    if !detect_kitty_support() {
+        return Err(
+            "preview requires a Kitty-compatible terminal (Kitty, WezTerm, or Ghostty)".to_string(),
+        );
+    }
+    display_kitty(img)
+}
+
 pub fn run_view(path: &str) -> Result<(), String> {
     let img = image::open(path)
         .map_err(|e| format!("view: failed to open '{path}': {e}"))?;

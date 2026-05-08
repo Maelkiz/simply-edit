@@ -40,6 +40,10 @@ pub(crate) enum Command {
         #[arg(short, long)]
         replace: bool,
 
+        /// Preview the result in the terminal without saving (requires Kitty, WezTerm, or Ghostty)
+        #[arg(short = 'p', long)]
+        preview: bool,
+
         #[command(flatten)]
         batch: BatchArgs,
 
@@ -60,6 +64,10 @@ pub(crate) enum Command {
         #[arg(short, long)]
         replace: bool,
 
+        /// Preview the result in the terminal without saving (requires Kitty, WezTerm, or Ghostty)
+        #[arg(short = 'p', long)]
+        preview: bool,
+
         #[command(flatten)]
         batch: BatchArgs,
 
@@ -76,6 +84,10 @@ pub(crate) enum Command {
         #[arg(short, long)]
         replace: bool,
 
+        /// Preview the result in the terminal without saving (requires Kitty, WezTerm, or Ghostty)
+        #[arg(short = 'p', long)]
+        preview: bool,
+
         #[command(flatten)]
         batch: BatchArgs,
 
@@ -91,6 +103,10 @@ pub(crate) enum Command {
         /// Overwrite target file (source if no output path given)
         #[arg(short, long)]
         replace: bool,
+
+        /// Preview the result in the terminal without saving (requires Kitty, WezTerm, or Ghostty)
+        #[arg(short = 'p', long)]
+        preview: bool,
 
         #[command(flatten)]
         batch: BatchArgs,
@@ -119,6 +135,10 @@ pub(crate) enum Command {
         /// Overwrite target file (source if no output path given)
         #[arg(short, long)]
         replace: bool,
+
+        /// Preview the result in the terminal without saving (requires Kitty, WezTerm, or Ghostty)
+        #[arg(short = 'p', long)]
+        preview: bool,
 
         #[command(flatten)]
         batch: BatchArgs,
@@ -152,6 +172,10 @@ pub(crate) enum Command {
         #[arg(long)]
         fast: bool,
 
+        /// Preview the result in the terminal without saving (requires Kitty, WezTerm, or Ghostty)
+        #[arg(short = 'p', long)]
+        preview: bool,
+
         #[command(flatten)]
         batch: BatchArgs,
 
@@ -181,6 +205,10 @@ pub(crate) enum Command {
         /// Output height in pixels
         #[arg(short = 'H', long, value_parser = parse_positive_u32)]
         height: Option<u32>,
+
+        /// Preview the result in the terminal without saving (requires Kitty, WezTerm, or Ghostty)
+        #[arg(short = 'p', long)]
+        preview: bool,
 
         #[command(flatten)]
         batch: BatchArgs,

@@ -92,6 +92,11 @@ No additional flags. Provide the image path as the only argument.
 
 Supported terminals: **Kitty**, **WezTerm**, **Ghostty**. In other terminals, image metadata (dimensions, color type) is printed as plain text instead.
 
+**`--preview / -p` flag (flip, rotate, invert, grayscale, resize, rasterize, vectorize):**
+
+- `-p`, `--preview`: Display the transformed image directly in the terminal without writing any file. Uses the same Kitty graphics protocol as the `view` command. Requires **Kitty**, **WezTerm**, or **Ghostty**; returns an error on unsupported terminals.
+- Cannot be combined with batch mode (`--preview` on a directory input is an error).
+
 **Batch flags (available on all commands):**
 
 - `--pattern <regex>`: Regex pattern to filter filenames.
@@ -138,6 +143,12 @@ simply grayscale ./photos/ -R --pattern "^photo_"
 
 # View an image inline (Kitty, WezTerm, Ghostty)
 simply view ./photo.png
+
+# Preview a transform without saving (Kitty, WezTerm, Ghostty)
+simply flip --horizontal --preview ./photo.png
+simply rotate --angle 90 --preview ./photo.png
+simply grayscale --preview ./photo.png
+simply vectorize --preview ./photo.png
 ```
 
 ### Format Support

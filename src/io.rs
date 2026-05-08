@@ -36,6 +36,7 @@ pub(crate) fn save_transformed_image(
             })?;
             Ok(target.to_string())
         }
+        OutputMode::Preview => unreachable!("Preview is handled before save_transformed_image"),
     }
 }
 
