@@ -39,7 +39,7 @@ fn test_cli_help_prints_usage_successfully() {
 
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(stdout.contains("simply-edit"));
+    assert!(stdout.contains("Image editing from the terminal"));
     assert!(stdout.contains("Usage:"));
     assert!(stdout.contains("convert"));
 }

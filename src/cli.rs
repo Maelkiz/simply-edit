@@ -3,15 +3,16 @@ use std::path::PathBuf;
 use clap::{Args, Parser, Subcommand};
 
 #[derive(Parser)]
-#[command(name = "simply", about = "simply-edit", version)]
+#[command(name = "simply", about = "Image editing from the terminal", version)]
 pub(crate) struct Cli {
     #[command(subcommand)]
     pub command: Command,
 }
 
 #[derive(Debug, Clone, Args)]
+#[command(next_help_heading = "Batch Options")]
 pub(crate) struct BatchArgs {
-    /// Regex pattern to filter filenames (batch mode)
+    /// Regex pattern to filter filenames
     #[arg(long)]
     pub pattern: Option<String>,
 
@@ -19,7 +20,7 @@ pub(crate) struct BatchArgs {
     #[arg(long)]
     pub output_dir: Option<PathBuf>,
 
-    /// Process subdirectories recursively (batch mode)
+    /// Process subdirectories recursively
     #[arg(short = 'R', long)]
     pub recursive: bool,
 }
@@ -28,11 +29,11 @@ pub(crate) struct BatchArgs {
 pub(crate) enum Command {
     /// Flip an image horizontally or vertically
     Flip {
-        /// Flip horizontally (bypasses interactive prompt)
+        /// Flip horizontally (interactive prompt if omitted)
         #[arg(long)]
         horizontal: bool,
 
-        /// Flip vertically (bypasses interactive prompt)
+        /// Flip vertically (interactive prompt if omitted)
         #[arg(long)]
         vertical: bool,
 
@@ -44,14 +45,14 @@ pub(crate) enum Command {
         #[arg(short = 'p', long)]
         preview: bool,
 
-        #[command(flatten)]
-        batch: BatchArgs,
-
         /// Path to image file or directory
         path: String,
 
         /// Output path (auto-generated if omitted)
         output: Option<String>,
+
+        #[command(flatten)]
+        batch: BatchArgs,
     },
 
     /// Rotate an image by 90, 180, or 270 degrees
@@ -68,14 +69,14 @@ pub(crate) enum Command {
         #[arg(short = 'p', long)]
         preview: bool,
 
-        #[command(flatten)]
-        batch: BatchArgs,
-
         /// Path to image file or directory
         path: String,
 
         /// Output path (auto-generated if omitted)
         output: Option<String>,
+
+        #[command(flatten)]
+        batch: BatchArgs,
     },
 
     /// Invert the colors of an image
@@ -88,14 +89,14 @@ pub(crate) enum Command {
         #[arg(short = 'p', long)]
         preview: bool,
 
-        #[command(flatten)]
-        batch: BatchArgs,
-
         /// Path to image file or directory
         path: String,
 
         /// Output path (auto-generated if omitted)
         output: Option<String>,
+
+        #[command(flatten)]
+        batch: BatchArgs,
     },
 
     /// Convert an image to grayscale
@@ -108,14 +109,14 @@ pub(crate) enum Command {
         #[arg(short = 'p', long)]
         preview: bool,
 
-        #[command(flatten)]
-        batch: BatchArgs,
-
         /// Path to image file or directory
         path: String,
 
         /// Output path (auto-generated if omitted)
         output: Option<String>,
+
+        #[command(flatten)]
+        batch: BatchArgs,
     },
 
     /// Resize an image to specified dimensions
@@ -140,14 +141,14 @@ pub(crate) enum Command {
         #[arg(short = 'p', long)]
         preview: bool,
 
-        #[command(flatten)]
-        batch: BatchArgs,
-
         /// Path to image file or directory
         path: String,
 
         /// Output path (auto-generated if omitted)
         output: Option<String>,
+
+        #[command(flatten)]
+        batch: BatchArgs,
     },
 
     /// Convert between image formats (PNG, JPG, ICO, SVG, WebP)
@@ -156,14 +157,14 @@ pub(crate) enum Command {
         #[arg(long)]
         format: Option<String>,
 
-        #[command(flatten)]
-        batch: BatchArgs,
-
         /// Source image path or directory
         src: String,
 
         /// Output path (required for single-file mode)
         dst: Option<String>,
+
+        #[command(flatten)]
+        batch: BatchArgs,
     },
 
     /// Convert a raster image to SVG
@@ -176,17 +177,17 @@ pub(crate) enum Command {
         #[arg(short = 'p', long)]
         preview: bool,
 
-        #[command(flatten)]
-        batch: BatchArgs,
-
         /// Source image path or directory
         src: String,
 
         /// Output SVG path (auto-generated if omitted)
         dst: Option<String>,
+
+        #[command(flatten)]
+        batch: BatchArgs,
     },
 
-    /// Display an image in the terminal using the Kitty graphics protocol
+    /// Display an image in the terminal (inline in Kitty, WezTerm, or Ghostty)
     View {
         /// Path to the image file
         path: String,
@@ -210,14 +211,14 @@ pub(crate) enum Command {
         #[arg(short = 'p', long)]
         preview: bool,
 
-        #[command(flatten)]
-        batch: BatchArgs,
-
         /// Source SVG path or directory
         src: String,
 
         /// Output path (auto-generated if omitted)
         dst: Option<String>,
+
+        #[command(flatten)]
+        batch: BatchArgs,
     },
 }
 
