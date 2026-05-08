@@ -235,6 +235,44 @@ fn test_spaces_in_file_paths_are_supported() {
 }
 
 #[test]
+fn test_resize_non_square_dimensions_preserved_exactly() {
+    let temp = TestDir::new("simply-phase2");
+    let input = temp.path().join("rect.png");
+    let out = temp.path().join("resized.png");
+    create_png(&input, 10, 6, [80, 160, 240, 255]);
+
+    let result = run(&[
+        "resize",
+        "--width", "20",
+        "-H", "12",
+        input.to_str().expect("valid input path"),
+        out.to_str().expect("valid output path"),
+    ]);
+    assert!(result.status.success());
+
+    let img = image::open(&out).expect("failed to open resized output");
+    assert_eq!(img.width(), 20);
+    assert_eq!(img.height(), 12);
+}
+
+#[test]
+fn test_resize_replace_mode_cleans_up_no_tmp_file() {
+    let temp = TestDir::new("simply-phase2");
+    let input = temp.path().join("sample.png");
+    create_png(&input, 4, 4, [10, 20, 30, 255]);
+
+    let result = run(&["resize", "-r", "--width", "2", "-H", "2", input.to_str().expect("valid input path")]);
+    assert!(result.status.success());
+
+    let tmp_files: Vec<_> = std::fs::read_dir(temp.path())
+        .unwrap()
+        .filter_map(|e| e.ok())
+        .filter(|e| e.file_name().to_string_lossy().contains("simple-edit-tmp"))
+        .collect();
+    assert!(tmp_files.is_empty(), "temporary files should be cleaned up after replace");
+}
+
+#[test]
 fn test_absolute_paths_work_for_transforms() {
     let temp = TestDir::new("simply-phase2");
     let input = std::fs::canonicalize(temp.path().join("abs_in.png")).unwrap_or_else(|_| {

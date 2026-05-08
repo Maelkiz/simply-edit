@@ -294,6 +294,75 @@ fn test_batch_rasterize_processes_svgs() {
 }
 
 #[test]
+fn test_batch_resize_with_scale() {
+    let temp = batch_dir_with_images("batch-resize-scale", 3);
+    let out = TestDir::new("batch-resize-scale-out");
+
+    let output = run(&[
+        "resize",
+        "--scale", "2",
+        temp.path().to_str().unwrap(),
+        "--output-dir",
+        out.path().to_str().unwrap(),
+    ]);
+    assert!(output.status.success());
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("3 succeeded"));
+
+    for entry in fs::read_dir(out.path()).unwrap() {
+        let img = image::open(entry.unwrap().path()).expect("output should be valid image");
+        assert_eq!(img.width(), 8);
+        assert_eq!(img.height(), 8);
+    }
+}
+
+#[test]
+fn test_batch_resize_with_width_and_height() {
+    let temp = batch_dir_with_images("batch-resize-wh", 2);
+    let out = TestDir::new("batch-resize-wh-out");
+
+    let output = run(&[
+        "resize",
+        "--width", "8",
+        "-H", "8",
+        temp.path().to_str().unwrap(),
+        "--output-dir",
+        out.path().to_str().unwrap(),
+    ]);
+    assert!(output.status.success());
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("2 succeeded"));
+
+    for entry in fs::read_dir(out.path()).unwrap() {
+        let img = image::open(entry.unwrap().path()).expect("output should be valid image");
+        assert_eq!(img.width(), 8);
+        assert_eq!(img.height(), 8);
+    }
+}
+
+#[test]
+fn test_batch_resize_requires_scale_or_both_dimensions() {
+    let temp = batch_dir_with_images("batch-resize-nodim", 1);
+
+    // Only --width without --height should be rejected in batch mode
+    let output = run(&["resize", "--width", "8", temp.path().to_str().unwrap()]);
+    assert!(!output.status.success());
+    let err = String::from_utf8_lossy(&output.stderr);
+    assert!(err.contains("--scale or both --width and --height required"));
+}
+
+#[test]
+fn test_batch_resize_scale_cannot_be_combined_with_dimensions() {
+    let temp = batch_dir_with_images("batch-resize-conflict", 1);
+
+    let output = run(&["resize", "--scale", "2", "--width", "8", temp.path().to_str().unwrap()]);
+    assert!(!output.status.success());
+    assert!(String::from_utf8_lossy(&output.stderr).contains("--scale cannot be combined"));
+}
+
+#[test]
 fn test_single_file_still_works_after_batch_changes() {
     let temp = TestDir::new("single-regression");
     let input = temp.path().join("img.png");

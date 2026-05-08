@@ -1,4 +1,6 @@
-use crate::common::{TestDir, assert_valid_image, create_png, create_svg, run, run_with_stdin};
+use std::process::Command;
+
+use crate::common::{TestDir, assert_valid_image, binary_path, create_png, create_svg, run, run_with_stdin};
 
 #[test]
 fn test_flip_horizontal_generated_output_mode() {
@@ -315,6 +317,182 @@ fn test_convert_png_to_jpg() {
     assert!(output.status.success());
     assert!(dst.exists());
     assert_valid_image(&dst);
+}
+
+#[test]
+fn test_resize_with_explicit_width_and_height() {
+    let temp = TestDir::new("simply-resize-int");
+    let input = temp.path().join("img.png");
+    let out = temp.path().join("out.png");
+    create_png(&input, 8, 8, [100, 150, 200, 255]);
+
+    let output = run(&[
+        "resize",
+        "--width", "20",
+        "-H", "10",
+        input.to_str().expect("valid input path"),
+        out.to_str().expect("valid output path"),
+    ]);
+    assert!(output.status.success());
+    assert!(out.exists());
+
+    let img = image::open(&out).expect("failed to open resized image");
+    assert_eq!(img.width(), 20);
+    assert_eq!(img.height(), 10);
+}
+
+#[test]
+fn test_resize_generated_output_suffix() {
+    let temp = TestDir::new("simply-resize-int");
+    let input = temp.path().join("img.png");
+    let generated = temp.path().join("img_resize20x10.png");
+    create_png(&input, 8, 8, [100, 150, 200, 255]);
+
+    let output = run(&[
+        "resize",
+        "--width", "20",
+        "-H", "10",
+        input.to_str().expect("valid input path"),
+    ]);
+    assert!(output.status.success());
+    assert!(generated.exists());
+    assert_valid_image(&generated);
+}
+
+#[test]
+fn test_resize_replace_mode() {
+    let temp = TestDir::new("simply-resize-int");
+    let input = temp.path().join("img.png");
+    create_png(&input, 8, 8, [100, 150, 200, 255]);
+
+    let output = run(&[
+        "resize",
+        "--replace",
+        "--width", "4",
+        "-H", "4",
+        input.to_str().expect("valid input path"),
+    ]);
+    assert!(output.status.success());
+    assert!(input.exists());
+
+    let img = image::open(&input).expect("failed to open replaced image");
+    assert_eq!(img.width(), 4);
+    assert_eq!(img.height(), 4);
+}
+
+#[test]
+fn test_resize_with_scale_flag() {
+    let temp = TestDir::new("simply-resize-int");
+    let input = temp.path().join("img.png");
+    let out = temp.path().join("out.png");
+    create_png(&input, 4, 6, [200, 100, 50, 255]);
+
+    let output = run(&[
+        "resize",
+        "--scale", "2",
+        input.to_str().expect("valid input path"),
+        out.to_str().expect("valid output path"),
+    ]);
+    assert!(output.status.success());
+
+    let img = image::open(&out).expect("failed to open scaled image");
+    assert_eq!(img.width(), 8);
+    assert_eq!(img.height(), 12);
+}
+
+#[test]
+fn test_resize_width_only_preserve_aspect_ratio() {
+    let temp = TestDir::new("simply-resize-int");
+    let input = temp.path().join("img.png");
+    let out = temp.path().join("out.png");
+    create_png(&input, 12, 6, [200, 100, 50, 255]);
+
+    // "1" selects "Preserve aspect ratio"
+    let output = run_with_stdin(
+        &["resize", "--width", "24", input.to_str().expect("valid input path"), out.to_str().expect("valid output path")],
+        "1\n",
+    );
+    assert!(output.status.success());
+
+    let img = image::open(&out).expect("failed to open resized image");
+    assert_eq!(img.width(), 24);
+    assert_eq!(img.height(), 12);
+}
+
+#[test]
+fn test_resize_width_only_stretch() {
+    let temp = TestDir::new("simply-resize-int");
+    let input = temp.path().join("img.png");
+    let out = temp.path().join("out.png");
+    create_png(&input, 12, 6, [200, 100, 50, 255]);
+
+    // "2" selects "Stretch"
+    let output = run_with_stdin(
+        &["resize", "--width", "24", input.to_str().expect("valid input path"), out.to_str().expect("valid output path")],
+        "2\n",
+    );
+    assert!(output.status.success());
+
+    let img = image::open(&out).expect("failed to open resized image");
+    assert_eq!(img.width(), 24);
+    assert_eq!(img.height(), 6);
+}
+
+#[test]
+fn test_resize_height_only_preserve_aspect_ratio() {
+    let temp = TestDir::new("simply-resize-int");
+    let input = temp.path().join("img.png");
+    let out = temp.path().join("out.png");
+    create_png(&input, 12, 6, [200, 100, 50, 255]);
+
+    // "1" selects "Preserve aspect ratio"
+    let output = run_with_stdin(
+        &["resize", "-H", "12", input.to_str().expect("valid input path"), out.to_str().expect("valid output path")],
+        "1\n",
+    );
+    assert!(output.status.success());
+
+    let img = image::open(&out).expect("failed to open resized image");
+    assert_eq!(img.width(), 24);
+    assert_eq!(img.height(), 12);
+}
+
+#[test]
+fn test_resize_interactive_both_dimensions_via_stdin() {
+    let temp = TestDir::new("simply-resize-int");
+    let input = temp.path().join("img.png");
+    let out = temp.path().join("out.png");
+    create_png(&input, 8, 8, [100, 150, 200, 255]);
+
+    // No width/height flags — prompt asks for both
+    let output = run_with_stdin(
+        &["resize", input.to_str().expect("valid input path"), out.to_str().expect("valid output path")],
+        "20\n10\n",
+    );
+    assert!(output.status.success());
+
+    let img = image::open(&out).expect("failed to open resized image");
+    assert_eq!(img.width(), 20);
+    assert_eq!(img.height(), 10);
+}
+
+#[test]
+fn test_view_prints_metadata_in_non_kitty_terminal() {
+    let temp = TestDir::new("simply-view-int");
+    let input = temp.path().join("img.png");
+    create_png(&input, 5, 3, [200, 100, 50, 255]);
+
+    let output = Command::new(binary_path())
+        .args(["view", input.to_str().expect("valid input path")])
+        .env_remove("KITTY_WINDOW_ID")
+        .env("TERM", "xterm-256color")
+        .env_remove("TERM_PROGRAM")
+        .output()
+        .expect("failed to run simply binary");
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("5") && stdout.contains("3"));
 }
 
 #[test]

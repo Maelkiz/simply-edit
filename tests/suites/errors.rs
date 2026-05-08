@@ -1,6 +1,6 @@
 use std::fs;
 
-use crate::common::{TestDir, create_png, run, run_with_stdin, stderr};
+use crate::common::{TestDir, create_png, create_svg, run, run_with_stdin, stderr};
 
 #[test]
 fn test_no_args_prints_usage() {
@@ -231,6 +231,157 @@ fn test_unsupported_output_format_rejected() {
     ]);
     assert!(!output.status.success());
     assert!(stderr(&output).contains("unsupported format 'bmp'"));
+}
+
+#[test]
+fn test_resize_missing_path_prints_usage() {
+    let output = run(&["resize"]);
+    assert!(!output.status.success());
+    assert!(stderr(&output).contains("Usage:"));
+}
+
+#[test]
+fn test_resize_unknown_flag_rejected() {
+    let output = run(&["resize", "--foo", "image.png"]);
+    assert!(!output.status.success());
+    assert!(stderr(&output).contains("--foo"));
+}
+
+#[test]
+fn test_resize_zero_width_rejected() {
+    let output = run(&["resize", "--width", "0", "-H", "100", "image.png"]);
+    assert!(!output.status.success());
+    let err = stderr(&output);
+    assert!(err.contains("invalid value '0'") && err.contains("--width"));
+}
+
+#[test]
+fn test_resize_zero_height_rejected() {
+    let output = run(&["resize", "--width", "100", "-H", "0", "image.png"]);
+    assert!(!output.status.success());
+    let err = stderr(&output);
+    assert!(err.contains("invalid value '0'") && err.contains("height"));
+}
+
+#[test]
+fn test_resize_invalid_scale_rejected() {
+    let output = run(&["resize", "--scale", "abc", "image.png"]);
+    assert!(!output.status.success());
+    assert!(stderr(&output).contains("abc"));
+}
+
+#[test]
+fn test_resize_scale_and_width_rejected() {
+    let temp = TestDir::new("simply-resize-err");
+    let input = temp.path().join("img.png");
+    create_png(&input, 4, 4, [255, 0, 0, 255]);
+
+    let output = run(&["resize", "--scale", "2", "--width", "100", input.to_str().expect("valid input path")]);
+    assert!(!output.status.success());
+    assert!(stderr(&output).contains("--scale cannot be combined"));
+}
+
+#[test]
+fn test_resize_scale_and_height_rejected() {
+    let temp = TestDir::new("simply-resize-err");
+    let input = temp.path().join("img.png");
+    create_png(&input, 4, 4, [255, 0, 0, 255]);
+
+    let output = run(&["resize", "--scale", "2", "-H", "100", input.to_str().expect("valid input path")]);
+    assert!(!output.status.success());
+    assert!(stderr(&output).contains("--scale cannot be combined"));
+}
+
+#[test]
+fn test_resize_invalid_mode_input_rejected() {
+    let temp = TestDir::new("simply-resize-err");
+    let input = temp.path().join("img.png");
+    let out = temp.path().join("out.png");
+    create_png(&input, 12, 6, [100, 100, 100, 255]);
+
+    // "3" is not a valid mode (only 1 or 2)
+    let output = run_with_stdin(
+        &["resize", "--width", "24", input.to_str().expect("valid input path"), out.to_str().expect("valid output path")],
+        "3\n",
+    );
+    assert!(!output.status.success());
+    assert!(stderr(&output).contains("invalid resize mode"));
+}
+
+#[test]
+fn test_preview_rejected_in_batch_flip() {
+    let temp = TestDir::new("simply-preview-batch-err");
+    let output = run(&["flip", "--horizontal", "--preview", temp.path().to_str().unwrap()]);
+    assert!(!output.status.success());
+    assert!(stderr(&output).contains("--preview cannot be used in batch mode"));
+}
+
+#[test]
+fn test_preview_rejected_in_batch_rotate() {
+    let temp = TestDir::new("simply-preview-batch-err");
+    let output = run(&["rotate", "--angle", "90", "--preview", temp.path().to_str().unwrap()]);
+    assert!(!output.status.success());
+    assert!(stderr(&output).contains("--preview cannot be used in batch mode"));
+}
+
+#[test]
+fn test_preview_rejected_in_batch_invert() {
+    let temp = TestDir::new("simply-preview-batch-err");
+    let output = run(&["invert", "--preview", temp.path().to_str().unwrap()]);
+    assert!(!output.status.success());
+    assert!(stderr(&output).contains("--preview cannot be used in batch mode"));
+}
+
+#[test]
+fn test_preview_rejected_in_batch_grayscale() {
+    let temp = TestDir::new("simply-preview-batch-err");
+    let output = run(&["grayscale", "--preview", temp.path().to_str().unwrap()]);
+    assert!(!output.status.success());
+    assert!(stderr(&output).contains("--preview cannot be used in batch mode"));
+}
+
+#[test]
+fn test_preview_rejected_in_batch_resize() {
+    let temp = TestDir::new("simply-preview-batch-err");
+    let output = run(&["resize", "--scale", "2", "--preview", temp.path().to_str().unwrap()]);
+    assert!(!output.status.success());
+    assert!(stderr(&output).contains("--preview cannot be used in batch mode"));
+}
+
+#[test]
+fn test_preview_rejected_in_batch_rasterize() {
+    let temp = TestDir::new("simply-preview-batch-err");
+    create_svg(&temp.path().join("a.svg"), 4, 4, "#ff0000");
+    let output = run(&["rasterize", "--preview", temp.path().to_str().unwrap()]);
+    assert!(!output.status.success());
+    assert!(stderr(&output).contains("--preview cannot be used in batch mode"));
+}
+
+#[test]
+fn test_preview_rejected_in_batch_vectorize() {
+    let temp = TestDir::new("simply-preview-batch-err");
+    create_png(&temp.path().join("a.png"), 4, 4, [255, 0, 0, 255]);
+    let output = run(&["vectorize", "--preview", temp.path().to_str().unwrap()]);
+    assert!(!output.status.success());
+    assert!(stderr(&output).contains("--preview cannot be used in batch mode"));
+}
+
+#[test]
+fn test_view_nonexistent_file_fails() {
+    let output = run(&["view", "/no/such/file.png"]);
+    assert!(!output.status.success());
+    assert!(stderr(&output).contains("failed to open"));
+}
+
+#[test]
+fn test_view_non_image_file_fails() {
+    let temp = TestDir::new("simply-view-err");
+    let bad = temp.path().join("data.txt");
+    fs::write(&bad, b"not an image").expect("failed to write file");
+
+    let output = run(&["view", bad.to_str().expect("valid path")]);
+    assert!(!output.status.success());
+    assert!(stderr(&output).contains("failed to open"));
 }
 
 #[test]
