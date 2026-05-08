@@ -187,7 +187,8 @@ fn run() -> Result<(), String> {
                 let scale = scale;
                 if scale.is_none() && (width.is_none() || height.is_none()) {
                     return Err(
-                        "resize: --scale or both --width and --height required in batch mode"
+                        "resize: batch mode requires --scale or both --width and --height \
+                         (single-dimension aspect-ratio resize is only available interactively)"
                             .to_string(),
                     );
                 }

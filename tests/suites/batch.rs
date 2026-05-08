@@ -350,7 +350,7 @@ fn test_batch_resize_requires_scale_or_both_dimensions() {
     let output = run(&["resize", "--width", "8", temp.path().to_str().unwrap()]);
     assert!(!output.status.success());
     let err = String::from_utf8_lossy(&output.stderr);
-    assert!(err.contains("--scale or both --width and --height required"));
+    assert!(err.contains("--scale or both --width and --height"));
 }
 
 #[test]
