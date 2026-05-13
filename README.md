@@ -2,7 +2,7 @@
 
 > A simple CLI tool for manipulating images.
 
-simply-edit is a convenient command-line utility for everyday image tasks: flip, rotate, invert, grayscale, binarize, resize, and convert between common formats like PNG, JPG, ICO, SVG, and WebP. It is designed to be easy to use with sensible defaults, optional in-place replacement, and straightforward commands that help you process images quickly.
+simply-edit is a convenient command-line utility for everyday image tasks: flip, rotate, invert, grayscale, binarize, resize, and convert between common formats. It is designed to be easy to use, with sensible defaults, straightforward commands, and quality-of-life features, such as optional in-place replacement, batch operations, and view/preview functionality using the [Kitty Terminal Graphics Protocol](https://sw.kovidgoyal.net/kitty/graphics-protocol).
 
 ---
 
@@ -35,7 +35,7 @@ Cargo installs binaries to:
 $HOME/.cargo/bin
 ```
 
-If `simply` is not found, add this directory to your PATH and refresh your shell.
+So, if `simply` is not found, add this directory to your PATH and refresh your shell.
 
 ---
 
@@ -63,7 +63,7 @@ simply <command> <args>
 | `info` | Display image metadata and properties |
 | `view` | Display an image inline in the terminal (Kitty, WezTerm, or Ghostty) |
 
-To get an more detailed description of any given command and its available flags run:
+To get a more detailed description of any given command and its available flags, run:
 
 ```bash
 simply <command> --help
@@ -71,7 +71,7 @@ simply <command> --help
 
 ### Output Path
 
-If you omit the output path, the tool generates one automatically: transforms keep the source format (e.g. `image.png` → `image_fliph.png`), while `vectorize` and `rasterize` switch to `.svg` and `.png` respectively. When you provide an explicit output path, the format is determined by its extension.
+If you omit the output path, the tool generates one automatically: transforms keep the source format (e.g., `image.png` → `image_fliph.png`), while `vectorize` and `rasterize` switch to `.svg` and `.png` respectively. When you provide an explicit output path, the format is determined by its extension.
 
 ### Common Examples
 
