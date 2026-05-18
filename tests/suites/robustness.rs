@@ -213,7 +213,7 @@ fn test_multiple_generated_operations_do_not_conflict() {
     assert!(first.status.success());
     assert!(step1.exists());
 
-    let second = run_with_stdin(&["flip", step1.to_str().expect("valid input path")], "1\n");
+    let second = run(&["flop", step1.to_str().expect("valid input path")]);
     assert!(second.status.success());
     assert!(step2.exists());
 }

@@ -61,23 +61,29 @@ fn test_batch_grayscale_produces_valid_output() {
 }
 
 #[test]
-fn test_batch_flip_requires_axis_flag() {
-    let temp = batch_dir_with_images("batch-flip-noaxis", 1);
+fn test_batch_flip() {
+    let temp = batch_dir_with_images("batch-flipv", 2);
+    let out = TestDir::new("batch-flipv-out");
 
-    let output = run(&["flip", temp.path().to_str().unwrap()]);
-    assert!(!output.status.success());
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(stderr.contains("--horizontal or --vertical required"));
+    let output = run(&[
+        "flip",
+        temp.path().to_str().unwrap(),
+        "--output-dir",
+        out.path().to_str().unwrap(),
+    ]);
+    assert!(output.status.success());
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("2 succeeded"));
 }
 
 #[test]
-fn test_batch_flip_horizontal() {
+fn test_batch_flop() {
     let temp = batch_dir_with_images("batch-fliph", 2);
     let out = TestDir::new("batch-fliph-out");
 
     let output = run(&[
-        "flip",
-        "--horizontal",
+        "flop",
         temp.path().to_str().unwrap(),
         "--output-dir",
         out.path().to_str().unwrap(),

@@ -13,12 +13,8 @@ pub(crate) enum FlipAxis {
 pub(crate) fn run_flip(
     path: &str,
     output: OutputMode,
-    axis: Option<FlipAxis>,
+    axis: FlipAxis,
 ) -> Result<(), String> {
-    let axis = match axis {
-        Some(axis) => axis,
-        None => prompt_flip_axis()?,
-    };
     let spinner = if matches!(output, OutputMode::Preview) {
         None
     } else {
@@ -55,45 +51,6 @@ pub(crate) fn run_flip(
         println!("Saved {axis_label} flipped image to {}", output_path);
     }
     Ok(())
-}
-
-fn prompt_flip_axis() -> Result<FlipAxis, String> {
-    if !stdin().is_terminal() {
-        return prompt_flip_axis_non_tty();
-    }
-
-    let mode = CustomType::<u8>::new("Choose flip direction:\n (1) Horizontal\n (2) Vertical\n")
-        .with_error_message("Please enter 1 or 2")
-        .with_validator(|value: &u8| {
-            if matches!(*value, 1..=2) {
-                Ok(Validation::Valid)
-            } else {
-                Ok(Validation::Invalid("Enter 1 or 2".into()))
-            }
-        })
-        .prompt()
-        .map_err(|e| format!("failed to read flip direction: {e}"))?;
-
-    match mode {
-        1 => Ok(FlipAxis::Horizontal),
-        2 => Ok(FlipAxis::Vertical),
-        _ => Err("invalid flip direction: use 1 (horizontal) or 2 (vertical)".to_string()),
-    }
-}
-
-fn prompt_flip_axis_non_tty() -> Result<FlipAxis, String> {
-    let mut input = String::new();
-    stdin()
-        .read_line(&mut input)
-        .map_err(|e| format!("failed to read flip direction from stdin: {e}"))?;
-
-    match input.trim() {
-        "1" => Ok(FlipAxis::Horizontal),
-        "2" => Ok(FlipAxis::Vertical),
-        other => Err(format!(
-            "invalid flip direction '{other}': use 1 (horizontal) or 2 (vertical)"
-        )),
-    }
 }
 
 pub(crate) fn run_rotate(

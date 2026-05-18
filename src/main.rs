@@ -34,34 +34,22 @@ fn run() -> Result<(), String> {
     let cli = Cli::parse();
     match cli.command {
         Command::Flip {
-            horizontal,
-            vertical,
             replace,
             preview,
             batch,
             path,
             output,
         } => {
-            let axis = cli::flip_axis_from_flags(horizontal, vertical)?;
             if is_batch(&path, &batch) {
                 if preview {
                     return Err("flip: --preview cannot be used in batch mode".to_string());
                 }
-                if axis.is_none() {
-                    return Err(
-                        "flip: --horizontal or --vertical required in batch mode".to_string()
-                    );
-                }
-                let axis = axis.unwrap();
                 let options = batch::to_batch_options(&batch)?;
                 let result = batch::run_batch(Path::new(&path), &options, |file| {
                     let img = image::open(file)
                         .map_err(|e| format!("flip: failed to open image '{}': {e}", file.display()))?;
-                    let (flipped, suffix) = match axis {
-                        commands::transforms::FlipAxis::Horizontal => (img.fliph(), "fliph"),
-                        commands::transforms::FlipAxis::Vertical => (img.flipv(), "flipv"),
-                    };
-                    let out_path = batch::resolve_output_path(file, suffix, &options);
+                    let flipped = img.flipv();
+                    let out_path = batch::resolve_output_path(file, "flipv", &options);
                     io::save_image(flipped, &out_path)?;
                     Ok(out_path.to_string_lossy().to_string())
                 })?;
@@ -69,7 +57,34 @@ fn run() -> Result<(), String> {
                 Ok(())
             } else {
                 let output = output_mode(replace, preview, output);
-                commands::transforms::run_flip(&path, output, axis)
+                commands::transforms::run_flip(&path, output, commands::transforms::FlipAxis::Vertical)
+            }
+        }
+        Command::Flop {
+            replace,
+            preview,
+            batch,
+            path,
+            output,
+        } => {
+            if is_batch(&path, &batch) {
+                if preview {
+                    return Err("flop: --preview cannot be used in batch mode".to_string());
+                }
+                let options = batch::to_batch_options(&batch)?;
+                let result = batch::run_batch(Path::new(&path), &options, |file| {
+                    let img = image::open(file)
+                        .map_err(|e| format!("flop: failed to open image '{}': {e}", file.display()))?;
+                    let flopped = img.fliph();
+                    let out_path = batch::resolve_output_path(file, "fliph", &options);
+                    io::save_image(flopped, &out_path)?;
+                    Ok(out_path.to_string_lossy().to_string())
+                })?;
+                batch::print_summary(&result);
+                Ok(())
+            } else {
+                let output = output_mode(replace, preview, output);
+                commands::transforms::run_flip(&path, output, commands::transforms::FlipAxis::Horizontal)
             }
         }
         Command::Rotate {

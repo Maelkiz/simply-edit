@@ -24,50 +24,6 @@ fn test_flip_missing_path_prints_usage() {
 }
 
 #[test]
-fn test_flip_empty_non_tty_input_rejected() {
-    let temp = TestDir::new("simply-phase1-errors");
-    let input = temp.path().join("input.png");
-    create_png(&input, 2, 2, [255, 0, 0, 255]);
-
-    let output = run_with_stdin(&["flip", input.to_str().expect("valid input path")], "\n");
-
-    assert!(!output.status.success());
-    assert!(stderr(&output).contains("invalid flip direction"));
-}
-
-#[test]
-fn test_flip_text_non_tty_input_rejected() {
-    let temp = TestDir::new("simply-phase1-errors");
-    let input = temp.path().join("input.png");
-    create_png(&input, 2, 2, [255, 0, 0, 255]);
-
-    let output = run_with_stdin(
-        &["flip", input.to_str().expect("valid input path")],
-        "horizontal\n",
-    );
-
-    assert!(!output.status.success());
-    assert!(stderr(&output).contains("invalid flip direction"));
-}
-
-#[test]
-fn test_flip_conflicting_axis_flags_rejected() {
-    let temp = TestDir::new("simply-phase1-errors");
-    let input = temp.path().join("input.png");
-    create_png(&input, 2, 2, [255, 0, 0, 255]);
-
-    let output = run(&[
-        "flip",
-        "--horizontal",
-        "--vertical",
-        input.to_str().expect("valid input path"),
-    ]);
-
-    assert!(!output.status.success());
-    assert!(stderr(&output).contains("choose only one"));
-}
-
-#[test]
 fn test_flip_unknown_flag_rejected() {
     let temp = TestDir::new("simply-phase1-errors");
     let input = temp.path().join("input.png");
@@ -311,7 +267,7 @@ fn test_resize_invalid_mode_input_rejected() {
 #[test]
 fn test_preview_rejected_in_batch_flip() {
     let temp = TestDir::new("simply-preview-batch-err");
-    let output = run(&["flip", "--horizontal", "--preview", temp.path().to_str().unwrap()]);
+    let output = run(&["flip", "--preview", temp.path().to_str().unwrap()]);
     assert!(!output.status.success());
     assert!(stderr(&output).contains("--preview cannot be used in batch mode"));
 }

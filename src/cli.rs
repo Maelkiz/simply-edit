@@ -27,16 +27,28 @@ pub(crate) struct BatchArgs {
 
 #[derive(Debug, Subcommand)]
 pub(crate) enum Command {
-    /// Flip an image horizontally or vertically
+    /// Mirror an image vertically (top to bottom)
     Flip {
-        /// Flip horizontally (interactive prompt if omitted)
-        #[arg(long)]
-        horizontal: bool,
+        /// Overwrite target file (source if no output path given)
+        #[arg(short, long)]
+        replace: bool,
 
-        /// Flip vertically (interactive prompt if omitted)
-        #[arg(long)]
-        vertical: bool,
+        /// Preview the result in the terminal without saving (requires Kitty, WezTerm, or Ghostty)
+        #[arg(short = 'p', long)]
+        preview: bool,
 
+        /// Path to image file or directory
+        path: String,
+
+        /// Output path (auto-generated if omitted)
+        output: Option<String>,
+
+        #[command(flatten)]
+        batch: BatchArgs,
+    },
+
+    /// Mirror an image horizontally (left to right)
+    Flop {
         /// Overwrite target file (source if no output path given)
         #[arg(short, long)]
         replace: bool,
@@ -290,17 +302,6 @@ fn parse_rotation(s: &str) -> Result<u16, String> {
     }
 }
 
-pub(crate) fn flip_axis_from_flags(
-    horizontal: bool,
-    vertical: bool,
-) -> Result<Option<crate::commands::transforms::FlipAxis>, String> {
-    match (horizontal, vertical) {
-        (true, true) => Err("flip: choose only one of --horizontal or --vertical".to_string()),
-        (true, false) => Ok(Some(crate::commands::transforms::FlipAxis::Horizontal)),
-        (false, true) => Ok(Some(crate::commands::transforms::FlipAxis::Vertical)),
-        (false, false) => Ok(None),
-    }
-}
 
 #[cfg(test)]
 mod tests {
@@ -316,11 +317,9 @@ mod tests {
     }
 
     #[test]
-    fn test_flip_horizontal() {
-        match parse(&["simply", "flip", "--horizontal", "image.png"]) {
+    fn test_flip_basic() {
+        match parse(&["simply", "flip", "image.png"]) {
             Command::Flip {
-                horizontal: true,
-                vertical: false,
                 replace: false,
                 path,
                 output: None,
@@ -331,11 +330,9 @@ mod tests {
     }
 
     #[test]
-    fn test_flip_vertical_with_output() {
-        match parse(&["simply", "flip", "--vertical", "image.png", "out.png"]) {
+    fn test_flip_with_output() {
+        match parse(&["simply", "flip", "image.png", "out.png"]) {
             Command::Flip {
-                horizontal: false,
-                vertical: true,
                 path,
                 output: Some(out),
                 ..
@@ -372,13 +369,43 @@ mod tests {
     }
 
     #[test]
-    fn test_flip_axis_from_flags_both() {
-        assert!(flip_axis_from_flags(true, true).is_err());
+    fn test_flop_basic() {
+        match parse(&["simply", "flop", "image.png"]) {
+            Command::Flop {
+                replace: false,
+                path,
+                output: None,
+                ..
+            } => assert_eq!(path, "image.png"),
+            other => panic!("unexpected: {other:?}"),
+        }
     }
 
     #[test]
-    fn test_flip_axis_from_flags_none() {
-        assert_eq!(flip_axis_from_flags(false, false).unwrap(), None);
+    fn test_flop_with_output() {
+        match parse(&["simply", "flop", "image.png", "out.png"]) {
+            Command::Flop {
+                path,
+                output: Some(out),
+                ..
+            } => {
+                assert_eq!(path, "image.png");
+                assert_eq!(out, "out.png");
+            }
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_flop_replace() {
+        match parse(&["simply", "flop", "-r", "image.png"]) {
+            Command::Flop {
+                replace: true,
+                path,
+                ..
+            } => assert_eq!(path, "image.png"),
+            other => panic!("unexpected: {other:?}"),
+        }
     }
 
     #[test]

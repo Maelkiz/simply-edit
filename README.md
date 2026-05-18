@@ -2,7 +2,7 @@
 
 > A simple CLI tool for manipulating images.
 
-simply-edit is a convenient command-line utility for everyday image tasks: flip, rotate, invert, grayscale, binarize, resize, and convert between common formats. It is designed to be easy to use, with sensible defaults, straightforward commands, and quality-of-life features, such as optional in-place replacement, batch operations, and view/preview functionality using the [Kitty Terminal Graphics Protocol](https://sw.kovidgoyal.net/kitty/graphics-protocol).
+simply-edit is a convenient command-line utility for everyday image tasks: flip, flop, rotate, invert, grayscale, binarize, resize, and convert between common formats. It is designed to be easy to use, with sensible defaults, straightforward commands, and quality-of-life features, such as optional in-place replacement, batch operations, and view/preview functionality using the [Kitty Terminal Graphics Protocol](https://sw.kovidgoyal.net/kitty/graphics-protocol).
 
 ---
 
@@ -52,11 +52,13 @@ simply <command> <args>
 | Command | What it does |
 | --- | --- |
 | `help` | Prints a detailed overview of the available commands |
-| `flip` | Flip image (interactive by default, or via direction flags) |
+| `flip` | Mirror an image vertically (top to bottom) |
+| `flop` | Mirror an image horizontally (left to right) |
 | `rotate` | Rotate image (interactive by default, or explicit `90`/`180`/`270`) |
 | `invert` | Invert image colors |
 | `grayscale` | Convert image to grayscale |
 | `binarize` | Convert image to pure black and white at a brightness cutoff |
+| `resize` | Resize an image to specified dimensions |
 | `convert` | Convert between PNG/JPG/ICO/WebP formats |
 | `vectorize` | Convert a raster image to SVG |
 | `rasterize` | Convert an SVG to a raster image |
@@ -71,18 +73,18 @@ simply <command> --help
 
 ### Output Path
 
-If you omit the output path, the tool generates one automatically: transforms keep the source format (e.g., `image.png` → `image_fliph.png`), while `vectorize` and `rasterize` switch to `.svg` and `.png` respectively. When you provide an explicit output path, the format is determined by its extension.
+If you omit the output path, the tool generates one automatically: transforms keep the source format (e.g., `image.png` → `image_flipv.png`), while `vectorize` and `rasterize` switch to `.svg` and `.png` respectively. When you provide an explicit output path, the format is determined by its extension.
 
 ### Common Examples
 
 #### Transforms
 
 ```bash
-# Flip (interactive: choose horizontal or vertical)
+# Flip (mirror vertically)
 simply flip ./image.png
 
-# Flip bypassing interactive mode
-simply flip --vertical ./image.png
+# Flop (mirror horizontally)
+simply flop ./image.png
 
 # Rotate (interactive: choose 90, 180, or 270 degrees)
 simply rotate ./image.png
@@ -136,7 +138,8 @@ simply binarize --threshold 100 ./scans/ --output-dir ./cleaned/
 simply view ./photo.png
 
 # Preview a transform without saving
-simply flip --horizontal --preview ./photo.png
+simply flip --preview ./photo.png
+simply flop --preview ./photo.png
 simply rotate --angle 90 --preview ./photo.png
 simply grayscale --preview ./photo.png
 simply binarize --preview ./photo.png
