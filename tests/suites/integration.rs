@@ -635,3 +635,135 @@ fn test_info_missing_file() {
         "expected path in error: {stderr}"
     );
 }
+
+#[test]
+fn test_pad_generated_output() {
+    let temp = TestDir::new("simply-pad-int");
+    let input = temp.path().join("img.png");
+    let generated = temp.path().join("img_pad.png");
+    create_png(&input, 4, 3, [100, 150, 200, 255]);
+
+    let output = run(&["pad", "--top", "5", input.to_str().expect("valid input path")]);
+    assert!(output.status.success());
+    assert!(generated.exists());
+    assert_valid_image(&generated);
+}
+
+#[test]
+fn test_pad_explicit_output() {
+    let temp = TestDir::new("simply-pad-int");
+    let input = temp.path().join("img.png");
+    let out = temp.path().join("custom.png");
+    create_png(&input, 4, 3, [100, 150, 200, 255]);
+
+    let output = run(&[
+        "pad",
+        "--left", "10",
+        input.to_str().expect("valid input path"),
+        out.to_str().expect("valid output path"),
+    ]);
+    assert!(output.status.success());
+    assert!(out.exists());
+    assert_valid_image(&out);
+}
+
+#[test]
+fn test_pad_replace_mode() {
+    let temp = TestDir::new("simply-pad-int");
+    let input = temp.path().join("img.png");
+    create_png(&input, 4, 3, [100, 150, 200, 255]);
+
+    let output = run(&["pad", "--replace", "--bottom", "8", input.to_str().expect("valid input path")]);
+    assert!(output.status.success());
+    assert!(input.exists());
+
+    let img = image::open(&input).expect("failed to open replaced image");
+    assert_eq!(img.width(), 4);
+    assert_eq!(img.height(), 11);
+}
+
+#[test]
+fn test_pad_dimensions_correct() {
+    let temp = TestDir::new("simply-pad-int");
+    let input = temp.path().join("img.png");
+    let out = temp.path().join("out.png");
+    create_png(&input, 5, 3, [200, 100, 50, 255]);
+
+    let output = run(&[
+        "pad",
+        "--top", "2",
+        "--bottom", "4",
+        "--left", "6",
+        "--right", "8",
+        input.to_str().expect("valid input path"),
+        out.to_str().expect("valid output path"),
+    ]);
+    assert!(output.status.success());
+
+    let img = image::open(&out).expect("failed to open padded image");
+    assert_eq!(img.width(), 5 + 6 + 8);
+    assert_eq!(img.height(), 3 + 2 + 4);
+}
+
+#[test]
+fn test_pad_horizontal_shorthand() {
+    let temp = TestDir::new("simply-pad-int");
+    let input = temp.path().join("img.png");
+    let out = temp.path().join("out.png");
+    create_png(&input, 4, 3, [200, 100, 50, 255]);
+
+    let output = run(&[
+        "pad",
+        "-x", "10",
+        input.to_str().expect("valid input path"),
+        out.to_str().expect("valid output path"),
+    ]);
+    assert!(output.status.success());
+
+    let img = image::open(&out).expect("failed to open padded image");
+    assert_eq!(img.width(), 4 + 10 + 10);
+    assert_eq!(img.height(), 3);
+}
+
+#[test]
+fn test_pad_color_pixels() {
+    let temp = TestDir::new("simply-pad-int");
+    let input = temp.path().join("img.png");
+    let out = temp.path().join("out.png");
+    create_png(&input, 2, 2, [50, 100, 150, 255]);
+
+    let output = run(&[
+        "pad",
+        "--top", "3",
+        "--color", "ff0000ff",
+        input.to_str().expect("valid input path"),
+        out.to_str().expect("valid output path"),
+    ]);
+    assert!(output.status.success());
+
+    let img = image::open(&out).expect("failed to open padded image");
+    let px = img.to_rgba8().get_pixel(0, 0).0;
+    assert_eq!(px[0], 255, "expected red channel 255");
+    assert_eq!(px[1], 0, "expected green channel 0");
+    assert_eq!(px[2], 0, "expected blue channel 0");
+}
+
+#[test]
+fn test_pad_default_padding() {
+    let temp = TestDir::new("simply-pad-int");
+    let input = temp.path().join("img.png");
+    let out = temp.path().join("out.png");
+    create_png(&input, 4, 3, [100, 150, 200, 255]);
+
+    // No size flags: defaults to 20px on all sides
+    let output = run(&[
+        "pad",
+        input.to_str().expect("valid input path"),
+        out.to_str().expect("valid output path"),
+    ]);
+    assert!(output.status.success());
+
+    let img = image::open(&out).expect("failed to open padded image");
+    assert_eq!(img.width(), 4 + 20 + 20);
+    assert_eq!(img.height(), 3 + 20 + 20);
+}
