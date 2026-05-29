@@ -401,6 +401,29 @@ pub(crate) fn binarize_image(img: image::DynamicImage, threshold: u8) -> image::
     image::DynamicImage::ImageRgba8(rgba)
 }
 
+pub(crate) fn run_pad(
+    path: &str,
+    output: OutputMode,
+    top: u32,
+    right: u32,
+    bottom: u32,
+    left: u32,
+    color: image::Rgba<u8>,
+) -> Result<(), String> {
+    let img = image::open(path)
+        .map_err(|e| format!("pad: failed to open image '{path}': {e}"))?;
+    let padded = pad_image(img, top, right, bottom, left, color);
+    let save_mode = match output {
+        OutputMode::Preview => return crate::commands::view::display_image(padded),
+        OutputMode::Generated => SaveMode::Generated("pad"),
+        OutputMode::Explicit(p) => SaveMode::Explicit(p),
+        OutputMode::Replace(t) => SaveMode::Replace(t),
+    };
+    let output_path = save_transformed_image(padded, path, save_mode, "pad")?;
+    println!("Saved padded image to {}", output_path);
+    Ok(())
+}
+
 pub(crate) fn pad_image(
     img: image::DynamicImage,
     top: u32,

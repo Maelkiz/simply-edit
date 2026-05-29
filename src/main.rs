@@ -325,6 +325,54 @@ fn run() -> Result<(), String> {
                 commands::convert::run_vectorize(VectorizeArgs { src, dst, fast, preview })
             }
         }
+        Command::Pad {
+            top,
+            bottom,
+            left,
+            right,
+            px,
+            horizontal,
+            vertical,
+            color,
+            replace,
+            preview,
+            batch,
+            path,
+            output,
+        } => {
+            let any_size_flag = top.is_some()
+                || bottom.is_some()
+                || left.is_some()
+                || right.is_some()
+                || horizontal.is_some()
+                || vertical.is_some()
+                || px.is_some();
+            let fallback = if any_size_flag { 0 } else { 20 };
+            let top = top.unwrap_or_else(|| vertical.unwrap_or_else(|| px.unwrap_or(fallback)));
+            let bottom = bottom.unwrap_or_else(|| vertical.unwrap_or_else(|| px.unwrap_or(fallback)));
+            let left = left.unwrap_or_else(|| horizontal.unwrap_or_else(|| px.unwrap_or(fallback)));
+            let right = right.unwrap_or_else(|| horizontal.unwrap_or_else(|| px.unwrap_or(fallback)));
+            let color = image::Rgba(color.unwrap_or([0, 0, 0, 0]));
+            if is_batch(&path, &batch) {
+                if preview {
+                    return Err("pad: --preview cannot be used in batch mode".to_string());
+                }
+                let options = batch::to_batch_options(&batch)?;
+                let result = batch::run_batch(Path::new(&path), &options, |file| {
+                    let img = image::open(file)
+                        .map_err(|e| format!("pad: failed to open image '{}': {e}", file.display()))?;
+                    let padded = commands::transforms::pad_image(img, top, right, bottom, left, color);
+                    let out_path = batch::resolve_output_path(file, "pad", &options);
+                    io::save_image(padded, &out_path)?;
+                    Ok(out_path.to_string_lossy().to_string())
+                })?;
+                batch::print_summary(&result);
+                Ok(())
+            } else {
+                let output = output_mode(replace, preview, output);
+                commands::transforms::run_pad(&path, output, top, right, bottom, left, color)
+            }
+        }
         Command::Info { path } => commands::info::run_info(&path),
         Command::View { path } => commands::view::run_view(&path),
         Command::Rasterize {

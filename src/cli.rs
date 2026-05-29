@@ -235,6 +235,58 @@ pub(crate) enum Command {
         path: String,
     },
 
+    /// Add transparent (or colored) padding around an image
+    Pad {
+        /// Pixels to add on the top edge
+        #[arg(long, value_parser = parse_positive_u32)]
+        top: Option<u32>,
+
+        /// Pixels to add on the bottom edge
+        #[arg(long, value_parser = parse_positive_u32)]
+        bottom: Option<u32>,
+
+        /// Pixels to add on the left edge
+        #[arg(long, value_parser = parse_positive_u32)]
+        left: Option<u32>,
+
+        /// Pixels to add on the right edge
+        #[arg(long, value_parser = parse_positive_u32)]
+        right: Option<u32>,
+
+        /// Pixels to add on every side (overridden by -x, -y, or individual side flags)
+        #[arg(long, value_parser = parse_positive_u32)]
+        px: Option<u32>,
+
+        /// Shorthand: pixels to add on both left and right (overridden by --left/--right)
+        #[arg(short = 'x', value_parser = parse_positive_u32)]
+        horizontal: Option<u32>,
+
+        /// Shorthand: pixels to add on both top and bottom (overridden by --top/--bottom)
+        #[arg(short = 'y', value_parser = parse_positive_u32)]
+        vertical: Option<u32>,
+
+        /// Fill color as hex (e.g. ffffff, #ff0000, #ff000080). Defaults to transparent
+        #[arg(short = 'c', long, value_parser = parse_color)]
+        color: Option<[u8; 4]>,
+
+        /// Overwrite target file (source if no output path given)
+        #[arg(short, long)]
+        replace: bool,
+
+        /// Preview the result in the terminal without saving (requires Kitty, WezTerm, or Ghostty)
+        #[arg(short = 'p', long)]
+        preview: bool,
+
+        /// Path to image file or directory
+        path: String,
+
+        /// Output path (auto-generated if omitted)
+        output: Option<String>,
+
+        #[command(flatten)]
+        batch: BatchArgs,
+    },
+
     /// Convert an SVG to a raster image
     Rasterize {
         /// Scale factor for rasterization
@@ -291,6 +343,31 @@ fn parse_positive_u32(s: &str) -> Result<u32, String> {
         ));
     }
     Ok(v)
+}
+
+fn parse_color(s: &str) -> Result<[u8; 4], String> {
+    let hex = s.trim_start_matches('#');
+    let parse_byte = |h: &str| {
+        u8::from_str_radix(h, 16)
+            .map_err(|_| format!("invalid color '{s}': use a hex string like ffffff or #ff000080"))
+    };
+    match hex.len() {
+        6 => Ok([
+            parse_byte(&hex[0..2])?,
+            parse_byte(&hex[2..4])?,
+            parse_byte(&hex[4..6])?,
+            255,
+        ]),
+        8 => Ok([
+            parse_byte(&hex[0..2])?,
+            parse_byte(&hex[2..4])?,
+            parse_byte(&hex[4..6])?,
+            parse_byte(&hex[6..8])?,
+        ]),
+        _ => Err(format!(
+            "invalid color '{s}': use a 6-digit (rrggbb) or 8-digit (rrggbbaa) hex string"
+        )),
+    }
 }
 
 fn parse_rotation(s: &str) -> Result<u16, String> {
@@ -783,6 +860,155 @@ mod tests {
     fn test_resize_zero_width_rejected() {
         let result = try_parse(&["simply", "resize", "--width", "0", "-H", "100", "image.png"]);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_pad_no_flags() {
+        match parse(&["simply", "pad", "image.png"]) {
+            Command::Pad {
+                top: None,
+                bottom: None,
+                left: None,
+                right: None,
+                horizontal: None,
+                vertical: None,
+                color: None,
+                replace: false,
+                path,
+                output: None,
+                ..
+            } => assert_eq!(path, "image.png"),
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_pad_individual_sides() {
+        match parse(&["simply", "pad", "--top", "10", "--bottom", "20", "--left", "5", "--right", "15", "image.png"]) {
+            Command::Pad {
+                top: Some(10),
+                bottom: Some(20),
+                left: Some(5),
+                right: Some(15),
+                path,
+                ..
+            } => assert_eq!(path, "image.png"),
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_pad_horizontal_shorthand() {
+        match parse(&["simply", "pad", "-x", "40", "image.png"]) {
+            Command::Pad {
+                horizontal: Some(40),
+                vertical: None,
+                path,
+                ..
+            } => assert_eq!(path, "image.png"),
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_pad_vertical_shorthand() {
+        match parse(&["simply", "pad", "-y", "15", "image.png"]) {
+            Command::Pad {
+                vertical: Some(15),
+                horizontal: None,
+                path,
+                ..
+            } => assert_eq!(path, "image.png"),
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_pad_color_6digit() {
+        match parse(&["simply", "pad", "-c", "ff0000", "--top", "5", "image.png"]) {
+            Command::Pad {
+                color: Some([255, 0, 0, 255]),
+                top: Some(5),
+                ..
+            } => {}
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_pad_color_8digit_with_hash() {
+        match parse(&["simply", "pad", "--color", "#00ff0080", "--top", "5", "image.png"]) {
+            Command::Pad {
+                color: Some([0, 255, 0, 128]),
+                ..
+            } => {}
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_pad_replace() {
+        match parse(&["simply", "pad", "-r", "--top", "10", "image.png"]) {
+            Command::Pad {
+                replace: true,
+                top: Some(10),
+                path,
+                ..
+            } => assert_eq!(path, "image.png"),
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_pad_with_output() {
+        match parse(&["simply", "pad", "--top", "5", "in.png", "out.png"]) {
+            Command::Pad {
+                top: Some(5),
+                path,
+                output: Some(out),
+                ..
+            } => {
+                assert_eq!(path, "in.png");
+                assert_eq!(out, "out.png");
+            }
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_pad_px_flag() {
+        match parse(&["simply", "pad", "--px", "20", "image.png"]) {
+            Command::Pad {
+                px: Some(20),
+                top: None,
+                bottom: None,
+                left: None,
+                right: None,
+                horizontal: None,
+                vertical: None,
+                path,
+                ..
+            } => assert_eq!(path, "image.png"),
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_pad_invalid_color_rejected() {
+        let result = try_parse(&["simply", "pad", "--color", "zzzzzz", "--top", "5", "image.png"]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_pad_batch_flags() {
+        match parse(&["simply", "pad", "-x", "10", "--output-dir", "/tmp/out", "images/"]) {
+            Command::Pad {
+                horizontal: Some(10),
+                batch,
+                ..
+            } => assert_eq!(batch.output_dir, Some(std::path::PathBuf::from("/tmp/out"))),
+            other => panic!("unexpected: {other:?}"),
+        }
     }
 
     #[test]
