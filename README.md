@@ -2,7 +2,7 @@
 
 > A simple CLI tool for manipulating images.
 
-simply-edit is a convenient command-line utility for everyday image tasks: flip, flop, rotate, invert, grayscale, binarize, resize, and convert between common formats. It is designed to be easy to use, with sensible defaults, straightforward commands, and quality-of-life features, such as optional in-place replacement, batch operations, and view/preview functionality using the [Kitty Terminal Graphics Protocol](https://sw.kovidgoyal.net/kitty/graphics-protocol).
+simply-edit is a convenient command-line utility for everyday image tasks: flip, flop, rotate, invert, grayscale, binarize, pad, resize, and convert between common formats. It is designed to be easy to use, with sensible defaults, straightforward commands, and quality-of-life features, such as optional in-place replacement, batch operations, and view/preview functionality using the [Kitty Terminal Graphics Protocol](https://sw.kovidgoyal.net/kitty/graphics-protocol).
 
 ---
 
@@ -58,6 +58,7 @@ simply <command> <args>
 | `invert` | Invert image colors |
 | `grayscale` | Convert image to grayscale |
 | `binarize` | Convert image to pure black and white at a brightness cutoff |
+| `pad` | Add padding (colored border) around an image |
 | `resize` | Resize an image to specified dimensions |
 | `convert` | Convert between PNG/JPG/ICO/WebP formats |
 | `vectorize` | Convert a raster image to SVG |
@@ -100,6 +101,24 @@ simply binarize ./image.png
 
 # Binarize with custom threshold
 simply binarize --threshold 200 ./image.png
+
+# Pad with 20px on every side (default when no size flags given)
+simply pad ./image.png
+
+# Pad individual sides
+simply pad --top 10 --bottom 10 ./image.png
+
+# Pad left and right equally using the -x shorthand
+simply pad -x 20 ./image.png
+
+# Pad top and bottom equally using the -y shorthand
+simply pad -y 15 ./image.png
+
+# Pad with a custom fill color (hex: rrggbb or rrggbbaa)
+simply pad --top 20 -x 15 --color 00ff00 ./image.png
+
+# Pad and replace the original file in-place
+simply pad --top 5 --replace ./image.png
 ```
 
 #### Format Conversion
@@ -143,6 +162,7 @@ simply flop --preview ./photo.png
 simply rotate --angle 90 --preview ./photo.png
 simply grayscale --preview ./photo.png
 simply binarize --preview ./photo.png
+simply pad --top 20 -x 10 --preview ./photo.png
 simply vectorize --preview ./photo.png
 ```
 
