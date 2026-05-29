@@ -401,6 +401,22 @@ pub(crate) fn binarize_image(img: image::DynamicImage, threshold: u8) -> image::
     image::DynamicImage::ImageRgba8(rgba)
 }
 
+pub(crate) fn pad_image(
+    img: image::DynamicImage,
+    top: u32,
+    right: u32,
+    bottom: u32,
+    left: u32,
+    color: image::Rgba<u8>,
+) -> image::DynamicImage {
+    let (orig_w, orig_h) = (img.width(), img.height());
+    let new_w = orig_w + left + right;
+    let new_h = orig_h + top + bottom;
+    let mut canvas = image::ImageBuffer::from_pixel(new_w, new_h, color);
+    image::imageops::overlay(&mut canvas, &img.to_rgba8(), left as i64, top as i64);
+    image::DynamicImage::ImageRgba8(canvas)
+}
+
 pub(crate) fn invert_colors(img: image::DynamicImage) -> image::DynamicImage {
     let mut rgba_image = img.to_rgba8();
 
@@ -548,5 +564,50 @@ mod tests {
         let pixel = result.to_rgba8().get_pixel(0, 0).0;
 
         assert_eq!(pixel, [0, 0, 0, 255]);
+    }
+
+    #[test]
+    fn test_pad_dimensions_uniform() {
+        let img = image::DynamicImage::ImageRgba8(
+            image::ImageBuffer::from_pixel(4, 3, image::Rgba([255, 0, 0, 255])),
+        );
+        let result = pad_image(img, 2, 3, 4, 5, image::Rgba([0, 0, 0, 0]));
+        assert_eq!(result.width(), 4 + 5 + 3);
+        assert_eq!(result.height(), 3 + 2 + 4);
+    }
+
+    #[test]
+    fn test_pad_zero_padding_same_size() {
+        let img = image::DynamicImage::ImageRgba8(
+            image::ImageBuffer::from_pixel(5, 5, image::Rgba([100, 100, 100, 255])),
+        );
+        let result = pad_image(img, 0, 0, 0, 0, image::Rgba([0, 0, 0, 0]));
+        assert_eq!(result.width(), 5);
+        assert_eq!(result.height(), 5);
+    }
+
+    #[test]
+    fn test_pad_fill_color_in_padding_region() {
+        let img = image::DynamicImage::ImageRgba8(
+            image::ImageBuffer::from_pixel(1, 1, image::Rgba([255, 0, 0, 255])),
+        );
+        let fill = image::Rgba([0, 255, 0, 255]);
+        let result = pad_image(img, 2, 2, 2, 2, fill);
+        // Top-left corner is padding
+        assert_eq!(result.to_rgba8().get_pixel(0, 0).0, [0, 255, 0, 255]);
+        // Bottom-right corner is padding
+        let w = result.width() - 1;
+        let h = result.height() - 1;
+        assert_eq!(result.to_rgba8().get_pixel(w, h).0, [0, 255, 0, 255]);
+    }
+
+    #[test]
+    fn test_pad_original_preserved_at_offset() {
+        let img = image::DynamicImage::ImageRgba8(
+            image::ImageBuffer::from_pixel(1, 1, image::Rgba([200, 100, 50, 255])),
+        );
+        let result = pad_image(img, 3, 0, 0, 5, image::Rgba([0, 0, 0, 0]));
+        // Original image placed at (left=5, top=3)
+        assert_eq!(result.to_rgba8().get_pixel(5, 3).0, [200, 100, 50, 255]);
     }
 }
