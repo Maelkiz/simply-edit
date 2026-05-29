@@ -17,9 +17,7 @@ simply-edit is a convenient command-line utility for everyday image tasks: flip,
 Install simply-edit so you can run the `simply` commands from anywhere:
 
 ```bash
-git clone https://github.com/Maelkiz/simply-edit.git
-cd simply-edit
-cargo install --path .
+cargo install --git https://github.com/Maelkiz/simply-edit.git
 ```
 
 ### Verify Installation
