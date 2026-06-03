@@ -282,10 +282,19 @@ fn run() -> Result<(), String> {
                 batch::print_summary(&result);
                 Ok(())
             } else {
-                let dst = dst.ok_or_else(|| {
-                    "convert: output path required (e.g. simply convert input.png output.jpg)"
-                        .to_string()
-                })?;
+                let dst = match dst {
+                    Some(d) => d,
+                    None => {
+                        let fmt = commands::convert::prompt_convert_format(&src)?;
+                        let src_path = Path::new(&src);
+                        let stem = src_path
+                            .file_stem()
+                            .and_then(|s| s.to_str())
+                            .unwrap_or("output");
+                        let parent = src_path.parent().unwrap_or(Path::new("."));
+                        parent.join(format!("{stem}.{fmt}")).to_string_lossy().to_string()
+                    }
+                };
                 commands::convert::run_convert(&src, &dst)
             }
         }

@@ -196,7 +196,7 @@ pub(crate) enum Command {
         /// Source image path or directory
         src: String,
 
-        /// Output path (required for single-file mode)
+        /// Output path (interactive format prompt if omitted)
         dst: Option<String>,
 
         #[command(flatten)]

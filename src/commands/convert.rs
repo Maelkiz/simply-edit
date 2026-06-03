@@ -1,6 +1,8 @@
 use std::fs;
+use std::io::{IsTerminal, stdin};
 use std::path::Path;
 
+use inquire::{CustomType, validator::Validation};
 use resvg::tiny_skia::{Pixmap, Transform};
 use resvg::usvg::{Options, Tree};
 use vtracer::Config;
@@ -75,7 +77,7 @@ pub(crate) fn run_rasterize(args: RasterizeArgs) -> Result<(), String> {
 fn vectorize(src: &str, dst: &str, fast: bool, preview: bool) -> Result<(), String> {
     if is_svg_path(src) {
         return Err(format!(
-            "vectorize: unsupported file format '{}': only raster images are accepted (PNG, JPG, GIF, BMP, ICO, TIFF, WebP, AVIF, TGA, DDS, EXR, HDR, PNM, QOI)",
+            "vectorize: unsupported file format '{}'",
             Path::new(src).display()
         ));
     }
@@ -245,6 +247,76 @@ fn save_rendered_pixmap(pixmap: Pixmap, output_path: &Path) -> Result<(), String
         })?;
 
     crate::io::save_image(image::DynamicImage::ImageRgba8(image), output_path)
+}
+
+pub(crate) fn prompt_convert_format(src: &str) -> Result<String, String> {
+    let src_ext = Path::new(src)
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_lowercase();
+    let src_ext = if src_ext == "jpeg" { "jpg" } else { src_ext.as_str() }.to_string();
+
+    let all_formats: &[&str] = if is_svg_path(src) {
+        &["png", "jpg", "webp", "ico"]
+    } else {
+        &["png", "jpg", "webp", "ico", "svg"]
+    };
+
+    let formats: Vec<&str> = all_formats
+        .iter()
+        .filter(|&&f| f != src_ext.as_str())
+        .copied()
+        .collect();
+
+    if !stdin().is_terminal() {
+        return prompt_convert_format_non_tty(&formats);
+    }
+
+    let mut prompt_str = String::from("Choose output format:\n");
+    for (i, fmt) in formats.iter().enumerate() {
+        prompt_str.push_str(&format!(" ({}) {}\n", i + 1, fmt.to_uppercase()));
+    }
+
+    let n = formats.len() as u8;
+    let choice = CustomType::<u8>::new(&prompt_str)
+        .with_error_message("Please enter a valid number")
+        .with_validator(move |value: &u8| {
+            if (1..=n).contains(value) {
+                Ok(Validation::Valid)
+            } else {
+                Ok(Validation::Invalid(
+                    format!("Enter a number between 1 and {n}").into(),
+                ))
+            }
+        })
+        .prompt()
+        .map_err(|e| format!("failed to read format: {e}"))?;
+
+    Ok(formats[(choice - 1) as usize].to_string())
+}
+
+fn prompt_convert_format_non_tty(formats: &[&str]) -> Result<String, String> {
+    let mut input = String::new();
+    stdin()
+        .read_line(&mut input)
+        .map_err(|e| format!("failed to read format from stdin: {e}"))?;
+
+    let trimmed = input.trim();
+    if let Ok(n) = trimmed.parse::<usize>() {
+        if n >= 1 && n <= formats.len() {
+            return Ok(formats[n - 1].to_string());
+        }
+    }
+    for fmt in formats {
+        if fmt.eq_ignore_ascii_case(trimmed) {
+            return Ok(fmt.to_string());
+        }
+    }
+    Err(format!(
+        "invalid format '{trimmed}': enter a number (1-{}) or a format name",
+        formats.len()
+    ))
 }
 
 pub(crate) fn is_svg_path(path: &str) -> bool {
