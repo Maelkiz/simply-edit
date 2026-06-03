@@ -70,6 +70,15 @@ To get a more detailed description of any given command and its available flags,
 simply <command> --help
 ```
 
+For those who do not want to memorize a bunch of flags, you can run all commands with an image path as the only argument:
+
+```bash
+simply <command> <path-to-img>
+```
+
+> **Note**:  
+> Currently, when only an image path is provided, some commands will start an interactive prompt while others run with a sane default. I intend to streamline this in the future for consistency.
+
 ### Output Path
 
 If you omit the output path, the tool generates one automatically: transforms keep the source format (e.g., `image.png` → `image_flipv.png`), while `vectorize` and `rasterize` switch to `.svg` and `.png` respectively. When you provide an explicit output path, the format is determined by its extension.
@@ -137,7 +146,7 @@ simply vectorize --full-quality ./image.png
 # Convert an SVG to a raster image
 simply rasterize ./icon.svg
 
-# Convert SVG to raster at 2× scale (1 SVG unit = 2 pixels)
+# Convert SVG to raster at 2× scale 
 simply rasterize --scale 2 ./icon.svg ./icon.png
 ```
 
