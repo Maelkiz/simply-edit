@@ -73,6 +73,13 @@ pub(crate) fn run_rasterize(args: RasterizeArgs) -> Result<(), String> {
 }
 
 fn vectorize(src: &str, dst: &str, fast: bool, preview: bool) -> Result<(), String> {
+    if is_svg_path(src) {
+        return Err(format!(
+            "vectorize: unsupported file format '{}': only raster images are accepted (PNG, JPG, GIF, BMP, ICO, TIFF, WebP, AVIF, TGA, DDS, EXR, HDR, PNM, QOI)",
+            Path::new(src).display()
+        ));
+    }
+
     let src_path = Path::new(src);
     let config = if fast {
         fast_vectorize_config()
@@ -133,6 +140,13 @@ fn vectorize(src: &str, dst: &str, fast: bool, preview: bool) -> Result<(), Stri
 }
 
 fn rasterize(src: &str, dst: &str, options: RasterizeOptions, preview: bool) -> Result<(), String> {
+    if !is_svg_path(src) {
+        return Err(format!(
+            "rasterize: unsupported file format '{}': only SVG files are accepted",
+            Path::new(src).display()
+        ));
+    }
+
     let src_path = Path::new(src);
     let dst_path = Path::new(dst);
     let svg_data = fs::read(src_path)
