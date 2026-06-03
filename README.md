@@ -59,7 +59,7 @@ simply <command> <args>
 | `pad` | Add padding (transparent or colored) around an image |
 | `resize` | Resize an image to specified dimensions |
 | `convert` | Convert between PNG/JPG/ICO/WebP formats |
-| `vectorize` | Convert a raster image to SVG |
+| `vectorize` | Convert a raster image to SVG (auto-downscales large images for speed; use `--full-quality` to disable) |
 | `rasterize` | Convert an SVG to a raster image |
 | `info` | Display image metadata and properties |
 | `view` | Display an image inline in the terminal (requires Kitty graphics protocol support (Kitty, WezTerm, or Ghostty)) |
@@ -128,8 +128,17 @@ simply convert ./photo.png ./photo.jpg
 # Convert a raster image to SVG
 simply vectorize ./image.png
 
-# Convert an SVG to a raster image at 2× scale
-simply rasterize -s 2 ./icon.svg ./icon.png
+# Faster conversion with lower fidelity
+simply vectorize --fast ./image.png
+
+# Full-resolution vectorization (no downscaling, slow for large images)
+simply vectorize --full-quality ./image.png
+
+# Convert an SVG to a raster image
+simply rasterize ./icon.svg
+
+# Convert SVG to raster at 2× scale (1 SVG unit = 2 pixels)
+simply rasterize --scale 2 ./icon.svg ./icon.png
 ```
 
 #### Batch Processing
@@ -170,7 +179,7 @@ simply vectorize --preview ./photo.png
 - **JPG/JPEG**: Supported for input and output
 - **ICO**: Supported for input and output. Images larger than 256×256 pixels are automatically resized while maintaining aspect ratio
 - **WebP**: Supported for input and output
-- **SVG output**: Raster images can be vectorized to SVG via `vectorize` (or `convert` with an `.svg` destination)
+- **SVG output**: Raster images can be vectorized to SVG via `vectorize` (or `convert` with an `.svg` destination). Images larger than 2000px on the long edge are automatically downscaled before vectorization for performance, with the SVG retaining the original dimensions via a `viewBox`. Pass `--full-quality` to vectorize at full resolution.
 - **SVG input**: SVG files can be rasterized via `rasterize` (supports `--scale`, `--width`, `--height`) or `convert` (at native resolution)
 
 ---
