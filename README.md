@@ -62,7 +62,7 @@ simply <command> <args>
 | `vectorize` | Convert a raster image to SVG |
 | `rasterize` | Convert an SVG to a raster image |
 | `info` | Display image metadata and properties |
-| `view` | Display an image inline in the terminal (Kitty, WezTerm, or Ghostty) |
+| `view` | Display an image inline in the terminal (requires Kitty graphics protocol support (Kitty, WezTerm, or Ghostty)) |
 
 To get a more detailed description of any given command and its available flags, run:
 

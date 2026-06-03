@@ -1,4 +1,4 @@
-use std::io::{self, Cursor, IsTerminal, Write};
+use std::io::{self, Cursor, Write};
 
 use base64::Engine;
 use image::{DynamicImage, imageops::FilterType};
@@ -9,7 +9,7 @@ const CHUNK_SIZE: usize = 4096;
 pub fn display_image(img: DynamicImage) -> Result<(), String> {
     if !detect_kitty_support() {
         return Err(
-            "preview requires a Kitty-compatible terminal (Kitty, WezTerm, or Ghostty)".to_string(),
+            "preview requires a terminal with Kitty graphics protocol support (Kitty, WezTerm, or Ghostty)".to_string(),
         );
     }
     display_kitty(img)
@@ -19,12 +19,12 @@ pub fn run_view(path: &str) -> Result<(), String> {
     let img = image::open(path)
         .map_err(|e| format!("view: failed to open '{path}': {e}"))?;
 
-    if detect_kitty_support() {
-        display_kitty(img)
-    } else {
-        display_fallback(path, &img);
-        Ok(())
+    if !detect_kitty_support() {
+        return Err(
+            "view: requires a terminal with Kitty graphics protocol support (Kitty, WezTerm, or Ghostty)".to_string(),
+        );
     }
+    display_kitty(img)
 }
 
 fn detect_kitty_support() -> bool {
@@ -132,18 +132,6 @@ fn display_kitty(img: DynamicImage) -> Result<(), String> {
     writeln!(out).map_err(|e| format!("view: write error: {e}"))?;
     out.flush().map_err(|e| format!("view: write error: {e}"))?;
     Ok(())
-}
-
-fn display_fallback(path: &str, img: &DynamicImage) {
-    if io::stderr().is_terminal() {
-        eprintln!(
-            "note: Kitty image protocol not detected; run in Kitty, WezTerm, or Ghostty to view images inline"
-        );
-        eprintln!();
-    }
-    println!("File:   {path}");
-    println!("Size:   {}×{} pixels", img.width(), img.height());
-    println!("Color:  {:?}", img.color());
 }
 
 #[cfg(test)]

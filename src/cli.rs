@@ -33,7 +33,7 @@ pub(crate) enum Command {
         #[arg(short, long)]
         replace: bool,
 
-        /// Preview the result in the terminal without saving (requires Kitty, WezTerm, or Ghostty)
+        /// Preview the result in the terminal without saving (requires Kitty graphics protocol support (Kitty, WezTerm, or Ghostty))
         #[arg(short = 'p', long)]
         preview: bool,
 
@@ -53,7 +53,7 @@ pub(crate) enum Command {
         #[arg(short, long)]
         replace: bool,
 
-        /// Preview the result in the terminal without saving (requires Kitty, WezTerm, or Ghostty)
+        /// Preview the result in the terminal without saving (requires Kitty graphics protocol support (Kitty, WezTerm, or Ghostty))
         #[arg(short = 'p', long)]
         preview: bool,
 
@@ -77,7 +77,7 @@ pub(crate) enum Command {
         #[arg(short, long)]
         replace: bool,
 
-        /// Preview the result in the terminal without saving (requires Kitty, WezTerm, or Ghostty)
+        /// Preview the result in the terminal without saving (requires Kitty graphics protocol support (Kitty, WezTerm, or Ghostty))
         #[arg(short = 'p', long)]
         preview: bool,
 
@@ -97,7 +97,7 @@ pub(crate) enum Command {
         #[arg(short, long)]
         replace: bool,
 
-        /// Preview the result in the terminal without saving (requires Kitty, WezTerm, or Ghostty)
+        /// Preview the result in the terminal without saving (requires Kitty graphics protocol support (Kitty, WezTerm, or Ghostty))
         #[arg(short = 'p', long)]
         preview: bool,
 
@@ -117,7 +117,7 @@ pub(crate) enum Command {
         #[arg(short, long)]
         replace: bool,
 
-        /// Preview the result in the terminal without saving (requires Kitty, WezTerm, or Ghostty)
+        /// Preview the result in the terminal without saving (requires Kitty graphics protocol support (Kitty, WezTerm, or Ghostty))
         #[arg(short = 'p', long)]
         preview: bool,
 
@@ -141,7 +141,7 @@ pub(crate) enum Command {
         #[arg(short, long)]
         replace: bool,
 
-        /// Preview the result in the terminal without saving (requires Kitty, WezTerm, or Ghostty)
+        /// Preview the result in the terminal without saving (requires Kitty graphics protocol support (Kitty, WezTerm, or Ghostty))
         #[arg(short = 'p', long)]
         preview: bool,
 
@@ -173,7 +173,7 @@ pub(crate) enum Command {
         #[arg(short, long)]
         replace: bool,
 
-        /// Preview the result in the terminal without saving (requires Kitty, WezTerm, or Ghostty)
+        /// Preview the result in the terminal without saving (requires Kitty graphics protocol support (Kitty, WezTerm, or Ghostty))
         #[arg(short = 'p', long)]
         preview: bool,
 
@@ -209,7 +209,7 @@ pub(crate) enum Command {
         #[arg(long)]
         fast: bool,
 
-        /// Preview the result in the terminal without saving (requires Kitty, WezTerm, or Ghostty)
+        /// Preview the result in the terminal without saving (requires Kitty graphics protocol support (Kitty, WezTerm, or Ghostty))
         #[arg(short = 'p', long)]
         preview: bool,
 
@@ -229,7 +229,7 @@ pub(crate) enum Command {
         path: String,
     },
 
-    /// Display an image in the terminal (inline in Kitty, WezTerm, or Ghostty)
+    /// Display an image inline in the terminal (requires Kitty graphics protocol support (Kitty, WezTerm, or Ghostty))
     View {
         /// Path to the image file
         path: String,
@@ -273,7 +273,7 @@ pub(crate) enum Command {
         #[arg(short, long)]
         replace: bool,
 
-        /// Preview the result in the terminal without saving (requires Kitty, WezTerm, or Ghostty)
+        /// Preview the result in the terminal without saving (requires Kitty graphics protocol support (Kitty, WezTerm, or Ghostty))
         #[arg(short = 'p', long)]
         preview: bool,
 
@@ -301,7 +301,7 @@ pub(crate) enum Command {
         #[arg(short = 'H', long, value_parser = parse_positive_u32)]
         height: Option<u32>,
 
-        /// Preview the result in the terminal without saving (requires Kitty, WezTerm, or Ghostty)
+        /// Preview the result in the terminal without saving (requires Kitty graphics protocol support (Kitty, WezTerm, or Ghostty))
         #[arg(short = 'p', long)]
         preview: bool,
 
