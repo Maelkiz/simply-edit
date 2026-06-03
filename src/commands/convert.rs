@@ -516,6 +516,100 @@ mod tests {
         let _ = fs::remove_dir_all(&temp_root);
     }
 
+    fn make_temp_png(dir: &std::path::Path, name: &str, w: u32, h: u32) -> std::path::PathBuf {
+        let path = dir.join(name);
+        image::DynamicImage::ImageRgba8(image::ImageBuffer::from_pixel(
+            w, h, image::Rgba([100u8, 100, 100, 255]),
+        ))
+        .save(&path)
+        .expect("failed to save test png");
+        path
+    }
+
+    #[test]
+    fn test_prepare_vectorize_input_no_downscale_when_under_threshold() {
+        let temp_root = std::env::temp_dir().join(format!(
+            "simply-edit-pvi-under-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()
+        ));
+        fs::create_dir_all(&temp_root).unwrap();
+        let img_path = make_temp_png(&temp_root, "input.png", 1000, 500);
+
+        let (color_img, out_config, orig_w, orig_h) =
+            prepare_vectorize_input(&img_path, Config::default(), false).unwrap();
+
+        assert_eq!((orig_w, orig_h), (1000, 500));
+        assert_eq!((color_img.width, color_img.height), (1000, 500));
+        assert_eq!(out_config.filter_speckle, 4);
+        assert!((out_config.length_threshold - 4.0).abs() < f64::EPSILON);
+
+        let _ = fs::remove_dir_all(&temp_root);
+    }
+
+    #[test]
+    fn test_prepare_vectorize_input_downscales_large_image() {
+        let temp_root = std::env::temp_dir().join(format!(
+            "simply-edit-pvi-large-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()
+        ));
+        fs::create_dir_all(&temp_root).unwrap();
+        // Long edge 2200 > 2000 threshold; scale = 2000/2200 ≈ 0.9091
+        let img_path = make_temp_png(&temp_root, "input.png", 2200, 100);
+
+        let (color_img, out_config, orig_w, orig_h) =
+            prepare_vectorize_input(&img_path, Config::default(), false).unwrap();
+
+        let scale = 2000.0_f64 / 2200.0;
+        assert_eq!((orig_w, orig_h), (2200, 100));
+        assert_eq!(color_img.width, 2000);
+        assert_eq!(color_img.height, (100.0 * scale).round() as usize);
+        // filter_speckle: floor(4 * scale) = floor(3.636) = 3
+        assert_eq!(out_config.filter_speckle, (4.0_f64 * scale).floor() as usize);
+        assert!((out_config.length_threshold - 4.0 * scale).abs() < 1e-9);
+
+        let _ = fs::remove_dir_all(&temp_root);
+    }
+
+    #[test]
+    fn test_prepare_vectorize_input_full_quality_skips_downscale() {
+        let temp_root = std::env::temp_dir().join(format!(
+            "simply-edit-pvi-fullq-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()
+        ));
+        fs::create_dir_all(&temp_root).unwrap();
+        let img_path = make_temp_png(&temp_root, "input.png", 2200, 100);
+
+        let (color_img, out_config, orig_w, orig_h) =
+            prepare_vectorize_input(&img_path, Config::default(), true).unwrap();
+
+        assert_eq!((orig_w, orig_h), (2200, 100));
+        assert_eq!((color_img.width, color_img.height), (2200, 100));
+        assert_eq!(out_config.filter_speckle, 4);
+        assert!((out_config.length_threshold - 4.0).abs() < f64::EPSILON);
+
+        let _ = fs::remove_dir_all(&temp_root);
+    }
+
+    #[test]
+    fn test_patch_svg_dimensions() {
+        let svg = concat!(
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n",
+            "<!-- Generator: visioncortex VTracer 0.6.5 -->\n",
+            "<svg version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\" width=\"2000\" height=\"837\">\n",
+            "</svg>\n",
+        ).to_string();
+
+        let patched = patch_svg_dimensions(svg, 2000, 837, 3440, 1440);
+
+        assert!(patched.contains(r#"width="3440""#), "original width not restored");
+        assert!(patched.contains(r#"height="1440""#), "original height not restored");
+        assert!(patched.contains(r#"viewBox="0 0 2000 837""#), "viewBox not injected");
+        assert!(!patched.contains(r#"width="2000" height="837""#), "old tag still present");
+    }
+
     #[test]
     fn test_compute_render_dimensions_uses_scale_when_no_resolution_is_set() {
         let size = resvg::usvg::Size::from_wh(10.0, 20.0).expect("valid size");

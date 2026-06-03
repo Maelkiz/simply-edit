@@ -209,7 +209,7 @@ pub(crate) enum Command {
         #[arg(long)]
         fast: bool,
 
-        /// Disable automatic downscaling — vectorize at full resolution (slower, higher quality)
+        /// Disable automatic downscaling — vectorize at full resolution (higher quality, but much slower and more memory-intensive, especially for large images)
         #[arg(long)]
         full_quality: bool,
 
