@@ -49,14 +49,14 @@ simply <command> <args>
 
 | Command | What it does |
 | --- | --- |
-| `help` | Prints a detailed overview of the available commands |
+| `help` | Prints an overview of the available commands |
 | `flip` | Mirror an image vertically (top to bottom) |
 | `flop` | Mirror an image horizontally (left to right) |
 | `rotate` | Rotate image (interactive by default, or explicit `90`/`180`/`270`) |
 | `invert` | Invert image colors |
 | `grayscale` | Convert image to grayscale |
 | `binarize` | Convert image to pure black and white at a brightness cutoff |
-| `pad` | Add padding (colored border) around an image |
+| `pad` | Add padding (transparent or colored) around an image |
 | `resize` | Resize an image to specified dimensions |
 | `convert` | Convert between PNG/JPG/ICO/WebP formats |
 | `vectorize` | Convert a raster image to SVG |
