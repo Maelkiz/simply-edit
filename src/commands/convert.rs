@@ -5,7 +5,7 @@ use std::path::Path;
 use inquire::{CustomType, validator::Validation};
 use resvg::tiny_skia::{Pixmap, Transform};
 use resvg::usvg::{Options, Tree};
-use vtracer::Config;
+use vtracer::{ColorImage, Config};
 
 use super::start_spinner;
 
@@ -75,7 +75,7 @@ pub(crate) fn run_rasterize(args: RasterizeArgs) -> Result<(), String> {
     rasterize(&args.src, &dst, args.options, args.preview)
 }
 
-fn vectorize(src: &str, dst: &str, fast: bool, _full_quality: bool, preview: bool) -> Result<(), String> {
+fn vectorize(src: &str, dst: &str, fast: bool, full_quality: bool, preview: bool) -> Result<(), String> {
     if is_svg_path(src) {
         return Err(format!(
             "vectorize: unsupported file format '{}'",
@@ -84,32 +84,23 @@ fn vectorize(src: &str, dst: &str, fast: bool, _full_quality: bool, preview: boo
     }
 
     let src_path = Path::new(src);
-    let config = if fast {
-        fast_vectorize_config()
-    } else {
-        Config::default()
-    };
+    let config = if fast { fast_vectorize_config() } else { Config::default() };
+
+    let (color_img, config, orig_w, orig_h) = prepare_vectorize_input(src_path, config, full_quality)?;
+    let scaled_w = color_img.width;
+    let scaled_h = color_img.height;
+
+    let spinner = start_spinner(if preview { "Vectorizing image for preview..." } else { "Vectorizing image..." });
+    let svg_result = vtracer::convert(color_img, config)
+        .map_err(|e| format!("vectorize: failed to vectorize '{}': {e}", src_path.display()));
+    if let Some(pb) = spinner { pb.finish_and_clear(); }
+    let svg_file = svg_result?;
+
+    let svg_str = format!("{svg_file}");
 
     if preview {
-        // Vectorize to a temp file, rasterize it, display, then clean up
-        let temp_path = std::env::temp_dir().join(format!(
-            "simply-preview-{}.svg",
-            std::process::id()
-        ));
-        let spinner = start_spinner("Vectorizing image for preview...");
-        let result = vtracer::convert_image_to_svg(src_path, &temp_path, config).map_err(|e| {
-            format!("vectorize: failed to vectorize image '{}': {e}", src_path.display())
-        });
-        if let Some(pb) = spinner { pb.finish_and_clear(); }
-        result?;
-
-        let svg_data = fs::read(&temp_path)
-            .map_err(|e| format!("vectorize: failed to read vectorized SVG for preview: {e}"));
-        let _ = fs::remove_file(&temp_path);
-        let svg_data = svg_data?;
-
         let usvg_options = Options::default();
-        let tree = Tree::from_data(&svg_data, &usvg_options)
+        let tree = Tree::from_data(svg_str.as_bytes(), &usvg_options)
             .map_err(|e| format!("vectorize: failed to parse vectorized SVG for preview: {e}"))?;
         let size = tree.size().to_int_size();
         let mut pixmap = Pixmap::new(size.width(), size.height())
@@ -122,24 +113,62 @@ fn vectorize(src: &str, dst: &str, fast: bool, _full_quality: bool, preview: boo
         return crate::commands::view::display_image(image);
     }
 
+    let svg_str = if scaled_w != orig_w || scaled_h != orig_h {
+        patch_svg_dimensions(svg_str, scaled_w, scaled_h, orig_w, orig_h)
+    } else {
+        svg_str
+    };
+
     let dst_path = Path::new(dst);
-    let spinner = start_spinner("Vectorizing image...");
-
-    let result = vtracer::convert_image_to_svg(src_path, dst_path, config).map_err(|e| {
-        format!(
-            "vectorize: failed to vectorize image '{}' to '{}': {e}",
-            src_path.display(),
-            dst_path.display()
-        )
-    });
-
-    if let Some(pb) = spinner {
-        pb.finish_and_clear();
-    }
-
-    result?;
+    fs::write(dst_path, &svg_str)
+        .map_err(|e| format!("vectorize: failed to write '{}': {e}", dst_path.display()))?;
     println!("Converted image to {}", dst);
     Ok(())
+}
+
+const MAX_LONG_EDGE: usize = 2000;
+
+fn prepare_vectorize_input(
+    src_path: &Path,
+    config: Config,
+    full_quality: bool,
+) -> Result<(ColorImage, Config, usize, usize), String> {
+    let img = image::open(src_path)
+        .map_err(|e| format!("vectorize: failed to open image '{}': {e}", src_path.display()))?;
+
+    let orig_w = img.width() as usize;
+    let orig_h = img.height() as usize;
+
+    let (img, config) = if !full_quality && orig_w.max(orig_h) > MAX_LONG_EDGE {
+        let scale = MAX_LONG_EDGE as f64 / orig_w.max(orig_h) as f64;
+        let resized = img.resize(MAX_LONG_EDGE as u32, MAX_LONG_EDGE as u32, image::imageops::FilterType::Triangle);
+        let config = Config {
+            filter_speckle: ((config.filter_speckle as f64 * scale).floor() as usize).max(1),
+            length_threshold: config.length_threshold * scale,
+            ..config
+        };
+        (resized, config)
+    } else {
+        (img, config)
+    };
+
+    let rgba = img.to_rgba8();
+    let w = rgba.width() as usize;
+    let h = rgba.height() as usize;
+    let color_img = ColorImage { pixels: rgba.into_raw(), width: w, height: h };
+
+    Ok((color_img, config, orig_w, orig_h))
+}
+
+fn patch_svg_dimensions(svg: String, scaled_w: usize, scaled_h: usize, orig_w: usize, orig_h: usize) -> String {
+    // vtracer's opening tag format is fixed — safe to do a targeted replace
+    let old_tag = format!(
+        r#"<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="{scaled_w}" height="{scaled_h}">"#
+    );
+    let new_tag = format!(
+        r#"<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="{orig_w}" height="{orig_h}" viewBox="0 0 {scaled_w} {scaled_h}">"#
+    );
+    svg.replacen(&old_tag, &new_tag, 1)
 }
 
 fn rasterize(src: &str, dst: &str, options: RasterizeOptions, preview: bool) -> Result<(), String> {
