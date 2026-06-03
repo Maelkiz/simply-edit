@@ -300,6 +300,7 @@ fn run() -> Result<(), String> {
         }
         Command::Vectorize {
             fast,
+            full_quality,
             preview,
             batch,
             src,
@@ -318,6 +319,7 @@ fn run() -> Result<(), String> {
                         src: src_str,
                         dst: out_str.clone(),
                         fast,
+                        full_quality,
                         preview: false,
                     })?;
                     Ok(out_str)
@@ -331,7 +333,7 @@ fn run() -> Result<(), String> {
                         .to_string_lossy()
                         .to_string()
                 });
-                commands::convert::run_vectorize(VectorizeArgs { src, dst, fast, preview })
+                commands::convert::run_vectorize(VectorizeArgs { src, dst, fast, full_quality, preview })
             }
         }
         Command::Pad {

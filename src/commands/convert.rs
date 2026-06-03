@@ -25,7 +25,7 @@ pub(crate) fn run_convert(src: &str, dst: &str) -> Result<(), String> {
         .to_string();
 
     if is_svg_path(&dst) {
-        return vectorize(src, &dst, false, false);
+        return vectorize(src, &dst, false, false, false);
     }
 
     if is_svg_path(src) {
@@ -57,6 +57,7 @@ pub(crate) struct VectorizeArgs {
     pub(crate) src: String,
     pub(crate) dst: String,
     pub(crate) fast: bool,
+    pub(crate) full_quality: bool,
     pub(crate) preview: bool,
 }
 
@@ -64,7 +65,7 @@ pub(crate) fn run_vectorize(args: VectorizeArgs) -> Result<(), String> {
     let dst = crate::io::enumerate_if_exists(Path::new(&args.dst))
         .to_string_lossy()
         .to_string();
-    vectorize(&args.src, &dst, args.fast, args.preview)
+    vectorize(&args.src, &dst, args.fast, args.full_quality, args.preview)
 }
 
 pub(crate) fn run_rasterize(args: RasterizeArgs) -> Result<(), String> {
@@ -74,7 +75,7 @@ pub(crate) fn run_rasterize(args: RasterizeArgs) -> Result<(), String> {
     rasterize(&args.src, &dst, args.options, args.preview)
 }
 
-fn vectorize(src: &str, dst: &str, fast: bool, preview: bool) -> Result<(), String> {
+fn vectorize(src: &str, dst: &str, fast: bool, _full_quality: bool, preview: bool) -> Result<(), String> {
     if is_svg_path(src) {
         return Err(format!(
             "vectorize: unsupported file format '{}'",

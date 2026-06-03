@@ -209,6 +209,10 @@ pub(crate) enum Command {
         #[arg(long)]
         fast: bool,
 
+        /// Disable automatic downscaling — vectorize at full resolution (slower, higher quality)
+        #[arg(long)]
+        full_quality: bool,
+
         /// Preview the result in the terminal without saving (requires Kitty graphics protocol support (Kitty, WezTerm, or Ghostty))
         #[arg(short = 'p', long)]
         preview: bool,
@@ -634,6 +638,19 @@ mod tests {
         match parse(&["simply", "vectorize", "--fast", "in.png"]) {
             Command::Vectorize {
                 fast: true,
+                src,
+                dst: None,
+                ..
+            } => assert_eq!(src, "in.png"),
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_vectorize_full_quality() {
+        match parse(&["simply", "vectorize", "--full-quality", "in.png"]) {
+            Command::Vectorize {
+                full_quality: true,
                 src,
                 dst: None,
                 ..
