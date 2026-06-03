@@ -468,7 +468,7 @@ fn test_resize_interactive_both_dimensions_via_stdin() {
 }
 
 #[test]
-fn test_view_prints_metadata_in_non_kitty_terminal() {
+fn test_view_fails_with_error_in_non_kitty_terminal() {
     let temp = TestDir::new("simply-view-int");
     let input = temp.path().join("img.png");
     create_png(&input, 5, 3, [200, 100, 50, 255]);
@@ -481,9 +481,9 @@ fn test_view_prints_metadata_in_non_kitty_terminal() {
         .output()
         .expect("failed to run simply binary");
 
-    assert!(output.status.success());
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(stdout.contains("5") && stdout.contains("3"));
+    assert!(!output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("Kitty"));
 }
 
 #[test]
