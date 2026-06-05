@@ -2,7 +2,7 @@ use std::fs;
 use std::io::{IsTerminal, stdin};
 use std::path::Path;
 
-use inquire::{CustomType, validator::Validation};
+use cliclack::select;
 use resvg::tiny_skia::{Pixmap, Transform};
 use resvg::usvg::{Options, Tree};
 use vtracer::{ColorImage, Config};
@@ -303,27 +303,15 @@ pub(crate) fn prompt_convert_format(src: &str) -> Result<String, String> {
         return prompt_convert_format_non_tty(&formats);
     }
 
-    let mut prompt_str = String::from("Choose output format:\n");
-    for (i, fmt) in formats.iter().enumerate() {
-        prompt_str.push_str(&format!(" ({}) {}\n", i + 1, fmt.to_uppercase()));
+    let mut prompt = select("Choose output format:");
+    for fmt in &formats {
+        prompt = prompt.item(fmt, fmt.to_uppercase(), "");
     }
-
-    let n = formats.len() as u8;
-    let choice = CustomType::<u8>::new(&prompt_str)
-        .with_error_message("Please enter a valid number")
-        .with_validator(move |value: &u8| {
-            if (1..=n).contains(value) {
-                Ok(Validation::Valid)
-            } else {
-                Ok(Validation::Invalid(
-                    format!("Enter a number between 1 and {n}").into(),
-                ))
-            }
-        })
-        .prompt()
+    let choice = prompt
+        .interact()
         .map_err(|e| format!("failed to read format: {e}"))?;
 
-    Ok(formats[(choice - 1) as usize].to_string())
+    Ok((*choice).to_string())
 }
 
 fn prompt_convert_format_non_tty(formats: &[&str]) -> Result<String, String> {
