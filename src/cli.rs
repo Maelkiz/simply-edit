@@ -189,6 +189,14 @@ pub(crate) enum Command {
         #[arg(short = 'f', long, value_parser = parse_positive_f32_factor)]
         factor: Option<f32>,
 
+        /// Scale factor for width only (e.g. 0.5 to halve width)
+        #[arg(short = 'x', long, value_parser = parse_positive_f32_factor)]
+        x: Option<f32>,
+
+        /// Scale factor for height only (e.g. 2.0 to double height)
+        #[arg(short = 'y', long, value_parser = parse_positive_f32_factor)]
+        y: Option<f32>,
+
         /// Overwrite target file (source if no output path given)
         #[arg(short, long)]
         replace: bool,

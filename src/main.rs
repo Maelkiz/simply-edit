@@ -261,24 +261,35 @@ fn run() -> Result<(), String> {
         }
         Command::Scale {
             factor,
+            x,
+            y,
             replace,
             preview,
             batch,
             path,
             output,
         } => {
+            if factor.is_some() && (x.is_some() || y.is_some()) {
+                return Err(
+                    "scale: --factor cannot be combined with --x or --y".to_string(),
+                );
+            }
             if is_batch(&path, &batch) {
                 if preview {
                     return Err("scale: --preview cannot be used in batch mode".to_string());
                 }
-                let f = factor
-                    .ok_or_else(|| "scale: --factor required in batch mode".to_string())?;
+                if factor.is_none() && x.is_none() && y.is_none() {
+                    return Err(
+                        "scale: batch mode requires --factor, --x, or --y".to_string(),
+                    );
+                }
                 let options = batch::to_batch_options(&batch)?;
                 let result = batch::run_batch(Path::new(&path), &options, |file| {
                     let (orig_w, orig_h) = image::image_dimensions(file)
                         .map_err(|e| format!("scale: failed to read image '{}': {e}", file.display()))?;
-                    let w = ((orig_w as f64 * f as f64).round() as u32).max(1);
-                    let h = ((orig_h as f64 * f as f64).round() as u32).max(1);
+                    let (xf, yf) = resolve_scale_factors(factor, x, y);
+                    let w = ((orig_w as f64 * xf as f64).round() as u32).max(1);
+                    let h = ((orig_h as f64 * yf as f64).round() as u32).max(1);
                     let img = image::open(file)
                         .map_err(|e| format!("scale: failed to open image '{}': {e}", file.display()))?;
                     let scaled = img.resize_exact(w, h, image::imageops::FilterType::Lanczos3);
@@ -291,16 +302,16 @@ fn run() -> Result<(), String> {
                 Ok(())
             } else {
                 let output = output_mode(replace, preview, output);
-                match factor {
-                    Some(f) => commands::transforms::run_scale(&path, output, f),
-                    None => {
-                        let f = if stdin().is_terminal() {
-                            commands::transforms::prompt_scale_factor_cliclack()?
-                        } else {
-                            commands::transforms::prompt_scale_factor_stdin()?
-                        };
-                        commands::transforms::run_scale(&path, output, f)
-                    }
+                if factor.is_none() && x.is_none() && y.is_none() {
+                    let f = if stdin().is_terminal() {
+                        commands::transforms::prompt_scale_factor_cliclack()?
+                    } else {
+                        commands::transforms::prompt_scale_factor_stdin()?
+                    };
+                    commands::transforms::run_scale(&path, output, f, f)
+                } else {
+                    let (xf, yf) = resolve_scale_factors(factor, x, y);
+                    commands::transforms::run_scale(&path, output, xf, yf)
                 }
             }
         }
@@ -483,6 +494,19 @@ fn run() -> Result<(), String> {
             }
         }
     }
+}
+
+/// Returns `(x_factor, y_factor)` from the three mutually-exclusive scale inputs.
+/// Caller has already verified `factor` and `x`/`y` are not both set.
+fn resolve_scale_factors(
+    factor: Option<f32>,
+    x: Option<f32>,
+    y: Option<f32>,
+) -> (f32, f32) {
+    if let Some(f) = factor {
+        return (f, f);
+    }
+    (x.unwrap_or(1.0), y.unwrap_or(1.0))
 }
 
 fn is_batch(path: &str, batch: &BatchArgs) -> bool {

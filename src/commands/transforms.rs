@@ -206,11 +206,16 @@ fn save_resize(
     Ok(())
 }
 
-pub(crate) fn run_scale(path: &str, output: OutputMode, factor: f32) -> Result<(), String> {
+pub(crate) fn run_scale(
+    path: &str,
+    output: OutputMode,
+    x_factor: f32,
+    y_factor: f32,
+) -> Result<(), String> {
     let (orig_w, orig_h) = image::image_dimensions(path)
         .map_err(|e| format!("scale: failed to read image '{path}': {e}"))?;
-    let w = ((orig_w as f64 * factor as f64).round() as u32).max(1);
-    let h = ((orig_h as f64 * factor as f64).round() as u32).max(1);
+    let w = ((orig_w as f64 * x_factor as f64).round() as u32).max(1);
+    let h = ((orig_h as f64 * y_factor as f64).round() as u32).max(1);
 
     let spinner = if matches!(output, OutputMode::Preview) {
         None
