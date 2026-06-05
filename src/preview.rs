@@ -32,10 +32,10 @@ impl LivePreview {
 
         terminal::enable_raw_mode().map_err(|e| format!("preview: failed to enter raw mode: {e}"))?;
 
-        // Save cursor position so render() can return to the same spot each frame.
+        // Save cursor position, hide the real cursor (we use a reverse-video block instead).
         let stdout = io::stdout();
         let mut out = stdout.lock();
-        write!(out, "\x1b7").map_err(|e| format!("preview: write error: {e}"))?;
+        write!(out, "\x1b7\x1b[?25l").map_err(|e| format!("preview: write error: {e}"))?;
         out.flush().map_err(|e| format!("preview: write error: {e}"))?;
         drop(out);
 
@@ -44,31 +44,24 @@ impl LivePreview {
         Ok(Self { scaled, term_px })
     }
 
-    /// Restore cursor to the saved position, print `label`, then render the RGBA buffer.
-    pub(crate) fn render(&self, rgba: &ImageBuffer<Rgba<u8>, Vec<u8>>, label: &str) -> Result<(), String> {
+    /// Restore cursor to the saved position, clear below, and render the RGBA buffer.
+    /// After this call the cursor is positioned at the start of the line below the image,
+    /// ready for the caller to print a prompt.
+    pub(crate) fn render(&self, rgba: &ImageBuffer<Rgba<u8>, Vec<u8>>) -> Result<(), String> {
         let stdout = io::stdout();
         let mut out = stdout.lock();
-        // Restore cursor to saved position and erase everything below it.
         write!(out, "\x1b8\x1b[J").map_err(|e| format!("preview: write error: {e}"))?;
-        // Print the label on its own line, then move to the next line for the image.
-        writeln!(out, "{label}\r").map_err(|e| format!("preview: write error: {e}"))?;
         out.flush().map_err(|e| format!("preview: write error: {e}"))?;
         drop(out);
-
         display_raw_rgba(rgba.width(), rgba.height(), rgba.as_raw())
     }
 
-    /// Re-query terminal size, re-downscale `img`, and re-render with `label`.
-    pub(crate) fn handle_resize(
-        &mut self,
-        img: &DynamicImage,
-        rgba: &ImageBuffer<Rgba<u8>, Vec<u8>>,
-        label: &str,
-    ) -> Result<(), String> {
+    /// Clear the SIGWINCH flag, re-query terminal size, and re-downscale `img`.
+    /// The caller is responsible for applying any transform and calling `render` afterwards.
+    pub(crate) fn handle_resize(&mut self, img: &DynamicImage) {
         RESIZED.store(false, Ordering::Relaxed);
         self.term_px = terminal_pixel_size();
         self.scaled = scale_to_terminal(img, self.term_px);
-        self.render(rgba, label)
     }
 
     /// Check whether a SIGWINCH has been received since the last `handle_resize`.
@@ -81,8 +74,8 @@ impl LivePreview {
         delete_kitty_image()?;
         let stdout = io::stdout();
         let mut out = stdout.lock();
-        // Restore cursor and clear below so the shell prompt appears cleanly.
-        write!(out, "\x1b8\x1b[J").map_err(|e| format!("preview: write error: {e}"))?;
+        // Restore cursor position, clear below, and show the real cursor again.
+        write!(out, "\x1b8\x1b[J\x1b[?25h").map_err(|e| format!("preview: write error: {e}"))?;
         out.flush().map_err(|e| format!("preview: write error: {e}"))?;
         drop(out);
         terminal::disable_raw_mode().map_err(|e| format!("preview: failed to exit raw mode: {e}"))
@@ -100,9 +93,31 @@ impl LivePreview {
     }
 }
 
+/// Print a cliclack-styled active input prompt below a live preview image.
+///
+/// Renders the three-line cliclack active-input layout:
+///   ◆  {label}          ← cyan ◆, two spaces, prompt label
+///   │  {typed}█         ← cyan │, two spaces, current input, reverse-video cursor block
+///   └                   ← cyan └
+///
+/// Raw mode disables output post-processing, so `\r\n` is used for line breaks.
+pub(crate) fn print_prompt(label: &str, typed: &str) -> Result<(), String> {
+    let stdout = io::stdout();
+    let mut out = stdout.lock();
+    write!(
+        out,
+        "\r\x1b[36m◆\x1b[0m  {label}\r\n\
+         \r\x1b[36m│\x1b[0m  {typed}\x1b[7m \x1b[0m\r\n\
+         \r\x1b[36m└\x1b[0m  \r\n"
+    )
+    .map_err(|e| format!("preview: write error: {e}"))?;
+    out.flush().map_err(|e| format!("preview: write error: {e}"))
+}
+
 impl Drop for LivePreview {
     fn drop(&mut self) {
         // Best-effort cleanup if the caller forgot to call finish() (e.g. on early return).
+        let _ = write!(io::stdout(), "\x1b[?25h");
         let _ = terminal::disable_raw_mode();
     }
 }

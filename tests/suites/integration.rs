@@ -557,7 +557,7 @@ fn test_binarize_generated_output_mode() {
     let generated = temp.path().join("img_binarize.png");
     create_png(&input, 2, 2, [200, 200, 200, 255]);
 
-    let output = run(&["binarize", input.to_str().expect("valid input path")]);
+    let output = run(&["binarize", "-t", "128", input.to_str().expect("valid input path")]);
     assert!(output.status.success());
     assert!(generated.exists());
     assert_valid_image(&generated);
@@ -597,7 +597,7 @@ fn test_binarize_replace_mode() {
     let before = image::open(&input).expect("failed to load initial image");
     let before_px = before.to_rgba8().get_pixel(0, 0).0;
 
-    let output = run(&["binarize", "-r", input.to_str().expect("valid input path")]);
+    let output = run(&["binarize", "-r", "-t", "128", input.to_str().expect("valid input path")]);
     assert!(output.status.success());
     assert!(input.exists());
 
@@ -615,6 +615,8 @@ fn test_binarize_explicit_output() {
 
     let output = run(&[
         "binarize",
+        "-t",
+        "128",
         input.to_str().expect("valid input path"),
         out.to_str().expect("valid output path"),
     ]);

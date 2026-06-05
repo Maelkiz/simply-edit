@@ -188,6 +188,10 @@ fn run() -> Result<(), String> {
             path,
             output,
         } => {
+            if threshold.is_none() && !is_batch(&path, &batch) {
+                let output = output_mode(replace, preview, output);
+                return commands::transforms::interactive_binarize(&path, output);
+            }
             let threshold = threshold.unwrap_or(128);
             if is_batch(&path, &batch) {
                 if preview {

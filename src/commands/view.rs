@@ -64,7 +64,7 @@ pub fn run_view(path: &str) -> Result<(), String> {
     display_kitty(img)
 }
 
-fn detect_kitty_support() -> bool {
+pub(crate) fn detect_kitty_support() -> bool {
     if std::env::var("KITTY_WINDOW_ID").is_ok() {
         return true;
     }
