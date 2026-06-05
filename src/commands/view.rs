@@ -15,6 +15,43 @@ pub fn display_image(img: DynamicImage) -> Result<(), String> {
     display_kitty(img)
 }
 
+/// Transmit raw 32-bit RGBA pixels to the terminal using the Kitty graphics protocol.
+/// Uses image ID 1 so frames can be replaced via `delete_kitty_image`.
+pub(crate) fn display_raw_rgba(width: u32, height: u32, rgba: &[u8]) -> Result<(), String> {
+    let encoded = base64::engine::general_purpose::STANDARD.encode(rgba);
+    let chunks: Vec<&str> = encoded
+        .as_bytes()
+        .chunks(CHUNK_SIZE)
+        .map(|c| std::str::from_utf8(c).expect("base64 is always valid UTF-8"))
+        .collect();
+
+    let stdout = io::stdout();
+    let mut out = stdout.lock();
+
+    let total = chunks.len();
+    for (i, chunk) in chunks.iter().enumerate() {
+        let m = if i == total - 1 { 0 } else { 1 };
+        if i == 0 {
+            write!(out, "\x1b_Ga=T,f=32,s={width},v={height},i=1,q=1,m={m};{chunk}\x1b\\")
+        } else {
+            write!(out, "\x1b_Gm={m};{chunk}\x1b\\")
+        }
+        .map_err(|e| format!("view: write error: {e}"))?;
+    }
+
+    writeln!(out).map_err(|e| format!("view: write error: {e}"))?;
+    out.flush().map_err(|e| format!("view: write error: {e}"))?;
+    Ok(())
+}
+
+/// Delete the image with ID 1 from the terminal, clearing the cells it occupied.
+pub(crate) fn delete_kitty_image() -> Result<(), String> {
+    let stdout = io::stdout();
+    let mut out = stdout.lock();
+    write!(out, "\x1b_Ga=d,d=I,i=1\x1b\\").map_err(|e| format!("view: write error: {e}"))?;
+    out.flush().map_err(|e| format!("view: write error: {e}"))
+}
+
 pub fn run_view(path: &str) -> Result<(), String> {
     let img = image::open(path)
         .map_err(|e| format!("view: failed to open '{path}': {e}"))?;
@@ -44,7 +81,7 @@ fn detect_kitty_support() -> bool {
 /// Height has 2 rows subtracted to leave room for the shell prompt below the image.
 /// Falls back to (None, None) on non-Unix platforms or when the terminal doesn't report pixels.
 #[cfg(unix)]
-fn terminal_pixel_size() -> (Option<u32>, Option<u32>) {
+pub(crate) fn terminal_pixel_size() -> (Option<u32>, Option<u32>) {
     use std::os::unix::io::AsRawFd;
 
     let mut ws: libc::winsize = unsafe { std::mem::zeroed() };
@@ -64,7 +101,7 @@ fn terminal_pixel_size() -> (Option<u32>, Option<u32>) {
 }
 
 #[cfg(not(unix))]
-fn terminal_pixel_size() -> (Option<u32>, Option<u32>) {
+pub(crate) fn terminal_pixel_size() -> (Option<u32>, Option<u32>) {
     (None, None)
 }
 
