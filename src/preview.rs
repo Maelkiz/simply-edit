@@ -122,23 +122,41 @@ impl Drop for LivePreview {
     }
 }
 
-/// Downscale `img` to fit within the terminal pixel dimensions, preserving aspect ratio.
-/// If terminal pixel size is unknown, returns a copy at original dimensions.
+/// Fraction of terminal pixel height reserved for the live preview.
+/// Keeping this constant ensures the preview occupies a stable number of terminal rows
+/// regardless of image dimensions or orientation.
+const PREVIEW_HEIGHT_FRACTION: f32 = 0.65;
+
+/// Scale `img` to fit the preview pixel budget, then pad to exactly `budget_h` tall.
+/// The budget is `PREVIEW_HEIGHT_FRACTION × term_h_px`, so the rendered area is always
+/// the same height in terminal rows even when the image is rotated or resized.
 fn scale_to_terminal(img: &DynamicImage, term_px: (Option<u32>, Option<u32>)) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
     let (px_w, px_h) = term_px;
+    let budget_h = px_h.map(|h| ((h as f32 * PREVIEW_HEIGHT_FRACTION).round() as u32).max(1));
+
     let scale_w = px_w.filter(|&w| img.width() > w).map(|w| w as f32 / img.width() as f32);
-    let scale_h = px_h.filter(|&h| img.height() > h).map(|h| h as f32 / img.height() as f32);
+    let scale_h = budget_h.filter(|&h| img.height() > h).map(|h| h as f32 / img.height() as f32);
     let scale = match (scale_w, scale_h) {
         (Some(sw), Some(sh)) => Some(sw.min(sh)),
         (Some(sw), None) => Some(sw),
         (None, Some(sh)) => Some(sh),
         (None, None) => None,
     };
-    if let Some(s) = scale {
+    let scaled = if let Some(s) = scale {
         let new_w = ((img.width() as f32 * s).round() as u32).max(1);
         let new_h = ((img.height() as f32 * s).round() as u32).max(1);
         img.resize(new_w, new_h, FilterType::Lanczos3).to_rgba8()
     } else {
         img.to_rgba8()
+    };
+
+    // Pad to exactly budget_h so the preview always occupies the same number of terminal rows.
+    if let Some(bh) = budget_h {
+        if scaled.height() < bh {
+            let mut canvas = ImageBuffer::from_pixel(scaled.width(), bh, Rgba([0, 0, 0, 0]));
+            image::imageops::overlay(&mut canvas, &scaled, 0, 0);
+            return canvas;
+        }
     }
+    scaled
 }
