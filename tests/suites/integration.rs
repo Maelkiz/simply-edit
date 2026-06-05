@@ -372,15 +372,15 @@ fn test_resize_replace_mode() {
 }
 
 #[test]
-fn test_resize_with_scale_flag() {
-    let temp = TestDir::new("simply-resize-int");
+fn test_scale_with_factor_flag() {
+    let temp = TestDir::new("simply-scale-int");
     let input = temp.path().join("img.png");
     let out = temp.path().join("out.png");
     create_png(&input, 4, 6, [200, 100, 50, 255]);
 
     let output = run(&[
-        "resize",
-        "--scale", "2",
+        "scale",
+        "--factor", "2",
         input.to_str().expect("valid input path"),
         out.to_str().expect("valid output path"),
     ]);

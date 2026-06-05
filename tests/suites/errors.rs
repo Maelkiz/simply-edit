@@ -220,32 +220,21 @@ fn test_resize_zero_height_rejected() {
 }
 
 #[test]
-fn test_resize_invalid_scale_rejected() {
-    let output = run(&["resize", "--scale", "abc", "image.png"]);
+fn test_scale_invalid_factor_rejected() {
+    let output = run(&["scale", "--factor", "abc", "image.png"]);
     assert!(!output.status.success());
     assert!(stderr(&output).contains("abc"));
 }
 
 #[test]
-fn test_resize_scale_and_width_rejected() {
+fn test_resize_scale_flag_unrecognized() {
     let temp = TestDir::new("simply-resize-err");
     let input = temp.path().join("img.png");
     create_png(&input, 4, 4, [255, 0, 0, 255]);
 
-    let output = run(&["resize", "--scale", "2", "--width", "100", input.to_str().expect("valid input path")]);
+    // --scale is no longer a valid flag on resize; clap should reject it
+    let output = run(&["resize", "--scale", "2", input.to_str().expect("valid input path")]);
     assert!(!output.status.success());
-    assert!(stderr(&output).contains("--scale cannot be combined"));
-}
-
-#[test]
-fn test_resize_scale_and_height_rejected() {
-    let temp = TestDir::new("simply-resize-err");
-    let input = temp.path().join("img.png");
-    create_png(&input, 4, 4, [255, 0, 0, 255]);
-
-    let output = run(&["resize", "--scale", "2", "-H", "100", input.to_str().expect("valid input path")]);
-    assert!(!output.status.success());
-    assert!(stderr(&output).contains("--scale cannot be combined"));
 }
 
 #[test]
@@ -299,7 +288,7 @@ fn test_preview_rejected_in_batch_grayscale() {
 #[test]
 fn test_preview_rejected_in_batch_resize() {
     let temp = TestDir::new("simply-preview-batch-err");
-    let output = run(&["resize", "--scale", "2", "--preview", temp.path().to_str().unwrap()]);
+    let output = run(&["resize", "--width", "4", "-H", "4", "--preview", temp.path().to_str().unwrap()]);
     assert!(!output.status.success());
     assert!(stderr(&output).contains("--preview cannot be used in batch mode"));
 }

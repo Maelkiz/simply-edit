@@ -300,13 +300,13 @@ fn test_batch_rasterize_processes_svgs() {
 }
 
 #[test]
-fn test_batch_resize_with_scale() {
-    let temp = batch_dir_with_images("batch-resize-scale", 3);
-    let out = TestDir::new("batch-resize-scale-out");
+fn test_batch_scale_with_factor() {
+    let temp = batch_dir_with_images("batch-scale-factor", 3);
+    let out = TestDir::new("batch-scale-factor-out");
 
     let output = run(&[
-        "resize",
-        "--scale", "2",
+        "scale",
+        "--factor", "2",
         temp.path().to_str().unwrap(),
         "--output-dir",
         out.path().to_str().unwrap(),
@@ -349,23 +349,23 @@ fn test_batch_resize_with_width_and_height() {
 }
 
 #[test]
-fn test_batch_resize_requires_scale_or_both_dimensions() {
+fn test_batch_resize_requires_both_dimensions() {
     let temp = batch_dir_with_images("batch-resize-nodim", 1);
 
     // Only --width without --height should be rejected in batch mode
     let output = run(&["resize", "--width", "8", temp.path().to_str().unwrap()]);
     assert!(!output.status.success());
     let err = String::from_utf8_lossy(&output.stderr);
-    assert!(err.contains("--scale or both --width and --height"));
+    assert!(err.contains("both --width and --height"));
 }
 
 #[test]
-fn test_batch_resize_scale_cannot_be_combined_with_dimensions() {
-    let temp = batch_dir_with_images("batch-resize-conflict", 1);
+fn test_batch_resize_scale_flag_rejected() {
+    let temp = batch_dir_with_images("batch-resize-scale-flag", 1);
 
-    let output = run(&["resize", "--scale", "2", "--width", "8", temp.path().to_str().unwrap()]);
+    // --scale is no longer a valid flag on resize; clap should reject it
+    let output = run(&["resize", "--scale", "2", temp.path().to_str().unwrap()]);
     assert!(!output.status.success());
-    assert!(String::from_utf8_lossy(&output.stderr).contains("--scale cannot be combined"));
 }
 
 #[test]

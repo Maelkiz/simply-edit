@@ -207,61 +207,61 @@ fn test_convert_svg_with_embedded_style_renders_content() {
 }
 
 #[test]
-fn test_resize_scale_half_produces_half_size() {
+fn test_scale_half_produces_half_size() {
     let temp = TestDir::new("simply-phase3");
     let input = temp.path().join("img.png");
     let out = temp.path().join("out.png");
     create_png(&input, 8, 8, [100, 200, 50, 255]);
 
     let output = run(&[
-        "resize",
-        "--scale", "0.5",
+        "scale",
+        "--factor", "0.5",
         input.to_str().expect("valid input path"),
         out.to_str().expect("valid output path"),
     ]);
     assert!(output.status.success());
 
-    let img = image::open(&out).expect("failed to open resized image");
+    let img = image::open(&out).expect("failed to open scaled image");
     assert_eq!(img.width(), 4);
     assert_eq!(img.height(), 4);
 }
 
 #[test]
-fn test_resize_scale_double_produces_double_size() {
+fn test_scale_double_produces_double_size() {
     let temp = TestDir::new("simply-phase3");
     let input = temp.path().join("img.png");
     let out = temp.path().join("out.png");
     create_png(&input, 6, 4, [100, 200, 50, 255]);
 
     let output = run(&[
-        "resize",
-        "--scale", "2",
+        "scale",
+        "--factor", "2",
         input.to_str().expect("valid input path"),
         out.to_str().expect("valid output path"),
     ]);
     assert!(output.status.success());
 
-    let img = image::open(&out).expect("failed to open resized image");
+    let img = image::open(&out).expect("failed to open scaled image");
     assert_eq!(img.width(), 12);
     assert_eq!(img.height(), 8);
 }
 
 #[test]
-fn test_resize_small_scale_clamps_to_minimum_one() {
+fn test_scale_small_factor_clamps_to_minimum_one() {
     let temp = TestDir::new("simply-phase3");
     let input = temp.path().join("img.png");
     let out = temp.path().join("out.png");
     create_png(&input, 1, 1, [100, 200, 50, 255]);
 
     let output = run(&[
-        "resize",
-        "--scale", "0.01",
+        "scale",
+        "--factor", "0.01",
         input.to_str().expect("valid input path"),
         out.to_str().expect("valid output path"),
     ]);
     assert!(output.status.success());
 
-    let img = image::open(&out).expect("failed to open resized image");
+    let img = image::open(&out).expect("failed to open scaled image");
     assert!(img.width() >= 1);
     assert!(img.height() >= 1);
 }
