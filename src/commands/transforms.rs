@@ -1,5 +1,5 @@
 use crate::{OutputMode, SaveMode, io::save_transformed_image};
-use inquire::{CustomType, validator::Validation};
+use cliclack::{input, select};
 use std::io::{IsTerminal, stdin};
 
 use super::start_spinner;
@@ -108,26 +108,12 @@ fn prompt_rotate_degrees() -> Result<u16, String> {
         return prompt_rotate_degrees_non_tty();
     }
 
-    let deg = CustomType::<u16>::new(
-        "Choose rotation:\n (1) 90 degrees\n (2) 180 degrees\n (3) 270 degrees\n",
-    )
-    .with_error_message("Please enter 1, 2, or 3")
-    .with_validator(|value: &u16| {
-        if matches!(*value, 1..=3) {
-            Ok(Validation::Valid)
-        } else {
-            Ok(Validation::Invalid("Enter 1, 2, or 3".into()))
-        }
-    })
-    .prompt()
-    .map_err(|e| format!("failed to read rotation: {e}"))?;
-
-    match deg {
-        1 => Ok(90),
-        2 => Ok(180),
-        3 => Ok(270),
-        _ => Err("invalid rotation selection: use 1, 2, or 3".to_string()),
-    }
+    select("Choose rotation:")
+        .item(90u16, "90 degrees", "")
+        .item(180u16, "180 degrees", "")
+        .item(270u16, "270 degrees", "")
+        .interact()
+        .map_err(|e| format!("failed to read rotation: {e}"))
 }
 
 fn prompt_rotate_degrees_non_tty() -> Result<u16, String> {
@@ -219,10 +205,7 @@ fn resolve_partial_resize(
         _ => unreachable!(),
     };
 
-    let prompt = format!(
-        "Only {given_label} provided:\n (1) Preserve aspect ratio\n (2) {stretch_label}\n"
-    );
-    let mode = prompt_resize_mode(&prompt)?;
+    let mode = prompt_resize_mode(&format!("Only {given_label} provided:"), stretch_label)?;
 
     match (mode, width, height) {
         (ResizeMode::Preserve, Some(w), None) => {
@@ -244,27 +227,21 @@ enum ResizeMode {
     Stretch,
 }
 
-fn prompt_resize_mode(message: &str) -> Result<ResizeMode, String> {
+fn prompt_resize_mode(title: &str, stretch_label: &str) -> Result<ResizeMode, String> {
     if !stdin().is_terminal() {
         return prompt_resize_mode_non_tty();
     }
 
-    let mode = CustomType::<u8>::new(message)
-        .with_error_message("Please enter 1 or 2")
-        .with_validator(|value: &u8| {
-            if matches!(*value, 1..=2) {
-                Ok(Validation::Valid)
-            } else {
-                Ok(Validation::Invalid("Enter 1 or 2".into()))
-            }
-        })
-        .prompt()
+    let choice = select(title)
+        .item("preserve", "Preserve aspect ratio", "")
+        .item("stretch", stretch_label, "")
+        .interact()
         .map_err(|e| format!("failed to read resize mode: {e}"))?;
 
-    match mode {
-        1 => Ok(ResizeMode::Preserve),
-        2 => Ok(ResizeMode::Stretch),
-        _ => Err("invalid resize mode: use 1 or 2".to_string()),
+    match choice {
+        "preserve" => Ok(ResizeMode::Preserve),
+        "stretch" => Ok(ResizeMode::Stretch),
+        _ => unreachable!(),
     }
 }
 
@@ -288,29 +265,25 @@ fn prompt_resize_dimensions() -> Result<(u32, u32), String> {
         return prompt_resize_dimensions_non_tty();
     }
 
-    let width = CustomType::<u32>::new("Enter new width in pixels:")
-        .with_error_message("Please enter a positive integer")
-        .with_validator(|value: &u32| {
-            if *value > 0 {
-                Ok(Validation::Valid)
-            } else {
-                Ok(Validation::Invalid("Width must be greater than 0".into()))
-            }
+    let width_str: String = input("Enter new width in pixels:")
+        .validate(|s: &String| match s.parse::<u32>() {
+            Err(_) => Err("Please enter a positive integer"),
+            Ok(0) => Err("Width must be greater than 0"),
+            Ok(_) => Ok(()),
         })
-        .prompt()
+        .interact()
         .map_err(|e| format!("failed to read width: {e}"))?;
+    let width: u32 = width_str.parse().unwrap();
 
-    let height = CustomType::<u32>::new("Enter new height in pixels:")
-        .with_error_message("Please enter a positive integer")
-        .with_validator(|value: &u32| {
-            if *value > 0 {
-                Ok(Validation::Valid)
-            } else {
-                Ok(Validation::Invalid("Height must be greater than 0".into()))
-            }
+    let height_str: String = input("Enter new height in pixels:")
+        .validate(|s: &String| match s.parse::<u32>() {
+            Err(_) => Err("Please enter a positive integer"),
+            Ok(0) => Err("Height must be greater than 0"),
+            Ok(_) => Ok(()),
         })
-        .prompt()
+        .interact()
         .map_err(|e| format!("failed to read height: {e}"))?;
+    let height: u32 = height_str.parse().unwrap();
 
     Ok((width, height))
 }
