@@ -187,6 +187,30 @@ pub(crate) enum Command {
         batch: BatchArgs,
     },
 
+    /// Scale an image by a factor (e.g. 0.5 to halve, 2.0 to double)
+    Scale {
+        /// Scale factor (e.g. 0.5 to halve, 2.0 to double)
+        #[arg(short = 'f', long, value_parser = parse_positive_f32_factor)]
+        factor: Option<f32>,
+
+        /// Overwrite target file (source if no output path given)
+        #[arg(short, long)]
+        replace: bool,
+
+        /// Preview the result in the terminal without saving (requires Kitty graphics protocol support (Kitty, WezTerm, or Ghostty))
+        #[arg(short = 'p', long)]
+        preview: bool,
+
+        /// Path to image file or directory
+        path: String,
+
+        /// Output path (auto-generated if omitted)
+        output: Option<String>,
+
+        #[command(flatten)]
+        batch: BatchArgs,
+    },
+
     /// Convert between image formats (PNG, JPG, ICO, SVG, WebP)
     Convert {
         /// Output format for batch mode (e.g. png, jpg, webp)
@@ -332,6 +356,18 @@ fn parse_positive_f32(s: &str) -> Result<f32, String> {
     if !v.is_finite() || v <= 0.0 {
         return Err(format!(
             "invalid value '{s}' for --scale: use a positive number"
+        ));
+    }
+    Ok(v)
+}
+
+fn parse_positive_f32_factor(s: &str) -> Result<f32, String> {
+    let v: f32 = s
+        .parse()
+        .map_err(|_| format!("invalid value '{s}' for --factor: use a positive number"))?;
+    if !v.is_finite() || v <= 0.0 {
+        return Err(format!(
+            "invalid value '{s}' for --factor: use a positive number"
         ));
     }
     Ok(v)
@@ -1042,5 +1078,79 @@ mod tests {
             }
             other => panic!("unexpected: {other:?}"),
         }
+    }
+
+    #[test]
+    fn test_scale_with_factor() {
+        match parse(&["simply", "scale", "--factor", "0.5", "image.png"]) {
+            Command::Scale {
+                factor: Some(f),
+                replace: false,
+                path,
+                output: None,
+                ..
+            } => {
+                assert!((f - 0.5).abs() < f32::EPSILON);
+                assert_eq!(path, "image.png");
+            }
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_scale_no_factor() {
+        match parse(&["simply", "scale", "image.png"]) {
+            Command::Scale {
+                factor: None,
+                replace: false,
+                path,
+                output: None,
+                ..
+            } => assert_eq!(path, "image.png"),
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_scale_short_factor() {
+        match parse(&["simply", "scale", "-f", "2", "image.png"]) {
+            Command::Scale { factor: Some(f), .. } => assert!((f - 2.0).abs() < f32::EPSILON),
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_scale_replace() {
+        match parse(&["simply", "scale", "-r", "--factor", "1.5", "image.png"]) {
+            Command::Scale { replace: true, factor: Some(f), path, .. } => {
+                assert!((f - 1.5).abs() < f32::EPSILON);
+                assert_eq!(path, "image.png");
+            }
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_scale_with_output() {
+        match parse(&["simply", "scale", "--factor", "2", "in.png", "out.png"]) {
+            Command::Scale { factor: Some(f), path, output: Some(out), .. } => {
+                assert!((f - 2.0).abs() < f32::EPSILON);
+                assert_eq!(path, "in.png");
+                assert_eq!(out, "out.png");
+            }
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_scale_zero_factor_rejected() {
+        let result = try_parse(&["simply", "scale", "--factor", "0", "image.png"]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_scale_negative_factor_rejected() {
+        let result = try_parse(&["simply", "scale", "--factor", "-1", "image.png"]);
+        assert!(result.is_err());
     }
 }

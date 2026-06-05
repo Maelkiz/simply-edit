@@ -193,6 +193,78 @@ pub(crate) fn run_resize(
     Ok(())
 }
 
+fn save_resize(
+    img: image::DynamicImage,
+    path: &str,
+    output: OutputMode,
+    w: u32,
+    h: u32,
+) -> Result<(), String> {
+    let suffix = format!("resize{w}x{h}");
+    let save_mode = match output {
+        OutputMode::Preview => return crate::commands::view::display_image(
+            img.resize_exact(w, h, image::imageops::FilterType::Lanczos3),
+        ),
+        OutputMode::Generated => SaveMode::Generated(suffix.as_str()),
+        OutputMode::Explicit(p) => SaveMode::Explicit(p),
+        OutputMode::Replace(t) => SaveMode::Replace(t),
+    };
+    let resized = img.resize_exact(w, h, image::imageops::FilterType::Lanczos3);
+    let output_path = save_transformed_image(resized, path, save_mode, &suffix)?;
+    println!("Saved resized image to {output_path}");
+    Ok(())
+}
+
+pub(crate) fn run_scale(path: &str, output: OutputMode, factor: f32) -> Result<(), String> {
+    let (orig_w, orig_h) = image::image_dimensions(path)
+        .map_err(|e| format!("scale: failed to read image '{path}': {e}"))?;
+    let w = ((orig_w as f64 * factor as f64).round() as u32).max(1);
+    let h = ((orig_h as f64 * factor as f64).round() as u32).max(1);
+
+    let spinner = if matches!(output, OutputMode::Preview) {
+        None
+    } else {
+        start_spinner("Processing scale...")
+    };
+
+    let img = image::open(path).map_err(|e| format!("scale: failed to open image '{path}': {e}"));
+
+    if let Some(pb) = spinner {
+        pb.finish_and_clear();
+    }
+
+    save_resize(img?, path, output, w, h)
+}
+
+pub(crate) fn prompt_scale_factor_cliclack() -> Result<f32, String> {
+    let s: String = cliclack::input("Enter scale factor (e.g. 0.5 to halve, 2 to double):")
+        .validate(|s: &String| {
+            match s.parse::<f32>() {
+                Err(_) => Err("Please enter a positive number"),
+                Ok(v) if v <= 0.0 || !v.is_finite() => Err("Scale factor must be greater than 0"),
+                Ok(_) => Ok(()),
+            }
+        })
+        .interact()
+        .map_err(|e| format!("failed to read scale factor: {e}"))?;
+    Ok(s.parse().unwrap())
+}
+
+pub(crate) fn prompt_scale_factor_stdin() -> Result<f32, String> {
+    let mut buf = String::new();
+    stdin()
+        .read_line(&mut buf)
+        .map_err(|e| format!("scale: failed to read factor: {e}"))?;
+    let v: f32 = buf
+        .trim()
+        .parse()
+        .map_err(|_| format!("invalid scale factor '{}': use a positive number", buf.trim()))?;
+    if v <= 0.0 || !v.is_finite() {
+        return Err("scale factor must be greater than 0".to_string());
+    }
+    Ok(v)
+}
+
 fn resolve_partial_resize(
     width: Option<u32>,
     height: Option<u32>,
