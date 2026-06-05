@@ -2,6 +2,7 @@ mod batch;
 mod cli;
 mod commands;
 mod io;
+mod preview;
 
 use std::path::Path;
 
