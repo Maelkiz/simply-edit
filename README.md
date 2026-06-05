@@ -2,7 +2,7 @@
 
 > A simple CLI tool for manipulating images.
 
-simply-edit is a convenient command-line utility for everyday image tasks: flip, flop, rotate, invert, grayscale, binarize, pad, resize, and convert between common formats. It is designed to be easy to use, with sensible defaults, straightforward commands, and quality-of-life features, such as optional in-place replacement, batch operations, and view/preview functionality using the [Kitty Terminal Graphics Protocol](https://sw.kovidgoyal.net/kitty/graphics-protocol).
+simply-edit is a convenient command-line utility for everyday image tasks: flip, flop, rotate, invert, grayscale, binarize, pad, resize, scale, and convert between common formats. It is designed to be easy to use, with sensible defaults, straightforward commands, and quality-of-life features, such as optional in-place replacement, batch operations, and view/preview functionality using the [Kitty Terminal Graphics Protocol](https://sw.kovidgoyal.net/kitty/graphics-protocol).
 
 ---
 
@@ -58,6 +58,7 @@ simply <command> <args>
 | `binarize` | Convert image to pure black and white at a brightness cutoff |
 | `pad` | Add padding (transparent or colored) around an image |
 | `resize` | Resize an image to specified dimensions |
+| `scale` | Scale an image by a factor (`--factor`), width only (`-x`), or height only (`-y`) |
 | `convert` | Convert between PNG/JPG/ICO/WebP formats |
 | `vectorize` | Convert a raster image to SVG (auto-downscales large images for speed; use `--full-quality` to disable) |
 | `rasterize` | Convert an SVG to a raster image |
@@ -126,6 +127,18 @@ simply pad --top 20 -x 15 --color 00ff00 ./image.png
 
 # Pad and replace the original file in-place
 simply pad --top 5 --replace ./image.png
+
+# Scale uniformly by factor
+simply scale --factor 0.5 ./image.png
+
+# Scale width only (height unchanged)
+simply scale -x 0.5 ./image.png
+
+# Scale height only (width unchanged)
+simply scale -y 2 ./image.png
+
+# Scale each axis independently
+simply scale -x 2 -y 0.5 ./image.png
 ```
 
 #### Format Conversion
