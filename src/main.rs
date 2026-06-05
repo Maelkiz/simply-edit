@@ -123,7 +123,11 @@ fn run() -> Result<(), String> {
                 Ok(())
             } else {
                 let output = output_mode(replace, preview, output);
-                commands::transforms::run_rotate(&path, output, angle)
+                if angle.is_none() {
+                    commands::transforms::interactive_rotate(&path, output)
+                } else {
+                    commands::transforms::run_rotate(&path, output, angle)
+                }
             }
         }
         Command::Invert {

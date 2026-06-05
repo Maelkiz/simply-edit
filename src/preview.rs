@@ -14,7 +14,9 @@ extern "C" fn handle_sigwinch(_: libc::c_int) {
 }
 
 pub(crate) struct LivePreview {
-    /// Downscaled copy of the source image used for fast per-frame transforms.
+    /// Unpadded downscale of the source image — use this as the base for per-frame transforms.
+    pub(crate) content: ImageBuffer<Rgba<u8>, Vec<u8>>,
+    /// `content` padded to exactly `budget_h` — pass directly to `render` for an unmodified view.
     pub(crate) scaled: ImageBuffer<Rgba<u8>, Vec<u8>>,
     /// Pixel dimensions of the terminal at the time the preview was created (or last resized).
     term_px: (Option<u32>, Option<u32>),
@@ -40,8 +42,9 @@ impl LivePreview {
         drop(out);
 
         let term_px = terminal_pixel_size();
-        let scaled = scale_to_terminal(img, term_px);
-        Ok(Self { scaled, term_px })
+        let content = scale_content(img, term_px);
+        let scaled = pad_to_budget(&content, term_px);
+        Ok(Self { content, scaled, term_px })
     }
 
     /// Restore cursor to the saved position, clear below, and render the RGBA buffer.
@@ -61,7 +64,14 @@ impl LivePreview {
     pub(crate) fn handle_resize(&mut self, img: &DynamicImage) {
         RESIZED.store(false, Ordering::Relaxed);
         self.term_px = terminal_pixel_size();
-        self.scaled = scale_to_terminal(img, self.term_px);
+        self.content = scale_content(img, self.term_px);
+        self.scaled = pad_to_budget(&self.content, self.term_px);
+    }
+
+    /// Scale and pad `img` to the current terminal budget — use for per-frame transform results.
+    pub(crate) fn fit_for_render(&self, img: &DynamicImage) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
+        let content = scale_content(img, self.term_px);
+        pad_to_budget(&content, self.term_px)
     }
 
     /// Check whether a SIGWINCH has been received since the last `handle_resize`.
@@ -114,6 +124,33 @@ pub(crate) fn print_prompt(label: &str, typed: &str) -> Result<(), String> {
     out.flush().map_err(|e| format!("preview: write error: {e}"))
 }
 
+/// Print a cliclack-styled active select prompt below a live preview image.
+///
+/// Renders the cliclack active-select layout:
+///   ◆  {label}          ← cyan ◆
+///   │  ● {item}         ← cyan │, green ●, normal label  (cursor item)
+///   │  ○ {item}         ← cyan │, dim ○, dim label       (other items)
+///   └                   ← cyan └
+///
+/// Raw mode disables output post-processing, so `\r\n` is used for line breaks.
+pub(crate) fn print_select_prompt(label: &str, items: &[&str], cursor: usize) -> Result<(), String> {
+    let stdout = io::stdout();
+    let mut out = stdout.lock();
+    write!(out, "\r\x1b[36m◆\x1b[0m  {label}\r\n")
+        .map_err(|e| format!("preview: write error: {e}"))?;
+    for (i, item) in items.iter().enumerate() {
+        if i == cursor {
+            write!(out, "\r\x1b[36m│\x1b[0m  \x1b[32m●\x1b[0m {item}\r\n")
+        } else {
+            write!(out, "\r\x1b[36m│\x1b[0m  \x1b[2m○\x1b[0m \x1b[2m{item}\x1b[0m\r\n")
+        }
+        .map_err(|e| format!("preview: write error: {e}"))?;
+    }
+    write!(out, "\r\x1b[36m└\x1b[0m\r\n")
+        .map_err(|e| format!("preview: write error: {e}"))?;
+    out.flush().map_err(|e| format!("preview: write error: {e}"))
+}
+
 impl Drop for LivePreview {
     fn drop(&mut self) {
         // Best-effort cleanup if the caller forgot to call finish() (e.g. on early return).
@@ -127,10 +164,8 @@ impl Drop for LivePreview {
 /// regardless of image dimensions or orientation.
 const PREVIEW_HEIGHT_FRACTION: f32 = 0.65;
 
-/// Scale `img` to fit the preview pixel budget, then pad to exactly `budget_h` tall.
-/// The budget is `PREVIEW_HEIGHT_FRACTION × term_h_px`, so the rendered area is always
-/// the same height in terminal rows even when the image is rotated or resized.
-fn scale_to_terminal(img: &DynamicImage, term_px: (Option<u32>, Option<u32>)) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
+/// Scale `img` to fit within `(term_w, budget_h)`, preserving aspect ratio. No padding.
+fn scale_content(img: &DynamicImage, term_px: (Option<u32>, Option<u32>)) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
     let (px_w, px_h) = term_px;
     let budget_h = px_h.map(|h| ((h as f32 * PREVIEW_HEIGHT_FRACTION).round() as u32).max(1));
 
@@ -142,21 +177,25 @@ fn scale_to_terminal(img: &DynamicImage, term_px: (Option<u32>, Option<u32>)) ->
         (None, Some(sh)) => Some(sh),
         (None, None) => None,
     };
-    let scaled = if let Some(s) = scale {
+    if let Some(s) = scale {
         let new_w = ((img.width() as f32 * s).round() as u32).max(1);
         let new_h = ((img.height() as f32 * s).round() as u32).max(1);
         img.resize(new_w, new_h, FilterType::Lanczos3).to_rgba8()
     } else {
         img.to_rgba8()
-    };
+    }
+}
 
-    // Pad to exactly budget_h so the preview always occupies the same number of terminal rows.
+/// Pad `content` to exactly `budget_h` with transparent rows so the rendered area is a
+/// stable number of terminal rows regardless of image dimensions or orientation.
+fn pad_to_budget(content: &ImageBuffer<Rgba<u8>, Vec<u8>>, term_px: (Option<u32>, Option<u32>)) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
+    let budget_h = term_px.1.map(|h| ((h as f32 * PREVIEW_HEIGHT_FRACTION).round() as u32).max(1));
     if let Some(bh) = budget_h {
-        if scaled.height() < bh {
-            let mut canvas = ImageBuffer::from_pixel(scaled.width(), bh, Rgba([0, 0, 0, 0]));
-            image::imageops::overlay(&mut canvas, &scaled, 0, 0);
+        if content.height() < bh {
+            let mut canvas = ImageBuffer::from_pixel(content.width(), bh, Rgba([0, 0, 0, 0]));
+            image::imageops::overlay(&mut canvas, content, 0, 0);
             return canvas;
         }
     }
-    scaled
+    content.clone()
 }
