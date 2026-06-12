@@ -426,7 +426,7 @@ fn run() -> Result<(), String> {
                 let result = batch::run_batch(Path::new(&path), &options, |file| {
                     let img = image::open(file)
                         .map_err(|e| format!("pad: failed to open image '{}': {e}", file.display()))?;
-                    let padded = commands::transforms::pad_image(img, top, right, bottom, left, color);
+                    let padded = commands::transforms::pad_image(img, top, right, bottom, left, color)?;
                     let out_path = batch::resolve_output_path(file, "pad", &options);
                     io::save_image(padded, &out_path)?;
                     Ok(out_path.to_string_lossy().to_string())

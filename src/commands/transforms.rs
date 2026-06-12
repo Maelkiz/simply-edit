@@ -422,7 +422,7 @@ pub(crate) fn run_pad(
 ) -> Result<(), String> {
     let img = image::open(path)
         .map_err(|e| format!("pad: failed to open image '{path}': {e}"))?;
-    let padded = pad_image(img, top, right, bottom, left, color);
+    let padded = pad_image(img, top, right, bottom, left, color)?;
     if let Some(output_path) = dispatch_save(padded, path, output, "pad")? {
         println!("Saved padded image to {output_path}");
     }
@@ -436,14 +436,20 @@ pub(crate) fn pad_image(
     bottom: u32,
     left: u32,
     color: image::Rgba<u8>,
-) -> image::DynamicImage {
+) -> Result<image::DynamicImage, String> {
     let (orig_w, orig_h) = (img.width(), img.height());
-    let new_w = orig_w + left + right;
-    let new_h = orig_h + top + bottom;
+    let new_w = orig_w
+        .checked_add(left)
+        .and_then(|v| v.checked_add(right))
+        .ok_or_else(|| "pad: dimensions overflow u32".to_string())?;
+    let new_h = orig_h
+        .checked_add(top)
+        .and_then(|v| v.checked_add(bottom))
+        .ok_or_else(|| "pad: dimensions overflow u32".to_string())?;
     let mut canvas = image::ImageBuffer::from_pixel(new_w, new_h, color);
     let img_rgba = img.into_rgba8();
     image::imageops::overlay(&mut canvas, &img_rgba, left as i64, top as i64);
-    image::DynamicImage::ImageRgba8(canvas)
+    Ok(image::DynamicImage::ImageRgba8(canvas))
 }
 
 pub(crate) fn invert_colors(img: image::DynamicImage) -> image::DynamicImage {
@@ -836,7 +842,7 @@ mod tests {
         let img = image::DynamicImage::ImageRgba8(
             image::ImageBuffer::from_pixel(4, 3, image::Rgba([255, 0, 0, 255])),
         );
-        let result = pad_image(img, 2, 3, 4, 5, image::Rgba([0, 0, 0, 0]));
+        let result = pad_image(img, 2, 3, 4, 5, image::Rgba([0, 0, 0, 0])).unwrap();
         assert_eq!(result.width(), 4 + 5 + 3);
         assert_eq!(result.height(), 3 + 2 + 4);
     }
@@ -846,7 +852,7 @@ mod tests {
         let img = image::DynamicImage::ImageRgba8(
             image::ImageBuffer::from_pixel(5, 5, image::Rgba([100, 100, 100, 255])),
         );
-        let result = pad_image(img, 0, 0, 0, 0, image::Rgba([0, 0, 0, 0]));
+        let result = pad_image(img, 0, 0, 0, 0, image::Rgba([0, 0, 0, 0])).unwrap();
         assert_eq!(result.width(), 5);
         assert_eq!(result.height(), 5);
     }
@@ -857,7 +863,7 @@ mod tests {
             image::ImageBuffer::from_pixel(1, 1, image::Rgba([255, 0, 0, 255])),
         );
         let fill = image::Rgba([0, 255, 0, 255]);
-        let result = pad_image(img, 2, 2, 2, 2, fill);
+        let result = pad_image(img, 2, 2, 2, 2, fill).unwrap();
         // Top-left corner is padding
         assert_eq!(result.to_rgba8().get_pixel(0, 0).0, [0, 255, 0, 255]);
         // Bottom-right corner is padding
@@ -871,7 +877,7 @@ mod tests {
         let img = image::DynamicImage::ImageRgba8(
             image::ImageBuffer::from_pixel(1, 1, image::Rgba([200, 100, 50, 255])),
         );
-        let result = pad_image(img, 3, 0, 0, 5, image::Rgba([0, 0, 0, 0]));
+        let result = pad_image(img, 3, 0, 0, 5, image::Rgba([0, 0, 0, 0])).unwrap();
         // Original image placed at (left=5, top=3)
         assert_eq!(result.to_rgba8().get_pixel(5, 3).0, [200, 100, 50, 255]);
     }
