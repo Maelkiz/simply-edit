@@ -551,15 +551,15 @@ pub(crate) fn interactive_rotate(path: &str, output: OutputMode) -> Result<(), S
     const DEGREES: [u16; 3] = [90, 180, 270];
     const LABELS: [&str; 3] = ["90 degrees", "180 degrees", "270 degrees"];
 
-    let img = image::open(path)
-        .map_err(|e| format!("rotate: failed to open image '{path}': {e}"))?;
-
     if !stdin().is_terminal() {
         return run_rotate(path, output, None);
     }
     if !crate::commands::view::detect_kitty_support() {
         return run_rotate(path, output, None);
     }
+
+    let img = image::open(path)
+        .map_err(|e| format!("rotate: failed to open image '{path}': {e}"))?;
 
     let mut preview = LivePreview::new(&img)?;
     let mut cursor = 0usize;
