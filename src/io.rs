@@ -8,12 +8,12 @@ use crate::SaveMode;
 pub(crate) fn save_transformed_image(
     img: image::DynamicImage,
     source_path: &str,
-    output: SaveMode<'_>,
+    output: SaveMode,
     default_suffix: &str,
 ) -> Result<String, String> {
     match output {
         SaveMode::Generated(suffix) => {
-            let output_path = output_path_with_suffix(source_path, suffix);
+            let output_path = output_path_with_suffix(source_path, &suffix);
             let output_path = enumerate_if_exists(&output_path);
             save_image(img, output_path.as_path())?;
             Ok(output_path.to_string_lossy().to_string())

@@ -21,8 +21,8 @@ enum OutputMode {
     Preview,
 }
 
-pub(crate) enum SaveMode<'a> {
-    Generated(&'a str),
+pub(crate) enum SaveMode {
+    Generated(String),
     Explicit(String),
     Replace(Option<String>),
 }

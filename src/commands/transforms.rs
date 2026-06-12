@@ -4,6 +4,32 @@ use std::io::{IsTerminal, stdin};
 
 use super::start_spinner;
 
+fn dispatch_save(
+    img: image::DynamicImage,
+    source: &str,
+    output: OutputMode,
+    suffix: &str,
+) -> Result<Option<String>, String> {
+    match output {
+        OutputMode::Preview => {
+            crate::commands::view::display_image(img)?;
+            Ok(None)
+        }
+        OutputMode::Generated => {
+            let p = save_transformed_image(img, source, SaveMode::Generated(suffix.to_string()), suffix)?;
+            Ok(Some(p))
+        }
+        OutputMode::Explicit(p) => {
+            let p = save_transformed_image(img, source, SaveMode::Explicit(p), suffix)?;
+            Ok(Some(p))
+        }
+        OutputMode::Replace(t) => {
+            let p = save_transformed_image(img, source, SaveMode::Replace(t), suffix)?;
+            Ok(Some(p))
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum FlipAxis {
     Horizontal,
@@ -21,34 +47,27 @@ pub(crate) fn run_flip(
         start_spinner("Processing flip...")
     };
 
-    let result: Result<Option<(String, &str)>, String> = (|| {
+    let (axis_label, suffix) = match axis {
+        FlipAxis::Horizontal => ("horizontally", "fliph"),
+        FlipAxis::Vertical => ("vertically", "flipv"),
+    };
+
+    let result: Result<Option<String>, String> = (|| {
         let img = image::open(path)
             .map_err(|e| format!("flip: failed to open image '{path}': {e}"))?;
-        let (flipped, suffix, axis_label) = match axis {
-            FlipAxis::Horizontal => (img.fliph(), "fliph", "horizontally"),
-            FlipAxis::Vertical => (img.flipv(), "flipv", "vertically"),
+        let flipped = match axis {
+            FlipAxis::Horizontal => img.fliph(),
+            FlipAxis::Vertical => img.flipv(),
         };
-
-        let save_mode = match output {
-            OutputMode::Preview => {
-                crate::commands::view::display_image(flipped)?;
-                return Ok(None);
-            }
-            OutputMode::Generated => SaveMode::Generated(suffix),
-            OutputMode::Explicit(p) => SaveMode::Explicit(p),
-            OutputMode::Replace(t) => SaveMode::Replace(t),
-        };
-
-        let output_path = save_transformed_image(flipped, path, save_mode, suffix)?;
-        Ok(Some((output_path, axis_label)))
+        dispatch_save(flipped, path, output, suffix)
     })();
 
     if let Some(pb) = spinner {
         pb.finish_and_clear();
     }
 
-    if let Some((output_path, axis_label)) = result? {
-        println!("Saved {axis_label} flipped image to {}", output_path);
+    if let Some(output_path) = result? {
+        println!("Saved {axis_label} flipped image to {output_path}");
     }
     Ok(())
 }
@@ -77,20 +96,8 @@ pub(crate) fn run_rotate(
             270 => img.rotate270(),
             _ => return Err(format!("rotate: invalid rotation '{deg}': use 90, 180, or 270")),
         };
-
-        let rotate_suffix = format!("rotate{deg}");
-        let save_mode = match output {
-            OutputMode::Preview => {
-                crate::commands::view::display_image(rotated)?;
-                return Ok(None);
-            }
-            OutputMode::Generated => SaveMode::Generated(rotate_suffix.as_str()),
-            OutputMode::Explicit(p) => SaveMode::Explicit(p),
-            OutputMode::Replace(t) => SaveMode::Replace(t),
-        };
-
-        let output_path = save_transformed_image(rotated, path, save_mode, &rotate_suffix)?;
-        Ok(Some(output_path))
+        let suffix = format!("rotate{deg}");
+        dispatch_save(rotated, path, output, &suffix)
     })();
 
     if let Some(pb) = spinner {
@@ -98,7 +105,7 @@ pub(crate) fn run_rotate(
     }
 
     if let Some(output_path) = result? {
-        println!("Saved rotated image to {}", output_path);
+        println!("Saved rotated image to {output_path}");
     }
     Ok(())
 }
@@ -174,18 +181,11 @@ fn save_resize(
     w: u32,
     h: u32,
 ) -> Result<(), String> {
-    let suffix = format!("resize{w}x{h}");
-    let save_mode = match output {
-        OutputMode::Preview => return crate::commands::view::display_image(
-            img.resize_exact(w, h, image::imageops::FilterType::Lanczos3),
-        ),
-        OutputMode::Generated => SaveMode::Generated(suffix.as_str()),
-        OutputMode::Explicit(p) => SaveMode::Explicit(p),
-        OutputMode::Replace(t) => SaveMode::Replace(t),
-    };
     let resized = img.resize_exact(w, h, image::imageops::FilterType::Lanczos3);
-    let output_path = save_transformed_image(resized, path, save_mode, &suffix)?;
-    println!("Saved resized image to {output_path}");
+    let suffix = format!("resize{w}x{h}");
+    if let Some(output_path) = dispatch_save(resized, path, output, &suffix)? {
+        println!("Saved resized image to {output_path}");
+    }
     Ok(())
 }
 
@@ -375,14 +375,9 @@ pub(crate) fn run_invert(path: &str, output: OutputMode) -> Result<(), String> {
     let img = image::open(path)
         .map_err(|e| format!("invert: failed to open image '{path}': {e}"))?;
     let inverted = invert_colors(img);
-    let save_mode = match output {
-        OutputMode::Preview => return crate::commands::view::display_image(inverted),
-        OutputMode::Generated => SaveMode::Generated("invert"),
-        OutputMode::Explicit(p) => SaveMode::Explicit(p),
-        OutputMode::Replace(t) => SaveMode::Replace(t),
-    };
-    let output_path = save_transformed_image(inverted, path, save_mode, "invert")?;
-    println!("Saved inverted image to {}", output_path);
+    if let Some(output_path) = dispatch_save(inverted, path, output, "invert")? {
+        println!("Saved inverted image to {output_path}");
+    }
     Ok(())
 }
 
@@ -390,14 +385,9 @@ pub(crate) fn run_grayscale(path: &str, output: OutputMode) -> Result<(), String
     let img = image::open(path)
         .map_err(|e| format!("grayscale: failed to open image '{path}': {e}"))?;
     let grayscale = img.grayscale();
-    let save_mode = match output {
-        OutputMode::Preview => return crate::commands::view::display_image(grayscale),
-        OutputMode::Generated => SaveMode::Generated("grayscale"),
-        OutputMode::Explicit(p) => SaveMode::Explicit(p),
-        OutputMode::Replace(t) => SaveMode::Replace(t),
-    };
-    let output_path = save_transformed_image(grayscale, path, save_mode, "grayscale")?;
-    println!("Saved grayscale image to {}", output_path);
+    if let Some(output_path) = dispatch_save(grayscale, path, output, "grayscale")? {
+        println!("Saved grayscale image to {output_path}");
+    }
     Ok(())
 }
 
@@ -405,14 +395,9 @@ pub(crate) fn run_binarize(path: &str, output: OutputMode, threshold: u8) -> Res
     let img = image::open(path)
         .map_err(|e| format!("binarize: failed to open image '{path}': {e}"))?;
     let binarized = binarize_image(img, threshold);
-    let save_mode = match output {
-        OutputMode::Preview => return crate::commands::view::display_image(binarized),
-        OutputMode::Generated => SaveMode::Generated("binarize"),
-        OutputMode::Explicit(p) => SaveMode::Explicit(p),
-        OutputMode::Replace(t) => SaveMode::Replace(t),
-    };
-    let output_path = save_transformed_image(binarized, path, save_mode, "binarize")?;
-    println!("Saved binarized image to {}", output_path);
+    if let Some(output_path) = dispatch_save(binarized, path, output, "binarize")? {
+        println!("Saved binarized image to {output_path}");
+    }
     Ok(())
 }
 
@@ -441,14 +426,9 @@ pub(crate) fn run_pad(
     let img = image::open(path)
         .map_err(|e| format!("pad: failed to open image '{path}': {e}"))?;
     let padded = pad_image(img, top, right, bottom, left, color);
-    let save_mode = match output {
-        OutputMode::Preview => return crate::commands::view::display_image(padded),
-        OutputMode::Generated => SaveMode::Generated("pad"),
-        OutputMode::Explicit(p) => SaveMode::Explicit(p),
-        OutputMode::Replace(t) => SaveMode::Replace(t),
-    };
-    let output_path = save_transformed_image(padded, path, save_mode, "pad")?;
-    println!("Saved padded image to {}", output_path);
+    if let Some(output_path) = dispatch_save(padded, path, output, "pad")? {
+        println!("Saved padded image to {output_path}");
+    }
     Ok(())
 }
 
@@ -662,14 +642,9 @@ fn save_rotated(
         _ => return Err(format!("rotate: invalid rotation '{degrees}': use 90, 180, or 270")),
     };
     let suffix = format!("rotate{degrees}");
-    let save_mode = match output {
-        OutputMode::Preview => return crate::commands::view::display_image(rotated),
-        OutputMode::Generated => SaveMode::Generated(suffix.as_str()),
-        OutputMode::Explicit(p) => SaveMode::Explicit(p),
-        OutputMode::Replace(t) => SaveMode::Replace(t),
-    };
-    let output_path = save_transformed_image(rotated, path, save_mode, &suffix)?;
-    println!("Saved rotated image to {output_path}");
+    if let Some(output_path) = dispatch_save(rotated, path, output, &suffix)? {
+        println!("Saved rotated image to {output_path}");
+    }
     Ok(())
 }
 
@@ -690,14 +665,9 @@ fn save_binarized(
     threshold: u8,
 ) -> Result<(), String> {
     let binarized = binarize_image(img, threshold);
-    let save_mode = match output {
-        OutputMode::Preview => return crate::commands::view::display_image(binarized),
-        OutputMode::Generated => SaveMode::Generated("binarize"),
-        OutputMode::Explicit(p) => SaveMode::Explicit(p),
-        OutputMode::Replace(t) => SaveMode::Replace(t),
-    };
-    let output_path = save_transformed_image(binarized, path, save_mode, "binarize")?;
-    println!("Saved binarized image to {}", output_path);
+    if let Some(output_path) = dispatch_save(binarized, path, output, "binarize")? {
+        println!("Saved binarized image to {output_path}");
+    }
     Ok(())
 }
 
