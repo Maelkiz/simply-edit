@@ -81,6 +81,7 @@ impl LivePreview {
 
     /// Delete the displayed image, restore the cursor, and disable raw mode.
     pub(crate) fn finish(&self) -> Result<(), String> {
+        RESIZED.store(false, Ordering::Relaxed);
         delete_kitty_image()?;
         let stdout = io::stdout();
         let mut out = stdout.lock();
