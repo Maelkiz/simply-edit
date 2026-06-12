@@ -160,6 +160,7 @@ fn read_icc_from_jpeg(data: &[u8]) -> Option<String> {
 }
 
 fn read_icc_from_png(data: &[u8]) -> Option<String> {
+    use std::io::Read;
     let mut pos = 8; // skip PNG signature
     while pos + 8 < data.len() {
         let chunk_len =
@@ -169,8 +170,12 @@ fn read_icc_from_png(data: &[u8]) -> Option<String> {
             let data_end = (pos + 8 + chunk_len).min(data.len());
             let chunk_data = &data[pos + 8..data_end];
             let null_pos = chunk_data.iter().position(|&b| b == 0)?;
-            let name = std::str::from_utf8(&chunk_data[..null_pos]).ok()?;
-            return if name.is_empty() { None } else { Some(name.to_string()) };
+            // skip null terminator (+1) and compression method byte (+1)
+            let compressed = &chunk_data[null_pos + 2..];
+            let mut decoder = flate2::read::ZlibDecoder::new(compressed);
+            let mut icc_data = Vec::new();
+            decoder.read_to_end(&mut icc_data).ok()?;
+            return parse_icc_description(&icc_data);
         }
         if chunk_type == b"IDAT" {
             break;

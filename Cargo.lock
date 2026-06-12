@@ -1609,6 +1609,7 @@ dependencies = [
  "clap 4.6.1",
  "cliclack",
  "crossterm",
+ "flate2",
  "image 0.25.10",
  "indicatif 0.17.11",
  "kamadak-exif",
