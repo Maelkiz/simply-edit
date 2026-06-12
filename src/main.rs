@@ -3,6 +3,8 @@ mod cli;
 mod commands;
 mod io;
 mod preview;
+#[cfg(test)]
+mod testutil;
 
 use std::io::{IsTerminal, stdin};
 use std::path::Path;

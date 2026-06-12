@@ -128,6 +128,7 @@ pub(crate) fn enumerate_if_exists(path: &Path) -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::testutil::testutil::temp_dir;
 
     #[test]
     fn test_output_path_with_suffix_simple() {
@@ -167,19 +168,6 @@ mod tests {
         let path_str = path.to_string_lossy();
         assert!(path_str.contains("simple-edit-tmp"));
         assert!(path_str.contains("dir/"));
-    }
-
-    fn temp_dir(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!(
-            "simply-edit-{name}-{}-{}",
-            std::process::id(),
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .expect("system time before unix epoch")
-                .as_nanos()
-        ));
-        fs::create_dir_all(&dir).expect("failed to create temp dir");
-        dir
     }
 
     #[test]

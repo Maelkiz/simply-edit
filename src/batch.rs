@@ -249,20 +249,8 @@ pub(crate) fn print_summary(result: &BatchResult) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::testutil::testutil::temp_dir;
     use std::fs;
-
-    fn temp_dir(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!(
-            "simply-batch-{name}-{}-{}",
-            std::process::id(),
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .expect("system time before unix epoch")
-                .as_nanos()
-        ));
-        fs::create_dir_all(&dir).expect("failed to create temp dir");
-        dir
-    }
 
     fn touch(dir: &Path, name: &str) {
         fs::write(dir.join(name), b"").expect("failed to write file");
