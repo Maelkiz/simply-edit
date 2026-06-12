@@ -190,11 +190,11 @@ pub(crate) enum Command {
         factor: Option<f32>,
 
         /// Scale factor for width only (e.g. 0.5 to halve width)
-        #[arg(short = 'x', long, value_parser = parse_positive_f32_factor)]
+        #[arg(short = 'x', long, value_parser = parse_positive_f32_x)]
         x: Option<f32>,
 
         /// Scale factor for height only (e.g. 2.0 to double height)
-        #[arg(short = 'y', long, value_parser = parse_positive_f32_factor)]
+        #[arg(short = 'y', long, value_parser = parse_positive_f32_y)]
         y: Option<f32>,
 
         /// Overwrite target file (source if no output path given)
@@ -371,6 +371,14 @@ fn parse_positive_f32(s: &str) -> Result<f32, String> {
 
 fn parse_positive_f32_factor(s: &str) -> Result<f32, String> {
     parse_positive_f32_impl(s, "--factor")
+}
+
+fn parse_positive_f32_x(s: &str) -> Result<f32, String> {
+    parse_positive_f32_impl(s, "--x")
+}
+
+fn parse_positive_f32_y(s: &str) -> Result<f32, String> {
+    parse_positive_f32_impl(s, "--y")
 }
 
 fn parse_positive_u32(s: &str) -> Result<u32, String> {
