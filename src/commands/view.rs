@@ -55,13 +55,7 @@ pub(crate) fn delete_kitty_image() -> Result<(), String> {
 pub fn run_view(path: &str) -> Result<(), String> {
     let img = image::open(path)
         .map_err(|e| format!("view: failed to open '{path}': {e}"))?;
-
-    if !detect_kitty_support() {
-        return Err(
-            "view: requires a terminal with Kitty graphics protocol support (Kitty, WezTerm, or Ghostty)".to_string(),
-        );
-    }
-    display_kitty(img)
+    display_image(img)
 }
 
 pub(crate) fn detect_kitty_support() -> bool {
