@@ -230,17 +230,17 @@ fn parse_mluc(tag: &[u8]) -> Option<String> {
         }
         let str_len = u32::from_be_bytes([tag[rec + 4], tag[rec + 5], tag[rec + 6], tag[rec + 7]]) as usize;
         let str_off = u32::from_be_bytes([tag[rec + 8], tag[rec + 9], tag[rec + 10], tag[rec + 11]]) as usize;
-        if str_off + str_len > tag.len() || str_len % 2 != 0 {
+        if str_off + str_len > tag.len() || !str_len.is_multiple_of(2) {
             continue;
         }
         let utf16: Vec<u16> = tag[str_off..str_off + str_len]
             .chunks_exact(2)
             .map(|b| u16::from_be_bytes([b[0], b[1]]))
             .collect();
-        if let Ok(s) = String::from_utf16(&utf16) {
-            if !s.is_empty() {
-                return Some(s);
-            }
+        if let Ok(s) = String::from_utf16(&utf16)
+            && !s.is_empty()
+        {
+            return Some(s);
         }
     }
     None

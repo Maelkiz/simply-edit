@@ -191,12 +191,12 @@ fn scale_content(img: &DynamicImage, term_px: (Option<u32>, Option<u32>)) -> Ima
 /// stable number of terminal rows regardless of image dimensions or orientation.
 fn pad_to_budget(content: &ImageBuffer<Rgba<u8>, Vec<u8>>, term_px: (Option<u32>, Option<u32>)) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
     let budget_h = term_px.1.map(|h| ((h as f32 * PREVIEW_HEIGHT_FRACTION).round() as u32).max(1));
-    if let Some(bh) = budget_h {
-        if content.height() < bh {
-            let mut canvas = ImageBuffer::from_pixel(content.width(), bh, Rgba([0, 0, 0, 0]));
-            image::imageops::overlay(&mut canvas, content, 0, 0);
-            return canvas;
-        }
+    if let Some(bh) = budget_h
+        && content.height() < bh
+    {
+        let mut canvas = ImageBuffer::from_pixel(content.width(), bh, Rgba([0, 0, 0, 0]));
+        image::imageops::overlay(&mut canvas, content, 0, 0);
+        return canvas;
     }
     content.clone()
 }

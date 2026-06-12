@@ -320,10 +320,10 @@ fn prompt_convert_format_non_tty(formats: &[&str]) -> Result<String, String> {
         .map_err(|e| format!("failed to read format from stdin: {e}"))?;
 
     let trimmed = input.trim();
-    if let Ok(n) = trimmed.parse::<usize>() {
-        if n >= 1 && n <= formats.len() {
-            return Ok(formats[n - 1].to_string());
-        }
+    if let Ok(n) = trimmed.parse::<usize>()
+        && n >= 1 && n <= formats.len()
+    {
+        return Ok(formats[n - 1].to_string());
     }
     for fmt in formats {
         if fmt.eq_ignore_ascii_case(trimmed) {
