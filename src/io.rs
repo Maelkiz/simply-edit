@@ -19,6 +19,7 @@ pub(crate) fn save_transformed_image(
             Ok(output_path.to_string_lossy().to_string())
         }
         SaveMode::Explicit(output_path) => {
+            // Overwrite the specified path — no enumeration.
             let output_path = PathBuf::from(&output_path);
             save_image(img, output_path.as_path())?;
             Ok(output_path.to_string_lossy().to_string())
