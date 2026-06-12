@@ -154,34 +154,17 @@ pub(crate) fn run_resize(
         start_spinner("Processing resize...")
     };
 
-    let result: Result<Option<String>, String> = (|| {
+    let result: Result<(), String> = (|| {
         let img = image::open(path)
             .map_err(|e| format!("resize: failed to open image '{path}': {e}"))?;
-        let resized = img.resize_exact(w, h, image::imageops::FilterType::Lanczos3);
-
-        let resize_suffix = format!("resize{w}x{h}");
-        let save_mode = match output {
-            OutputMode::Preview => {
-                crate::commands::view::display_image(resized)?;
-                return Ok(None);
-            }
-            OutputMode::Generated => SaveMode::Generated(resize_suffix.as_str()),
-            OutputMode::Explicit(p) => SaveMode::Explicit(p),
-            OutputMode::Replace(t) => SaveMode::Replace(t),
-        };
-
-        let output_path = save_transformed_image(resized, path, save_mode, &resize_suffix)?;
-        Ok(Some(output_path))
+        save_resize(img, path, output, w, h)
     })();
 
     if let Some(pb) = spinner {
         pb.finish_and_clear();
     }
 
-    if let Some(output_path) = result? {
-        println!("Saved resized image to {}", output_path);
-    }
-    Ok(())
+    result
 }
 
 fn save_resize(
