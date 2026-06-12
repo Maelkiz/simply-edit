@@ -20,6 +20,7 @@ pub(crate) struct LivePreview {
     pub(crate) scaled: ImageBuffer<Rgba<u8>, Vec<u8>>,
     /// Pixel dimensions of the terminal at the time the preview was created (or last resized).
     term_px: (Option<u32>, Option<u32>),
+    finished: bool,
 }
 
 impl LivePreview {
@@ -44,7 +45,7 @@ impl LivePreview {
         let term_px = terminal_pixel_size();
         let content = scale_content(img, term_px);
         let scaled = pad_to_budget(content.clone(), term_px);
-        Ok(Self { content, scaled, term_px })
+        Ok(Self { content, scaled, term_px, finished: false })
     }
 
     /// Restore cursor to the saved position, clear below, and render the RGBA buffer.
@@ -80,7 +81,7 @@ impl LivePreview {
     }
 
     /// Delete the displayed image, restore the cursor, and disable raw mode.
-    pub(crate) fn finish(&self) -> Result<(), String> {
+    pub(crate) fn finish(&mut self) -> Result<(), String> {
         RESIZED.store(false, Ordering::Relaxed);
         delete_kitty_image()?;
         let stdout = io::stdout();
@@ -89,7 +90,9 @@ impl LivePreview {
         write!(out, "\x1b8\x1b[J\x1b[?25h").map_err(|e| format!("preview: write error: {e}"))?;
         out.flush().map_err(|e| format!("preview: write error: {e}"))?;
         drop(out);
-        terminal::disable_raw_mode().map_err(|e| format!("preview: failed to exit raw mode: {e}"))
+        terminal::disable_raw_mode().map_err(|e| format!("preview: failed to exit raw mode: {e}"))?;
+        self.finished = true;
+        Ok(())
     }
 
     /// Read one key event from the terminal (blocking).
@@ -154,9 +157,9 @@ pub(crate) fn print_select_prompt(label: &str, items: &[&str], cursor: usize) ->
 
 impl Drop for LivePreview {
     fn drop(&mut self) {
-        // Best-effort cleanup if the caller forgot to call finish() (e.g. on early return).
-        let _ = write!(io::stdout(), "\x1b[?25h");
-        let _ = terminal::disable_raw_mode();
+        if !self.finished {
+            let _ = self.finish();
+        }
     }
 }
 
