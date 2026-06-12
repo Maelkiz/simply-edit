@@ -145,14 +145,10 @@ pub(crate) fn run_resize(
     width: Option<u32>,
     height: Option<u32>,
 ) -> Result<(), String> {
-    let (w, h) = match (width, height) {
-        (Some(w), Some(h)) => (w, h),
-        (None, None) => prompt_resize_dimensions()?,
-        (partial_w, partial_h) => {
-            let (orig_w, orig_h) = image::image_dimensions(path)
-                .map_err(|e| format!("resize: failed to read image '{path}': {e}"))?;
-            resolve_partial_resize(partial_w, partial_h, orig_w, orig_h)?
-        }
+    let known_dims = match (width, height) {
+        (Some(w), Some(h)) => Some((w, h)),
+        (None, None) => Some(prompt_resize_dimensions()?),
+        _ => None,
     };
 
     let spinner = if matches!(output, OutputMode::Preview) {
@@ -164,6 +160,10 @@ pub(crate) fn run_resize(
     let result: Result<(), String> = (|| {
         let img = image::open(path)
             .map_err(|e| format!("resize: failed to open image '{path}': {e}"))?;
+        let (w, h) = match known_dims {
+            Some(dims) => dims,
+            None => resolve_partial_resize(width, height, img.width(), img.height())?,
+        };
         save_resize(img, path, output, w, h)
     })();
 
@@ -195,11 +195,6 @@ pub(crate) fn run_scale(
     x_factor: f32,
     y_factor: f32,
 ) -> Result<(), String> {
-    let (orig_w, orig_h) = image::image_dimensions(path)
-        .map_err(|e| format!("scale: failed to read image '{path}': {e}"))?;
-    let w = ((orig_w as f64 * x_factor as f64).round() as u32).max(1);
-    let h = ((orig_h as f64 * y_factor as f64).round() as u32).max(1);
-
     let spinner = if matches!(output, OutputMode::Preview) {
         None
     } else {
@@ -209,6 +204,8 @@ pub(crate) fn run_scale(
     let result: Result<(), String> = (|| {
         let img = image::open(path)
             .map_err(|e| format!("scale: failed to open image '{path}': {e}"))?;
+        let w = ((img.width() as f64 * x_factor as f64).round() as u32).max(1);
+        let h = ((img.height() as f64 * y_factor as f64).round() as u32).max(1);
         save_resize(img, path, output, w, h)
     })();
 
@@ -402,7 +399,7 @@ pub(crate) fn run_binarize(path: &str, output: OutputMode, threshold: u8) -> Res
 }
 
 pub(crate) fn binarize_image(img: image::DynamicImage, threshold: u8) -> image::DynamicImage {
-    let mut rgba = img.to_rgba8();
+    let mut rgba = img.into_rgba8();
     for pixel in rgba.pixels_mut() {
         let luma =
             ((pixel[0] as u32 * 77 + pixel[1] as u32 * 150 + pixel[2] as u32 * 29) >> 8) as u8;
@@ -444,12 +441,13 @@ pub(crate) fn pad_image(
     let new_w = orig_w + left + right;
     let new_h = orig_h + top + bottom;
     let mut canvas = image::ImageBuffer::from_pixel(new_w, new_h, color);
-    image::imageops::overlay(&mut canvas, &img.to_rgba8(), left as i64, top as i64);
+    let img_rgba = img.into_rgba8();
+    image::imageops::overlay(&mut canvas, &img_rgba, left as i64, top as i64);
     image::DynamicImage::ImageRgba8(canvas)
 }
 
 pub(crate) fn invert_colors(img: image::DynamicImage) -> image::DynamicImage {
-    let mut rgba_image = img.to_rgba8();
+    let mut rgba_image = img.into_rgba8();
 
     for pixel in rgba_image.pixels_mut() {
         pixel[0] = 255 - pixel[0];
@@ -482,17 +480,14 @@ pub(crate) fn interactive_binarize(path: &str, output: OutputMode) -> Result<(),
     let mut threshold: Option<u8> = None;
     let mut typed = String::new();
 
-    preview.render(&preview.scaled.clone())?;
+    preview.render(&preview.scaled)?;
     crate::preview::print_prompt("Enter threshold (0\u{2013}255)", &typed)?;
 
     loop {
         if LivePreview::needs_resize() {
             preview.handle_resize(&img);
-            let frame = match threshold {
-                Some(t) => binarize_rgba(&preview.scaled, t),
-                None => preview.scaled.clone(),
-            };
-            preview.render(&frame)?;
+            let binarized = threshold.map(|t| binarize_rgba(&preview.scaled, t));
+            preview.render(binarized.as_ref().unwrap_or(&preview.scaled))?;
             crate::preview::print_prompt("Enter threshold (0\u{2013}255)", &typed)?;
         }
 
@@ -534,11 +529,8 @@ pub(crate) fn interactive_binarize(path: &str, output: OutputMode) -> Result<(),
             _ => continue,
         }
 
-        let frame = match threshold {
-            Some(t) => binarize_rgba(&preview.scaled, t),
-            None => preview.scaled.clone(),
-        };
-        preview.render(&frame)?;
+        let binarized = threshold.map(|t| binarize_rgba(&preview.scaled, t));
+        preview.render(binarized.as_ref().unwrap_or(&preview.scaled))?;
         crate::preview::print_prompt("Enter threshold (0\u{2013}255)", &typed)?;
     }
 

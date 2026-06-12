@@ -19,17 +19,13 @@ pub fn display_image(img: DynamicImage) -> Result<(), String> {
 /// Uses image ID 1 so frames can be replaced via `delete_kitty_image`.
 pub(crate) fn display_raw_rgba(width: u32, height: u32, rgba: &[u8]) -> Result<(), String> {
     let encoded = base64::engine::general_purpose::STANDARD.encode(rgba);
-    let chunks: Vec<&str> = encoded
-        .as_bytes()
-        .chunks(CHUNK_SIZE)
-        .map(|c| std::str::from_utf8(c).expect("base64 is always valid UTF-8"))
-        .collect();
+    let total = encoded.len().div_ceil(CHUNK_SIZE);
 
     let stdout = io::stdout();
     let mut out = stdout.lock();
 
-    let total = chunks.len();
-    for (i, chunk) in chunks.iter().enumerate() {
+    for (i, chunk) in encoded.as_bytes().chunks(CHUNK_SIZE).enumerate() {
+        let chunk = std::str::from_utf8(chunk).expect("base64 is always valid UTF-8");
         let m = if i == total - 1 { 0 } else { 1 };
         if i == 0 {
             write!(out, "\x1b_Ga=T,f=32,s={width},v={height},i=1,q=1,m={m};{chunk}\x1b\\")
@@ -135,11 +131,7 @@ fn display_kitty(img: DynamicImage) -> Result<(), String> {
         .map_err(|e| format!("view: failed to encode image as PNG: {e}"))?;
 
     let encoded = base64::engine::general_purpose::STANDARD.encode(&png_bytes);
-    let chunks: Vec<&str> = encoded
-        .as_bytes()
-        .chunks(CHUNK_SIZE)
-        .map(|c| std::str::from_utf8(c).expect("base64 is always valid UTF-8"))
-        .collect();
+    let total = encoded.len().div_ceil(CHUNK_SIZE);
 
     let stdout = io::stdout();
     let mut out = stdout.lock();
@@ -149,8 +141,8 @@ fn display_kitty(img: DynamicImage) -> Result<(), String> {
         None => "a=T,f=100,q=1,m=".to_string(),
     };
 
-    let total = chunks.len();
-    for (i, chunk) in chunks.iter().enumerate() {
+    for (i, chunk) in encoded.as_bytes().chunks(CHUNK_SIZE).enumerate() {
+        let chunk = std::str::from_utf8(chunk).expect("base64 is always valid UTF-8");
         let m = if i == total - 1 { 0 } else { 1 };
         if i == 0 {
             write!(out, "\x1b_G{first_params}{m};{chunk}\x1b\\")

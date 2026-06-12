@@ -113,7 +113,10 @@ fn read_exif(path: &str) -> (bool, Option<String>) {
 }
 
 fn read_icc_profile(path: &str) -> Option<String> {
-    let data = fs::read(path).ok()?;
+    use std::io::Read;
+    let file = fs::File::open(path).ok()?;
+    let mut data = Vec::with_capacity(65536);
+    file.take(262144).read_to_end(&mut data).ok()?;
     if data.starts_with(b"\xff\xd8") {
         read_icc_from_jpeg(&data)
     } else if data.starts_with(b"\x89PNG\r\n\x1a\n") {

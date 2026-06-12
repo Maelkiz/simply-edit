@@ -287,13 +287,11 @@ fn run() -> Result<(), String> {
                 }
                 let options = batch::to_batch_options(&batch)?;
                 let result = batch::run_batch(Path::new(&path), &options, |file| {
-                    let (orig_w, orig_h) = image::image_dimensions(file)
-                        .map_err(|e| format!("scale: failed to read image '{}': {e}", file.display()))?;
-                    let (xf, yf) = resolve_scale_factors(factor, x, y);
-                    let w = ((orig_w as f64 * xf as f64).round() as u32).max(1);
-                    let h = ((orig_h as f64 * yf as f64).round() as u32).max(1);
                     let img = image::open(file)
                         .map_err(|e| format!("scale: failed to open image '{}': {e}", file.display()))?;
+                    let (xf, yf) = resolve_scale_factors(factor, x, y);
+                    let w = ((img.width() as f64 * xf as f64).round() as u32).max(1);
+                    let h = ((img.height() as f64 * yf as f64).round() as u32).max(1);
                     let scaled = img.resize_exact(w, h, image::imageops::FilterType::Lanczos3);
                     let suffix = format!("scale{w}x{h}");
                     let out_path = batch::resolve_output_path(file, &suffix, &options);

@@ -43,7 +43,7 @@ impl LivePreview {
 
         let term_px = terminal_pixel_size();
         let content = scale_content(img, term_px);
-        let scaled = pad_to_budget(&content, term_px);
+        let scaled = pad_to_budget(content.clone(), term_px);
         Ok(Self { content, scaled, term_px })
     }
 
@@ -65,13 +65,13 @@ impl LivePreview {
         RESIZED.store(false, Ordering::Relaxed);
         self.term_px = terminal_pixel_size();
         self.content = scale_content(img, self.term_px);
-        self.scaled = pad_to_budget(&self.content, self.term_px);
+        self.scaled = pad_to_budget(self.content.clone(), self.term_px);
     }
 
     /// Scale and pad `img` to the current terminal budget — use for per-frame transform results.
     pub(crate) fn fit_for_render(&self, img: &DynamicImage) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
         let content = scale_content(img, self.term_px);
-        pad_to_budget(&content, self.term_px)
+        pad_to_budget(content, self.term_px)
     }
 
     /// Check whether a SIGWINCH has been received since the last `handle_resize`.
@@ -189,14 +189,14 @@ fn scale_content(img: &DynamicImage, term_px: (Option<u32>, Option<u32>)) -> Ima
 
 /// Pad `content` to exactly `budget_h` with transparent rows so the rendered area is a
 /// stable number of terminal rows regardless of image dimensions or orientation.
-fn pad_to_budget(content: &ImageBuffer<Rgba<u8>, Vec<u8>>, term_px: (Option<u32>, Option<u32>)) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
+fn pad_to_budget(content: ImageBuffer<Rgba<u8>, Vec<u8>>, term_px: (Option<u32>, Option<u32>)) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
     let budget_h = term_px.1.map(|h| ((h as f32 * PREVIEW_HEIGHT_FRACTION).round() as u32).max(1));
     if let Some(bh) = budget_h
         && content.height() < bh
     {
         let mut canvas = ImageBuffer::from_pixel(content.width(), bh, Rgba([0, 0, 0, 0]));
-        image::imageops::overlay(&mut canvas, content, 0, 0);
+        image::imageops::overlay(&mut canvas, &content, 0, 0);
         return canvas;
     }
-    content.clone()
+    content
 }

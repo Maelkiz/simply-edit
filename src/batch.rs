@@ -81,17 +81,9 @@ fn walk_dir(
             continue;
         }
 
-        let ext = path
-            .extension()
-            .and_then(|e| e.to_str())
-            .map(|e| e.to_lowercase());
-
-        let ext = match ext {
-            Some(e) => e,
-            None => continue,
-        };
-
-        if !extensions.iter().any(|&supported| supported == ext) {
+        let ext = path.extension().and_then(|e| e.to_str());
+        let Some(ext) = ext else { continue };
+        if !extensions.iter().any(|&s| s.eq_ignore_ascii_case(ext)) {
             continue;
         }
 
