@@ -49,6 +49,11 @@ fn run() -> Result<(), String> {
                     return Err("flip: --preview cannot be used in batch mode".to_string());
                 }
                 let options = batch::to_batch_options(&batch)?;
+                {
+                    let files = batch::collect_files(Path::new(&path), options.recursive, options.pattern.as_ref(), batch::RASTER_EXTENSIONS)?;
+                    let out_paths: Vec<_> = files.iter().map(|f| batch::resolve_output_path(f, "flipv", &options)).collect();
+                    check_output_collisions(&options, "flip", &out_paths)?;
+                }
                 let result = batch::run_batch(Path::new(&path), &options, |file| {
                     let img = image::open(file)
                         .map_err(|e| format!("flip: failed to open image '{}': {e}", file.display()))?;
@@ -76,6 +81,11 @@ fn run() -> Result<(), String> {
                     return Err("flop: --preview cannot be used in batch mode".to_string());
                 }
                 let options = batch::to_batch_options(&batch)?;
+                {
+                    let files = batch::collect_files(Path::new(&path), options.recursive, options.pattern.as_ref(), batch::RASTER_EXTENSIONS)?;
+                    let out_paths: Vec<_> = files.iter().map(|f| batch::resolve_output_path(f, "fliph", &options)).collect();
+                    check_output_collisions(&options, "flop", &out_paths)?;
+                }
                 let result = batch::run_batch(Path::new(&path), &options, |file| {
                     let img = image::open(file)
                         .map_err(|e| format!("flop: failed to open image '{}': {e}", file.display()))?;
@@ -108,6 +118,12 @@ fn run() -> Result<(), String> {
                 }
                 let deg = angle.unwrap();
                 let options = batch::to_batch_options(&batch)?;
+                {
+                    let suffix = format!("rotate{deg}");
+                    let files = batch::collect_files(Path::new(&path), options.recursive, options.pattern.as_ref(), batch::RASTER_EXTENSIONS)?;
+                    let out_paths: Vec<_> = files.iter().map(|f| batch::resolve_output_path(f, &suffix, &options)).collect();
+                    check_output_collisions(&options, "rotate", &out_paths)?;
+                }
                 let result = batch::run_batch(Path::new(&path), &options, |file| {
                     let img = image::open(file)
                         .map_err(|e| format!("rotate: failed to open image '{}': {e}", file.display()))?;
@@ -145,6 +161,11 @@ fn run() -> Result<(), String> {
                     return Err("invert: --preview cannot be used in batch mode".to_string());
                 }
                 let options = batch::to_batch_options(&batch)?;
+                {
+                    let files = batch::collect_files(Path::new(&path), options.recursive, options.pattern.as_ref(), batch::RASTER_EXTENSIONS)?;
+                    let out_paths: Vec<_> = files.iter().map(|f| batch::resolve_output_path(f, "invert", &options)).collect();
+                    check_output_collisions(&options, "invert", &out_paths)?;
+                }
                 let result = batch::run_batch(Path::new(&path), &options, |file| {
                     let img = image::open(file)
                         .map_err(|e| format!("invert: failed to open image '{}': {e}", file.display()))?;
@@ -172,6 +193,11 @@ fn run() -> Result<(), String> {
                     return Err("grayscale: --preview cannot be used in batch mode".to_string());
                 }
                 let options = batch::to_batch_options(&batch)?;
+                {
+                    let files = batch::collect_files(Path::new(&path), options.recursive, options.pattern.as_ref(), batch::RASTER_EXTENSIONS)?;
+                    let out_paths: Vec<_> = files.iter().map(|f| batch::resolve_output_path(f, "grayscale", &options)).collect();
+                    check_output_collisions(&options, "grayscale", &out_paths)?;
+                }
                 let result = batch::run_batch(Path::new(&path), &options, |file| {
                     let img = image::open(file)
                         .map_err(|e| format!("grayscale: failed to open image '{}': {e}", file.display()))?;
@@ -205,6 +231,11 @@ fn run() -> Result<(), String> {
                     return Err("binarize: --preview cannot be used in batch mode".to_string());
                 }
                 let options = batch::to_batch_options(&batch)?;
+                {
+                    let files = batch::collect_files(Path::new(&path), options.recursive, options.pattern.as_ref(), batch::RASTER_EXTENSIONS)?;
+                    let out_paths: Vec<_> = files.iter().map(|f| batch::resolve_output_path(f, "binarize", &options)).collect();
+                    check_output_collisions(&options, "binarize", &out_paths)?;
+                }
                 let result = batch::run_batch(Path::new(&path), &options, |file| {
                     let img = image::open(file)
                         .map_err(|e| format!("binarize: failed to open image '{}': {e}", file.display()))?;
@@ -241,6 +272,12 @@ fn run() -> Result<(), String> {
                     );
                 }
                 let options = batch::to_batch_options(&batch)?;
+                {
+                    let suffix = format!("resize{}x{}", width.unwrap(), height.unwrap());
+                    let files = batch::collect_files(Path::new(&path), options.recursive, options.pattern.as_ref(), batch::RASTER_EXTENSIONS)?;
+                    let out_paths: Vec<_> = files.iter().map(|f| batch::resolve_output_path(f, &suffix, &options)).collect();
+                    check_output_collisions(&options, "resize", &out_paths)?;
+                }
                 let result = batch::run_batch(Path::new(&path), &options, |file| {
                     let img = image::open(file)
                         .map_err(|e| format!("resize: failed to open image '{}': {e}", file.display()))?;
@@ -326,6 +363,11 @@ fn run() -> Result<(), String> {
                     "convert: --format required in batch mode (e.g. --format png)".to_string()
                 })?;
                 let options = batch::to_batch_options(&batch)?;
+                {
+                    let files = batch::collect_files(Path::new(&src), options.recursive, options.pattern.as_ref(), batch::RASTER_EXTENSIONS)?;
+                    let out_paths: Vec<_> = files.iter().map(|f| batch::resolve_output_path_with_ext(f, &fmt, &options)).collect();
+                    check_output_collisions(&options, "convert", &out_paths)?;
+                }
                 let result = batch::run_batch(Path::new(&src), &options, |file| {
                     let out_path = batch::resolve_output_path_with_ext(file, &fmt, &options);
                     let out_str = out_path.to_string_lossy().to_string();
@@ -365,6 +407,11 @@ fn run() -> Result<(), String> {
                     return Err("vectorize: --preview cannot be used in batch mode".to_string());
                 }
                 let options = batch::to_batch_options(&batch)?;
+                {
+                    let files = batch::collect_files(Path::new(&src), options.recursive, options.pattern.as_ref(), batch::RASTER_EXTENSIONS)?;
+                    let out_paths: Vec<_> = files.iter().map(|f| batch::resolve_output_path_with_ext(f, "svg", &options)).collect();
+                    check_output_collisions(&options, "vectorize", &out_paths)?;
+                }
                 let result = batch::run_batch(Path::new(&src), &options, |file| {
                     let out_path = batch::resolve_output_path_with_ext(file, "svg", &options);
                     let out_str = out_path.to_string_lossy().to_string();
@@ -423,6 +470,11 @@ fn run() -> Result<(), String> {
                     return Err("pad: --preview cannot be used in batch mode".to_string());
                 }
                 let options = batch::to_batch_options(&batch)?;
+                {
+                    let files = batch::collect_files(Path::new(&path), options.recursive, options.pattern.as_ref(), batch::RASTER_EXTENSIONS)?;
+                    let out_paths: Vec<_> = files.iter().map(|f| batch::resolve_output_path(f, "pad", &options)).collect();
+                    check_output_collisions(&options, "pad", &out_paths)?;
+                }
                 let result = batch::run_batch(Path::new(&path), &options, |file| {
                     let img = image::open(file)
                         .map_err(|e| format!("pad: failed to open image '{}': {e}", file.display()))?;
@@ -459,6 +511,11 @@ fn run() -> Result<(), String> {
                     height,
                 };
                 let options = batch::to_batch_options(&batch)?;
+                {
+                    let files = batch::collect_files(Path::new(&src), options.recursive, options.pattern.as_ref(), batch::SVG_EXTENSIONS)?;
+                    let out_paths: Vec<_> = files.iter().map(|f| batch::resolve_output_path_with_ext(f, "png", &options)).collect();
+                    check_output_collisions(&options, "rasterize", &out_paths)?;
+                }
                 let result = batch::run_batch_svg(Path::new(&src), &options, |file| {
                     let out_path =
                         batch::resolve_output_path_with_ext(file, "png", &options);
@@ -514,6 +571,25 @@ fn is_batch(path: &str, batch: &BatchArgs) -> bool {
         || batch.pattern.is_some()
         || batch.output_dir.is_some()
         || batch.recursive
+}
+
+fn check_output_collisions(
+    options: &batch::BatchOptions,
+    cmd: &str,
+    output_paths: &[std::path::PathBuf],
+) -> Result<(), String> {
+    if options.output_dir.is_none() {
+        return Ok(());
+    }
+    let collisions = batch::find_output_collisions(output_paths);
+    if collisions.is_empty() {
+        return Ok(());
+    }
+    let list: Vec<String> = collisions.iter().map(|p| p.display().to_string()).collect();
+    Err(format!(
+        "{cmd}: the following output paths would be written by multiple inputs: {}",
+        list.join(", ")
+    ))
 }
 
 fn output_mode(replace: bool, preview: bool, output: Option<String>) -> OutputMode {

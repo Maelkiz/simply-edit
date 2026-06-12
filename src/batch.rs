@@ -8,8 +8,8 @@ use regex::Regex;
 
 use crate::cli::BatchArgs;
 
-const RASTER_EXTENSIONS: &[&str] = &["png", "jpg", "jpeg", "webp", "ico"];
-const SVG_EXTENSIONS: &[&str] = &["svg"];
+pub(crate) const RASTER_EXTENSIONS: &[&str] = &["png", "jpg", "jpeg", "webp", "ico"];
+pub(crate) const SVG_EXTENSIONS: &[&str] = &["svg"];
 
 pub(crate) struct BatchOptions {
     pub pattern: Option<Regex>,
@@ -217,6 +217,19 @@ pub(crate) fn resolve_output_path_with_ext(
 ) -> PathBuf {
     let stem = input.file_stem().and_then(|s| s.to_str()).unwrap_or("output");
     output_dir(input, options).join(format!("{stem}.{ext}"))
+}
+
+pub(crate) fn find_output_collisions(outputs: &[PathBuf]) -> Vec<PathBuf> {
+    let mut seen = std::collections::HashSet::new();
+    let mut collisions = std::collections::HashSet::new();
+    for p in outputs {
+        if !seen.insert(p) {
+            collisions.insert(p.clone());
+        }
+    }
+    let mut result: Vec<PathBuf> = collisions.into_iter().collect();
+    result.sort();
+    result
 }
 
 pub(crate) fn print_summary(result: &BatchResult) {
@@ -578,6 +591,40 @@ mod tests {
         let opts = to_batch_options(&args).unwrap();
         assert!(opts.pattern.is_some());
         assert!(opts.pattern.unwrap().is_match("123.png"));
+    }
+
+    #[test]
+    fn test_find_output_collisions_no_duplicates() {
+        let paths = vec![
+            PathBuf::from("/out/a.png"),
+            PathBuf::from("/out/b.png"),
+            PathBuf::from("/out/c.png"),
+        ];
+        assert!(find_output_collisions(&paths).is_empty());
+    }
+
+    #[test]
+    fn test_find_output_collisions_detects_duplicate() {
+        let paths = vec![
+            PathBuf::from("/out/beach.png"),
+            PathBuf::from("/out/sun.png"),
+            PathBuf::from("/out/beach.png"),
+        ];
+        let collisions = find_output_collisions(&paths);
+        assert_eq!(collisions, vec![PathBuf::from("/out/beach.png")]);
+    }
+
+    #[test]
+    fn test_find_output_collisions_multiple_duplicates() {
+        let paths = vec![
+            PathBuf::from("/out/a.png"),
+            PathBuf::from("/out/b.png"),
+            PathBuf::from("/out/a.png"),
+            PathBuf::from("/out/b.png"),
+        ];
+        let mut collisions = find_output_collisions(&paths);
+        collisions.sort();
+        assert_eq!(collisions, vec![PathBuf::from("/out/a.png"), PathBuf::from("/out/b.png")]);
     }
 
     #[test]
