@@ -127,7 +127,7 @@ fn read_icc_profile(path: &str) -> Option<String> {
 }
 
 fn read_icc_from_jpeg(data: &[u8]) -> Option<String> {
-    let mut icc_data: Vec<u8> = Vec::new();
+    let mut segments: Vec<(u8, Vec<u8>)> = Vec::new();
     let mut pos = 2; // skip SOI
     while pos + 3 < data.len() {
         if data[pos] != 0xFF {
@@ -141,19 +141,21 @@ fn read_icc_from_jpeg(data: &[u8]) -> Option<String> {
         if marker == 0xE2 && pos + 18 <= data.len() {
             let id_end = pos + 4 + 12;
             if id_end <= data.len() && &data[pos + 4..id_end] == b"ICC_PROFILE\0" {
-                // bytes pos+16 = sequence number, pos+17 = total (ignored — concatenate in order)
+                let seq_num = data[pos + 16];
                 let start = pos + 18;
                 let end = (pos + 2 + seg_len).min(data.len());
                 if start < end {
-                    icc_data.extend_from_slice(&data[start..end]);
+                    segments.push((seq_num, data[start..end].to_vec()));
                 }
             }
         }
         pos += 2 + seg_len;
     }
-    if icc_data.is_empty() {
+    if segments.is_empty() {
         return None;
     }
+    segments.sort_by_key(|(seq, _)| *seq);
+    let icc_data: Vec<u8> = segments.into_iter().flat_map(|(_, b)| b).collect();
     parse_icc_description(&icc_data)
 }
 
