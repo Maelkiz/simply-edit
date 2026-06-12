@@ -223,13 +223,17 @@ pub(crate) fn run_scale(
         start_spinner("Processing scale...")
     };
 
-    let img = image::open(path).map_err(|e| format!("scale: failed to open image '{path}': {e}"));
+    let result: Result<(), String> = (|| {
+        let img = image::open(path)
+            .map_err(|e| format!("scale: failed to open image '{path}': {e}"))?;
+        save_resize(img, path, output, w, h)
+    })();
 
     if let Some(pb) = spinner {
         pb.finish_and_clear();
     }
 
-    save_resize(img?, path, output, w, h)
+    result
 }
 
 pub(crate) fn prompt_scale_factor_cliclack() -> Result<f32, String> {
