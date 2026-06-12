@@ -203,11 +203,10 @@ fn rasterize(src: &str, dst: &str, options: RasterizeOptions, preview: bool) -> 
         )
     })?;
 
-    let mut pixmap_mut = pixmap.as_mut();
     resvg::render(
         &tree,
         Transform::from_scale(scale_x, scale_y),
-        &mut pixmap_mut,
+        &mut pixmap.as_mut(),
     );
 
     if preview {

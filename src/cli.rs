@@ -353,28 +353,24 @@ fn parse_threshold(s: &str) -> Result<u8, String> {
         .map_err(|_| format!("invalid threshold '{s}': use an integer from 0 to 255"))
 }
 
-fn parse_positive_f32(s: &str) -> Result<f32, String> {
+fn parse_positive_f32_impl(s: &str, flag: &str) -> Result<f32, String> {
     let v: f32 = s
         .parse()
-        .map_err(|_| format!("invalid value '{s}' for --scale: use a positive number"))?;
+        .map_err(|_| format!("invalid value '{s}' for {flag}: use a positive number"))?;
     if !v.is_finite() || v <= 0.0 {
         return Err(format!(
-            "invalid value '{s}' for --scale: use a positive number"
+            "invalid value '{s}' for {flag}: use a positive number"
         ));
     }
     Ok(v)
 }
 
+fn parse_positive_f32(s: &str) -> Result<f32, String> {
+    parse_positive_f32_impl(s, "--scale")
+}
+
 fn parse_positive_f32_factor(s: &str) -> Result<f32, String> {
-    let v: f32 = s
-        .parse()
-        .map_err(|_| format!("invalid value '{s}' for --factor: use a positive number"))?;
-    if !v.is_finite() || v <= 0.0 {
-        return Err(format!(
-            "invalid value '{s}' for --factor: use a positive number"
-        ));
-    }
-    Ok(v)
+    parse_positive_f32_impl(s, "--factor")
 }
 
 fn parse_positive_u32(s: &str) -> Result<u32, String> {

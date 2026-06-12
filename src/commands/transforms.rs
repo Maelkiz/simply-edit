@@ -723,7 +723,7 @@ fn prompt_binarize_threshold_cliclack() -> Result<u8, String> {
         })
         .interact()
         .map_err(|e| format!("binarize: failed to read threshold: {e}"))?;
-    Ok(s.parse::<u16>().unwrap().min(255) as u8)
+    Ok(s.parse::<u8>().unwrap())
 }
 
 /// Binarize a raw RGBA buffer directly without going through DynamicImage.
