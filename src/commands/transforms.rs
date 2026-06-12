@@ -434,10 +434,10 @@ pub(crate) fn run_binarize(path: &str, output: OutputMode, threshold: u8) -> Res
 }
 
 pub(crate) fn binarize_image(img: image::DynamicImage, threshold: u8) -> image::DynamicImage {
-    let gray = img.to_luma8();
     let mut rgba = img.to_rgba8();
-    for (i, pixel) in rgba.pixels_mut().enumerate() {
-        let luma = gray.as_raw()[i];
+    for pixel in rgba.pixels_mut() {
+        let luma =
+            ((pixel[0] as u32 * 77 + pixel[1] as u32 * 150 + pixel[2] as u32 * 29) >> 8) as u8;
         let bw = if luma > threshold { 255 } else { 0 };
         pixel[0] = bw;
         pixel[1] = bw;
