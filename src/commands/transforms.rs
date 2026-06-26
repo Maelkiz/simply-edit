@@ -77,6 +77,33 @@ pub(crate) fn run_flip(
     Ok(())
 }
 
+pub(crate) fn run_flip_both(
+    path: &str,
+    output: OutputMode,
+) -> Result<(), String> {
+    let spinner = if matches!(output, OutputMode::Preview) {
+        None
+    } else {
+        start_spinner("Processing flip...")
+    };
+
+    let result: Result<Option<String>, String> = (|| {
+        let img = image::open(path)
+            .map_err(|e| format!("flip: failed to open image '{path}': {e}"))?;
+        let flipped = img.flipv().fliph();
+        dispatch_save(flipped, path, output, "flipxy")
+    })();
+
+    if let Some(pb) = spinner {
+        pb.finish_and_clear();
+    }
+
+    if let Some(output_path) = result? {
+        println!("Saved both-axis flipped image to {output_path}");
+    }
+    Ok(())
+}
+
 fn prompt_flip_axis() -> Result<FlipAxis, String> {
     if !stdin().is_terminal() {
         return prompt_flip_axis_non_tty();

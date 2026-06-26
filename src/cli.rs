@@ -27,8 +27,16 @@ pub(crate) struct BatchArgs {
 
 #[derive(Debug, Subcommand)]
 pub(crate) enum Command {
-    /// Mirror an image vertically (top to bottom)
+    /// Mirror an image along the X axis (vertical), Y axis (horizontal), or both
     Flip {
+        /// Flip along the X axis (vertical mirror, top to bottom)
+        #[arg(short = 'x', long)]
+        x: bool,
+
+        /// Flip along the Y axis (horizontal mirror, left to right)
+        #[arg(short = 'y', long)]
+        y: bool,
+
         /// Overwrite target file (source if no output path given)
         #[arg(short, long)]
         replace: bool,
@@ -489,6 +497,30 @@ mod tests {
                 path,
                 ..
             } => assert_eq!(path, "image.png"),
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_flip_x_flag() {
+        match parse(&["simply", "flip", "-x", "image.png"]) {
+            Command::Flip { x: true, y: false, path, .. } => assert_eq!(path, "image.png"),
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_flip_y_flag() {
+        match parse(&["simply", "flip", "-y", "image.png"]) {
+            Command::Flip { x: false, y: true, path, .. } => assert_eq!(path, "image.png"),
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_flip_xy_flags() {
+        match parse(&["simply", "flip", "-x", "-y", "image.png"]) {
+            Command::Flip { x: true, y: true, path, .. } => assert_eq!(path, "image.png"),
             other => panic!("unexpected: {other:?}"),
         }
     }

@@ -38,6 +38,8 @@ fn run() -> Result<(), String> {
     let cli = Cli::parse();
     match cli.command {
         Command::Flip {
+            x,
+            y,
             replace,
             preview,
             batch,
@@ -48,17 +50,31 @@ fn run() -> Result<(), String> {
                 if preview {
                     return Err("flip: --preview cannot be used in batch mode".to_string());
                 }
+                if !x && !y {
+                    return Err("flip: --x or --y required in batch mode".to_string());
+                }
+                let suffix = match (x, y) {
+                    (true, true) => "flipxy",
+                    (true, false) => "flipv",
+                    (false, true) => "fliph",
+                    (false, false) => unreachable!(),
+                };
                 let options = batch::to_batch_options(&batch)?;
                 {
                     let files = batch::collect_files(Path::new(&path), options.recursive, options.pattern.as_ref(), batch::RASTER_EXTENSIONS)?;
-                    let out_paths: Vec<_> = files.iter().map(|f| batch::resolve_output_path(f, "flipv", &options)).collect();
+                    let out_paths: Vec<_> = files.iter().map(|f| batch::resolve_output_path(f, suffix, &options)).collect();
                     check_output_collisions(&options, "flip", &out_paths)?;
                 }
                 let result = batch::run_batch(Path::new(&path), &options, |file| {
                     let img = image::open(file)
                         .map_err(|e| format!("flip: failed to open image '{}': {e}", file.display()))?;
-                    let flipped = img.flipv();
-                    let out_path = batch::resolve_output_path(file, "flipv", &options);
+                    let flipped = match (x, y) {
+                        (true, true) => img.flipv().fliph(),
+                        (true, false) => img.flipv(),
+                        (false, true) => img.fliph(),
+                        (false, false) => unreachable!(),
+                    };
+                    let out_path = batch::resolve_output_path(file, suffix, &options);
                     io::save_image(flipped, &out_path)?;
                     Ok(out_path.to_string_lossy().to_string())
                 })?;
@@ -66,7 +82,12 @@ fn run() -> Result<(), String> {
                 Ok(())
             } else {
                 let output = output_mode(replace, preview, output);
-                commands::transforms::run_flip(&path, output, Some(commands::transforms::FlipAxis::Vertical))
+                match (x, y) {
+                    (true, true) => commands::transforms::run_flip_both(&path, output),
+                    (true, false) => commands::transforms::run_flip(&path, output, Some(commands::transforms::FlipAxis::Vertical)),
+                    (false, true) => commands::transforms::run_flip(&path, output, Some(commands::transforms::FlipAxis::Horizontal)),
+                    (false, false) => commands::transforms::run_flip(&path, output, None),
+                }
             }
         }
         Command::Flop {

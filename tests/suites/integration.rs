@@ -9,7 +9,7 @@ fn test_flip_generated_output() {
     let generated = temp.path().join("img_flipv.png");
     create_png(&input, 3, 2, [220, 30, 30, 255]);
 
-    let output = run(&["flip", input.to_str().expect("valid input path")]);
+    let output = run(&["flip", "-x", input.to_str().expect("valid input path")]);
     assert!(output.status.success());
     assert!(generated.exists());
     assert_valid_image(&generated);
@@ -24,6 +24,7 @@ fn test_flip_explicit_output() {
 
     let output = run(&[
         "flip",
+        "-x",
         input.to_str().expect("valid input path"),
         out.to_str().expect("valid output path"),
     ]);

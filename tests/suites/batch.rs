@@ -67,6 +67,7 @@ fn test_batch_flip() {
 
     let output = run(&[
         "flip",
+        "-x",
         temp.path().to_str().unwrap(),
         "--output-dir",
         out.path().to_str().unwrap(),
