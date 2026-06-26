@@ -66,7 +66,7 @@ fn run() -> Result<(), String> {
                 Ok(())
             } else {
                 let output = output_mode(replace, preview, output);
-                commands::transforms::run_flip(&path, output, commands::transforms::FlipAxis::Vertical)
+                commands::transforms::run_flip(&path, output, Some(commands::transforms::FlipAxis::Vertical))
             }
         }
         Command::Flop {
@@ -98,7 +98,7 @@ fn run() -> Result<(), String> {
                 Ok(())
             } else {
                 let output = output_mode(replace, preview, output);
-                commands::transforms::run_flip(&path, output, commands::transforms::FlipAxis::Horizontal)
+                commands::transforms::run_flip(&path, output, Some(commands::transforms::FlipAxis::Horizontal))
             }
         }
         Command::Rotate {

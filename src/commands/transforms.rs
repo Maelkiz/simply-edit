@@ -39,8 +39,13 @@ pub(crate) enum FlipAxis {
 pub(crate) fn run_flip(
     path: &str,
     output: OutputMode,
-    axis: FlipAxis,
+    axis: Option<FlipAxis>,
 ) -> Result<(), String> {
+    let axis = match axis {
+        Some(a) => a,
+        None => prompt_flip_axis()?,
+    };
+
     let spinner = if matches!(output, OutputMode::Preview) {
         None
     } else {
@@ -70,6 +75,33 @@ pub(crate) fn run_flip(
         println!("Saved {axis_label} flipped image to {output_path}");
     }
     Ok(())
+}
+
+fn prompt_flip_axis() -> Result<FlipAxis, String> {
+    if !stdin().is_terminal() {
+        return prompt_flip_axis_non_tty();
+    }
+
+    select("Choose flip axis:")
+        .item(FlipAxis::Vertical, "X axis (vertical, top to bottom)", "")
+        .item(FlipAxis::Horizontal, "Y axis (horizontal, left to right)", "")
+        .interact()
+        .map_err(|e| format!("failed to read flip axis: {e}"))
+}
+
+fn prompt_flip_axis_non_tty() -> Result<FlipAxis, String> {
+    let mut input = String::new();
+    stdin()
+        .read_line(&mut input)
+        .map_err(|e| format!("failed to read flip axis from stdin: {e}"))?;
+
+    match input.trim() {
+        "1" => Ok(FlipAxis::Vertical),
+        "2" => Ok(FlipAxis::Horizontal),
+        other => Err(format!(
+            "invalid flip axis '{other}': use 1 (X axis, vertical) or 2 (Y axis, horizontal)"
+        )),
+    }
 }
 
 pub(crate) fn run_rotate(
