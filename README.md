@@ -77,7 +77,7 @@ simply <command> <path-to-img>
 ```
 
 > **Note**:  
-> Currently, when only an image path is provided, some commands will start an interactive prompt while others run with a sane default. I intend to streamline this in the future for consistency.
+> Currently, when only an image path is provided, some commands will start an interactive prompt while others run with a sane default.
 
 ### Output Path
 

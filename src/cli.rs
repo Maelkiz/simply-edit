@@ -28,6 +28,7 @@ pub(crate) struct BatchArgs {
 #[derive(Debug, Subcommand)]
 pub(crate) enum Command {
     /// Mirror an image along the X axis (vertical), Y axis (horizontal), or both
+    #[command(after_help = "Default behaviour: prompts interactively to choose an axis when neither -x nor -y is given.")]
     Flip {
         /// Flip along the X axis (vertical mirror, top to bottom)
         #[arg(short = 'x', long)]
@@ -56,6 +57,7 @@ pub(crate) enum Command {
     },
 
     /// Rotate an image by 90, 180, or 270 degrees
+    #[command(after_help = "Default behaviour: prompts interactively to choose an angle when --angle is omitted.")]
     Rotate {
         /// Rotation angle: 90, 180, or 270 (interactive prompt if omitted)
         #[arg(long, value_parser = parse_rotation)]
@@ -80,6 +82,7 @@ pub(crate) enum Command {
     },
 
     /// Invert the colors of an image
+    #[command(after_help = "Default behaviour: inverts the image immediately with no additional input.")]
     Invert {
         /// Overwrite target file (source if no output path given)
         #[arg(short, long)]
@@ -100,6 +103,7 @@ pub(crate) enum Command {
     },
 
     /// Convert an image to grayscale
+    #[command(after_help = "Default behaviour: converts to grayscale immediately with no additional input.")]
     Grayscale {
         /// Overwrite target file (source if no output path given)
         #[arg(short, long)]
@@ -120,6 +124,7 @@ pub(crate) enum Command {
     },
 
     /// Convert an image to pure black and white at a brightness cutoff
+    #[command(after_help = "Default behaviour: uses a threshold of 128 when --threshold is omitted.")]
     Binarize {
         /// Threshold value 0-255 (default: 128). Pixels brighter than this become white, others black
         #[arg(short, long, value_parser = parse_threshold)]
@@ -144,6 +149,7 @@ pub(crate) enum Command {
     },
 
     /// Resize an image to specified dimensions
+    #[command(after_help = "Default behaviour: prompts interactively for dimensions when neither --width nor --height is given.")]
     Resize {
         /// Target width in pixels
         #[arg(short, long, value_parser = parse_positive_u32)]
@@ -172,6 +178,7 @@ pub(crate) enum Command {
     },
 
     /// Scale an image by a factor (e.g. 0.5 to halve, 2.0 to double)
+    #[command(after_help = "Default behaviour: prompts interactively for a uniform scale factor when no scale flag is given.")]
     Scale {
         /// Scale factor (e.g. 0.5 to halve, 2.0 to double)
         #[arg(short = 'f', long, value_parser = parse_positive_f32_factor)]
@@ -204,6 +211,7 @@ pub(crate) enum Command {
     },
 
     /// Convert between image formats (PNG, JPG, ICO, SVG, WebP)
+    #[command(after_help = "Default behaviour: prompts interactively for an output format when the output path is omitted.")]
     Convert {
         /// Output format for batch mode (e.g. png, jpg, webp)
         #[arg(long)]
@@ -220,6 +228,7 @@ pub(crate) enum Command {
     },
 
     /// Convert a raster image to SVG
+    #[command(after_help = "Default behaviour: runs immediately; auto-downscales images larger than 2000px on the long edge for speed.")]
     Vectorize {
         /// Faster conversion with lower fidelity
         #[arg(long)]
@@ -244,18 +253,21 @@ pub(crate) enum Command {
     },
 
     /// Display image metadata and properties
+    #[command(after_help = "Default behaviour: displays metadata immediately with no additional input.")]
     Info {
         /// Path to the image file
         path: String,
     },
 
     /// Display an image inline in the terminal (requires Kitty graphics protocol support (Kitty, WezTerm, or Ghostty))
+    #[command(after_help = "Default behaviour: displays the image immediately with no additional input.")]
     View {
         /// Path to the image file
         path: String,
     },
 
     /// Add transparent (or colored) padding around an image
+    #[command(after_help = "Default behaviour: adds 20px on every side when no size flags are given.")]
     Pad {
         /// Pixels to add on the top edge
         #[arg(long, value_parser = parse_positive_u32)]
@@ -308,6 +320,7 @@ pub(crate) enum Command {
     },
 
     /// Convert an SVG to a raster image
+    #[command(after_help = "Default behaviour: renders at native SVG resolution when no size flags are given.")]
     Rasterize {
         /// Scale factor for rasterization
         #[arg(short, long, value_parser = parse_positive_f32)]
