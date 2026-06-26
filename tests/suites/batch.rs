@@ -79,12 +79,13 @@ fn test_batch_flip() {
 }
 
 #[test]
-fn test_batch_flop() {
+fn test_batch_flip_y() {
     let temp = batch_dir_with_images("batch-fliph", 2);
     let out = TestDir::new("batch-fliph-out");
 
     let output = run(&[
-        "flop",
+        "flip",
+        "-y",
         temp.path().to_str().unwrap(),
         "--output-dir",
         out.path().to_str().unwrap(),

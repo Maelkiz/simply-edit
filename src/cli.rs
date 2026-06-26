@@ -55,26 +55,6 @@ pub(crate) enum Command {
         batch: BatchArgs,
     },
 
-    /// Mirror an image horizontally (left to right)
-    Flop {
-        /// Overwrite target file (source if no output path given)
-        #[arg(short, long)]
-        replace: bool,
-
-        /// Preview the result in the terminal without saving (requires Kitty graphics protocol support (Kitty, WezTerm, or Ghostty))
-        #[arg(short = 'p', long)]
-        preview: bool,
-
-        /// Path to image file or directory
-        path: String,
-
-        /// Output path (auto-generated if omitted)
-        output: Option<String>,
-
-        #[command(flatten)]
-        batch: BatchArgs,
-    },
-
     /// Rotate an image by 90, 180, or 270 degrees
     Rotate {
         /// Rotation angle: 90, 180, or 270 (interactive prompt if omitted)
@@ -526,9 +506,11 @@ mod tests {
     }
 
     #[test]
-    fn test_flop_basic() {
-        match parse(&["simply", "flop", "image.png"]) {
-            Command::Flop {
+    fn test_flip_y_basic() {
+        match parse(&["simply", "flip", "-y", "image.png"]) {
+            Command::Flip {
+                x: false,
+                y: true,
                 replace: false,
                 path,
                 output: None,
@@ -539,9 +521,10 @@ mod tests {
     }
 
     #[test]
-    fn test_flop_with_output() {
-        match parse(&["simply", "flop", "image.png", "out.png"]) {
-            Command::Flop {
+    fn test_flip_y_with_output() {
+        match parse(&["simply", "flip", "-y", "image.png", "out.png"]) {
+            Command::Flip {
+                y: true,
                 path,
                 output: Some(out),
                 ..
@@ -554,9 +537,10 @@ mod tests {
     }
 
     #[test]
-    fn test_flop_replace() {
-        match parse(&["simply", "flop", "-r", "image.png"]) {
-            Command::Flop {
+    fn test_flip_y_replace() {
+        match parse(&["simply", "flip", "-y", "-r", "image.png"]) {
+            Command::Flip {
+                y: true,
                 replace: true,
                 path,
                 ..

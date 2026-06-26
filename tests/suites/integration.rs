@@ -34,27 +34,28 @@ fn test_flip_explicit_output() {
 }
 
 #[test]
-fn test_flop_generated_output() {
+fn test_flip_y_generated_output() {
     let temp = TestDir::new("simply-phase1-int");
     let input = temp.path().join("img.png");
     let generated = temp.path().join("img_fliph.png");
     create_png(&input, 3, 2, [220, 30, 30, 255]);
 
-    let output = run(&["flop", input.to_str().expect("valid input path")]);
+    let output = run(&["flip", "-y", input.to_str().expect("valid input path")]);
     assert!(output.status.success());
     assert!(generated.exists());
     assert_valid_image(&generated);
 }
 
 #[test]
-fn test_flop_explicit_output() {
+fn test_flip_y_explicit_output() {
     let temp = TestDir::new("simply-phase1-int");
     let input = temp.path().join("img.png");
     let out = temp.path().join("custom.png");
     create_png(&input, 3, 2, [220, 30, 30, 255]);
 
     let output = run(&[
-        "flop",
+        "flip",
+        "-y",
         input.to_str().expect("valid input path"),
         out.to_str().expect("valid output path"),
     ]);

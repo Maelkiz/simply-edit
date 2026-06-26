@@ -90,38 +90,6 @@ fn run() -> Result<(), String> {
                 }
             }
         }
-        Command::Flop {
-            replace,
-            preview,
-            batch,
-            path,
-            output,
-        } => {
-            if is_batch(&path, &batch) {
-                if preview {
-                    return Err("flop: --preview cannot be used in batch mode".to_string());
-                }
-                let options = batch::to_batch_options(&batch)?;
-                {
-                    let files = batch::collect_files(Path::new(&path), options.recursive, options.pattern.as_ref(), batch::RASTER_EXTENSIONS)?;
-                    let out_paths: Vec<_> = files.iter().map(|f| batch::resolve_output_path(f, "fliph", &options)).collect();
-                    check_output_collisions(&options, "flop", &out_paths)?;
-                }
-                let result = batch::run_batch(Path::new(&path), &options, |file| {
-                    let img = image::open(file)
-                        .map_err(|e| format!("flop: failed to open image '{}': {e}", file.display()))?;
-                    let flopped = img.fliph();
-                    let out_path = batch::resolve_output_path(file, "fliph", &options);
-                    io::save_image(flopped, &out_path)?;
-                    Ok(out_path.to_string_lossy().to_string())
-                })?;
-                batch::print_summary(&result);
-                Ok(())
-            } else {
-                let output = output_mode(replace, preview, output);
-                commands::transforms::run_flip(&path, output, Some(commands::transforms::FlipAxis::Horizontal))
-            }
-        }
         Command::Rotate {
             angle,
             replace,
