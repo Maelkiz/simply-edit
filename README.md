@@ -2,7 +2,7 @@
 
 > A simple CLI tool for manipulating images.
 
-simply-edit is a convenient command-line utility for everyday image tasks: flip, flop, rotate, invert, grayscale, binarize, pad, resize, scale, and convert between common formats. It is designed to be easy to use, with sensible defaults, straightforward commands, and quality-of-life features, such as optional in-place replacement, batch operations, and view/preview functionality using the [Kitty Terminal Graphics Protocol](https://sw.kovidgoyal.net/kitty/graphics-protocol).
+simply-edit is a convenient command-line utility for everyday image tasks: flip, rotate, invert, grayscale, binarize, pad, resize, scale, and convert between common formats. It is designed to be easy to use, with sensible defaults, straightforward commands, and quality-of-life features, such as optional in-place replacement, batch operations, and view/preview functionality using the [Kitty Terminal Graphics Protocol](https://sw.kovidgoyal.net/kitty/graphics-protocol).
 
 ---
 
@@ -50,8 +50,7 @@ simply <command> <args>
 | Command | What it does |
 | --- | --- |
 | `help` | Prints an overview of the available commands |
-| `flip` | Mirror an image vertically (top to bottom) |
-| `flop` | Mirror an image horizontally (left to right) |
+| `flip` | Mirror an image along the X axis (`-x`, vertical), Y axis (`-y`, horizontal), or both (interactive if no flag given) |
 | `rotate` | Rotate image (interactive by default, or explicit `90`/`180`/`270`) |
 | `invert` | Invert image colors |
 | `grayscale` | Convert image to grayscale |
@@ -82,18 +81,24 @@ simply <command> <path-to-img>
 
 ### Output Path
 
-If you omit the output path, the tool generates one automatically: transforms keep the source format (e.g., `image.png` → `image_flipv.png`), while `vectorize` and `rasterize` switch to `.svg` and `.png` respectively. When you provide an explicit output path, the format is determined by its extension.
+If you omit the output path, the tool generates one automatically: transforms keep the source format (e.g., `image.png` → `image_flipv.png`, `image_fliph.png`, or `image_flipxy.png` for flip), while `vectorize` and `rasterize` switch to `.svg` and `.png` respectively. When you provide an explicit output path, the format is determined by its extension.
 
 ### Common Examples
 
 #### Transforms
 
 ```bash
-# Flip (mirror vertically)
-simply flip ./image.png
+# Flip along X axis (vertical mirror, top to bottom)
+simply flip -x ./image.png
 
-# Flop (mirror horizontally)
-simply flop ./image.png
+# Flip along Y axis (horizontal mirror, left to right)
+simply flip -y ./image.png
+
+# Flip both axes at once
+simply flip -x -y ./image.png
+
+# Flip interactively (prompts for axis when no flag is given)
+simply flip ./image.png
 
 # Rotate (interactive: choose 90, 180, or 270 degrees)
 simply rotate ./image.png
@@ -186,8 +191,8 @@ simply binarize --threshold 100 ./scans/ --output-dir ./cleaned/
 simply view ./photo.png
 
 # Preview a transform without saving
-simply flip --preview ./photo.png
-simply flop --preview ./photo.png
+simply flip -x --preview ./photo.png
+simply flip -y --preview ./photo.png
 simply rotate --angle 90 --preview ./photo.png
 simply grayscale --preview ./photo.png
 simply binarize --preview ./photo.png
