@@ -27,28 +27,16 @@ pub(crate) struct BatchArgs {
 
 #[derive(Debug, Subcommand)]
 pub(crate) enum Command {
-    /// Mirror an image vertically (top to bottom)
+    /// Mirror an image along the X axis (vertical), Y axis (horizontal), or both
     Flip {
-        /// Overwrite target file (source if no output path given)
-        #[arg(short, long)]
-        replace: bool,
+        /// Flip along the X axis (vertical mirror, top to bottom)
+        #[arg(short = 'x', long)]
+        x: bool,
 
-        /// Preview the result in the terminal without saving (requires Kitty graphics protocol support (Kitty, WezTerm, or Ghostty))
-        #[arg(short = 'p', long)]
-        preview: bool,
+        /// Flip along the Y axis (horizontal mirror, left to right)
+        #[arg(short = 'y', long)]
+        y: bool,
 
-        /// Path to image file or directory
-        path: String,
-
-        /// Output path (auto-generated if omitted)
-        output: Option<String>,
-
-        #[command(flatten)]
-        batch: BatchArgs,
-    },
-
-    /// Mirror an image horizontally (left to right)
-    Flop {
         /// Overwrite target file (source if no output path given)
         #[arg(short, long)]
         replace: bool,
@@ -494,9 +482,35 @@ mod tests {
     }
 
     #[test]
-    fn test_flop_basic() {
-        match parse(&["simply", "flop", "image.png"]) {
-            Command::Flop {
+    fn test_flip_x_flag() {
+        match parse(&["simply", "flip", "-x", "image.png"]) {
+            Command::Flip { x: true, y: false, path, .. } => assert_eq!(path, "image.png"),
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_flip_y_flag() {
+        match parse(&["simply", "flip", "-y", "image.png"]) {
+            Command::Flip { x: false, y: true, path, .. } => assert_eq!(path, "image.png"),
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_flip_xy_flags() {
+        match parse(&["simply", "flip", "-x", "-y", "image.png"]) {
+            Command::Flip { x: true, y: true, path, .. } => assert_eq!(path, "image.png"),
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_flip_y_basic() {
+        match parse(&["simply", "flip", "-y", "image.png"]) {
+            Command::Flip {
+                x: false,
+                y: true,
                 replace: false,
                 path,
                 output: None,
@@ -507,9 +521,10 @@ mod tests {
     }
 
     #[test]
-    fn test_flop_with_output() {
-        match parse(&["simply", "flop", "image.png", "out.png"]) {
-            Command::Flop {
+    fn test_flip_y_with_output() {
+        match parse(&["simply", "flip", "-y", "image.png", "out.png"]) {
+            Command::Flip {
+                y: true,
                 path,
                 output: Some(out),
                 ..
@@ -522,9 +537,10 @@ mod tests {
     }
 
     #[test]
-    fn test_flop_replace() {
-        match parse(&["simply", "flop", "-r", "image.png"]) {
-            Command::Flop {
+    fn test_flip_y_replace() {
+        match parse(&["simply", "flip", "-y", "-r", "image.png"]) {
+            Command::Flip {
+                y: true,
                 replace: true,
                 path,
                 ..
