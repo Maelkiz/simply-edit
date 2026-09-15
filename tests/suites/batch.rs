@@ -439,3 +439,28 @@ fn test_single_file_still_works_after_batch_changes() {
     assert!(output_path.exists());
     image::open(&output_path).expect("should be valid image");
 }
+
+#[test]
+fn test_batch_cutout_output_dir() {
+    let temp = batch_dir_with_images("batch-cutout", 3);
+    let out = TestDir::new("batch-cutout-out");
+
+    let output = run(&[
+        "cutout",
+        temp.path().to_str().unwrap(),
+        "--output-dir",
+        out.path().to_str().unwrap(),
+    ]);
+    assert!(output.status.success());
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("3 succeeded"));
+    assert!(stdout.contains("0 failed"));
+
+    for entry in fs::read_dir(out.path()).unwrap() {
+        let path = entry.unwrap().path();
+        assert_eq!(path.extension().and_then(|e| e.to_str()), Some("png"));
+        let img = image::open(&path).expect("output should be valid image");
+        assert_eq!(img.to_rgba8().get_pixel(0, 0).0[3], 0);
+    }
+}

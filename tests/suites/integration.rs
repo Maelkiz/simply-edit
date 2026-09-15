@@ -1032,3 +1032,67 @@ fn test_flip_vertical_mirrors_top_to_bottom() {
     // Columns keep their order; rows swap.
     assert_eq!(after, vec![before[2], before[3], before[0], before[1]]);
 }
+
+#[test]
+fn test_cutout_generated_output_makes_background_transparent() {
+    let temp = TestDir::new("simply-cutout-int");
+    let input = temp.path().join("flat.png");
+    let generated = temp.path().join("flat_cutout.png");
+    create_png(&input, 8, 8, [255, 255, 255, 255]);
+
+    let output = run(&["cutout", input.to_str().expect("valid input path")]);
+    assert!(output.status.success());
+    assert!(generated.exists());
+    assert_valid_image(&generated);
+
+    let img = image::open(&generated).expect("cutout output should be a valid image");
+    assert_eq!(img.to_rgba8().get_pixel(0, 0).0[3], 0);
+}
+
+#[test]
+fn test_cutout_forces_png_for_jpeg_source() {
+    let temp = TestDir::new("simply-cutout-jpeg");
+    let png = temp.path().join("src.png");
+    let jpeg = temp.path().join("photo.jpg");
+    create_png(&png, 8, 8, [200, 200, 200, 255]);
+    image::open(&png)
+        .expect("source png")
+        .to_rgb8()
+        .save(&jpeg)
+        .expect("failed to write jpeg");
+
+    let output = run(&["cutout", jpeg.to_str().expect("valid input path")]);
+    assert!(output.status.success());
+    assert!(temp.path().join("photo_cutout.png").exists());
+    assert!(!temp.path().join("photo_cutout.jpg").exists());
+}
+
+#[test]
+fn test_cutout_preserves_dimensions() {
+    let temp = TestDir::new("simply-cutout-dims");
+    let input = temp.path().join("img.png");
+    create_png(&input, 6, 4, [10, 10, 10, 255]);
+
+    let output = run(&["cutout", input.to_str().expect("valid input path")]);
+    assert!(output.status.success());
+
+    let img = image::open(temp.path().join("img_cutout.png")).expect("valid output");
+    assert_eq!((img.width(), img.height()), (6, 4));
+}
+
+#[test]
+fn test_cutout_replace_rewrites_png_in_place() {
+    let temp = TestDir::new("simply-cutout-replace");
+    let input = temp.path().join("img.png");
+    create_png(&input, 5, 5, [40, 90, 160, 255]);
+
+    let output = run(&[
+        "cutout",
+        "--replace",
+        input.to_str().expect("valid input path"),
+    ]);
+    assert!(output.status.success());
+
+    let img = image::open(&input).expect("valid replaced image");
+    assert_eq!(img.to_rgba8().get_pixel(0, 0).0[3], 0);
+}

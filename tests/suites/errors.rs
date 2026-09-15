@@ -406,3 +406,84 @@ fn test_convert_invalid_svg_parse_fails() {
     assert!(!output.status.success());
     assert!(stderr(&output).contains("failed to parse SVG"));
 }
+
+#[test]
+fn test_cutout_missing_path_prints_usage() {
+    let output = run(&["cutout"]);
+    assert!(!output.status.success());
+    assert!(stderr(&output).contains("Usage:"));
+}
+
+#[test]
+fn test_cutout_nonexistent_file_fails() {
+    let output = run(&["cutout", "this/path/does/not/exist.png"]);
+    assert!(!output.status.success());
+    assert!(stderr(&output).contains("failed to open image"));
+}
+
+#[test]
+fn test_cutout_rejects_jpeg_destination() {
+    let temp = TestDir::new("simply-cutout-dst-err");
+    let input = temp.path().join("input.png");
+    create_png(&input, 2, 2, [255, 0, 0, 255]);
+
+    let output = run(&[
+        "cutout",
+        input.to_str().expect("valid input path"),
+        temp.path().join("out.jpg").to_str().expect("valid path"),
+    ]);
+    assert!(!output.status.success());
+    assert!(stderr(&output).contains("cannot store transparency"));
+}
+
+#[test]
+fn test_cutout_rejects_replace_on_jpeg_source() {
+    let temp = TestDir::new("simply-cutout-replace-err");
+    let png = temp.path().join("src.png");
+    let jpeg = temp.path().join("photo.jpg");
+    create_png(&png, 2, 2, [255, 0, 0, 255]);
+    image::open(&png)
+        .expect("source png")
+        .to_rgb8()
+        .save(&jpeg)
+        .expect("failed to write jpeg");
+
+    let output = run(&["cutout", "--replace", jpeg.to_str().expect("valid path")]);
+    assert!(!output.status.success());
+    assert!(stderr(&output).contains("only png and webp can store transparency"));
+}
+
+#[test]
+fn test_cutout_rejects_svg_input() {
+    let temp = TestDir::new("simply-cutout-svg-err");
+    let input = temp.path().join("shape.svg");
+    create_svg(&input, 10, 10, "red");
+
+    let output = run(&["cutout", input.to_str().expect("valid path")]);
+    assert!(!output.status.success());
+    assert!(stderr(&output).contains("unsupported file format"));
+}
+
+#[test]
+fn test_cutout_rejects_invalid_tolerance() {
+    let temp = TestDir::new("simply-cutout-tol-err");
+    let input = temp.path().join("input.png");
+    create_png(&input, 2, 2, [255, 0, 0, 255]);
+
+    let output = run(&[
+        "cutout",
+        "--tolerance",
+        "900",
+        input.to_str().expect("valid path"),
+    ]);
+    assert!(!output.status.success());
+    assert!(stderr(&output).contains("invalid tolerance"));
+}
+
+#[test]
+fn test_preview_rejected_in_batch_cutout() {
+    let temp = TestDir::new("simply-cutout-preview-batch-err");
+    let output = run(&["cutout", "--preview", temp.path().to_str().unwrap()]);
+    assert!(!output.status.success());
+    assert!(stderr(&output).contains("--preview cannot be used in batch mode"));
+}

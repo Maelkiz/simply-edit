@@ -171,6 +171,33 @@ pub(crate) enum Command {
         batch: BatchArgs,
     },
 
+    /// Remove an image's background, producing a transparent cutout
+    #[command(
+        after_help = "Default behaviour: removes a flat background by flood-filling inward from the image border with a tolerance of 12. Output is always written in an alpha-capable format (png, or webp when the source is webp)."
+    )]
+    Cutout {
+        /// Colour-distance tolerance 0-441.7 (default: 12). Higher values remove more of the background
+        #[arg(long, value_parser = parse_tolerance)]
+        tolerance: Option<f32>,
+
+        /// Overwrite target file (source if no output path given)
+        #[arg(long)]
+        replace: bool,
+
+        /// Preview the result in the terminal without saving (requires Kitty graphics protocol support (Kitty, WezTerm, or Ghostty))
+        #[arg(short = 'p', long)]
+        preview: bool,
+
+        /// Path to image file or directory
+        path: String,
+
+        /// Output path (auto-generated if omitted)
+        output: Option<String>,
+
+        #[command(flatten)]
+        batch: BatchArgs,
+    },
+
     /// Resize an image to specified dimensions
     #[command(
         after_help = "Default behaviour: prompts interactively for dimensions when neither --width nor --height is given."
@@ -409,6 +436,21 @@ pub(crate) enum Command {
         #[command(flatten)]
         batch: BatchArgs,
     },
+}
+
+/// Maximum possible euclidean distance between two RGB colours.
+const MAX_RGB_DISTANCE: f32 = 441.673;
+
+fn parse_tolerance(s: &str) -> Result<f32, String> {
+    let v: f32 = s
+        .parse()
+        .map_err(|_| format!("invalid tolerance '{s}': use a number from 0 to 441.7"))?;
+    if !v.is_finite() || !(0.0..=MAX_RGB_DISTANCE).contains(&v) {
+        return Err(format!(
+            "invalid tolerance '{s}': use a number from 0 to 441.7"
+        ));
+    }
+    Ok(v)
 }
 
 fn parse_threshold(s: &str) -> Result<u8, String> {

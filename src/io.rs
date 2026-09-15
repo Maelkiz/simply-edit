@@ -103,6 +103,29 @@ pub(crate) fn output_path_with_suffix(input: &str, suffix: &str) -> PathBuf {
     parent.join(format!("{stem}_{suffix}.{ext}"))
 }
 
+/// Returns an extension that can carry an alpha channel.
+///
+/// JPEG (and anything unrecognised) cannot store transparency, so callers that
+/// produce RGBA output fall back to PNG rather than silently dropping alpha.
+pub(crate) fn alpha_safe_ext(src_ext: &str) -> &'static str {
+    match src_ext.to_lowercase().as_str() {
+        "webp" => "webp",
+        _ => "png",
+    }
+}
+
+/// Like [`output_path_with_suffix`], but forces the output extension instead of
+/// inheriting the source one.
+pub(crate) fn output_path_with_suffix_ext(input: &str, suffix: &str, ext: &str) -> PathBuf {
+    let path = Path::new(input);
+    let parent = path.parent().unwrap_or_else(|| Path::new("."));
+    let stem = path
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("output");
+    parent.join(format!("{stem}_{suffix}.{ext}"))
+}
+
 pub(crate) fn enumerate_if_exists(path: &Path) -> PathBuf {
     if !path.exists() {
         return path.to_path_buf();
@@ -153,6 +176,52 @@ mod tests {
     fn test_output_path_with_suffix_no_extension() {
         let path = output_path_with_suffix("imagefile", "grayscale");
         assert_eq!(path.to_string_lossy(), "imagefile_grayscale.png");
+    }
+
+    #[test]
+    fn test_alpha_safe_ext_preserves_alpha_capable_formats() {
+        assert_eq!(alpha_safe_ext("png"), "png");
+        assert_eq!(alpha_safe_ext("webp"), "webp");
+    }
+
+    #[test]
+    fn test_alpha_safe_ext_falls_back_to_png() {
+        assert_eq!(alpha_safe_ext("jpg"), "png");
+        assert_eq!(alpha_safe_ext("jpeg"), "png");
+        assert_eq!(alpha_safe_ext("ico"), "png");
+        assert_eq!(alpha_safe_ext("bmp"), "png");
+        assert_eq!(alpha_safe_ext(""), "png");
+    }
+
+    #[test]
+    fn test_alpha_safe_ext_is_case_insensitive() {
+        assert_eq!(alpha_safe_ext("PNG"), "png");
+        assert_eq!(alpha_safe_ext("WebP"), "webp");
+        assert_eq!(alpha_safe_ext("JPG"), "png");
+    }
+
+    #[test]
+    fn test_output_path_with_suffix_ext_forces_extension() {
+        let path = output_path_with_suffix_ext("a/b.jpg", "cutout", "png");
+        assert_eq!(path.to_string_lossy(), "a/b_cutout.png");
+    }
+
+    #[test]
+    fn test_output_path_with_suffix_ext_same_extension() {
+        let path = output_path_with_suffix_ext("image.png", "cutout", "png");
+        assert_eq!(path.to_string_lossy(), "image_cutout.png");
+    }
+
+    #[test]
+    fn test_output_path_with_suffix_ext_multiple_dots() {
+        let path = output_path_with_suffix_ext("my.image.file.jpg", "cutout", "png");
+        assert_eq!(path.to_string_lossy(), "my.image.file_cutout.png");
+    }
+
+    #[test]
+    fn test_output_path_with_suffix_ext_no_extension() {
+        let path = output_path_with_suffix_ext("imagefile", "cutout", "png");
+        assert_eq!(path.to_string_lossy(), "imagefile_cutout.png");
     }
 
     #[test]

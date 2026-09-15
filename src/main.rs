@@ -299,6 +299,53 @@ fn run() -> Result<(), String> {
                 commands::transforms::run_binarize(&path, output, threshold)
             }
         }
+        Command::Cutout {
+            tolerance,
+            replace,
+            preview,
+            batch,
+            path,
+            output,
+        } => {
+            let tolerance = tolerance.unwrap_or(commands::cutout::DEFAULT_TOLERANCE);
+            if is_batch(&path, &batch) {
+                if preview {
+                    return Err("cutout: --preview cannot be used in batch mode".to_string());
+                }
+                let options = batch::to_batch_options(&batch)?;
+                {
+                    let files = batch::collect_files(
+                        Path::new(&path),
+                        options.recursive,
+                        options.pattern.as_ref(),
+                        batch::RASTER_EXTENSIONS,
+                    )?;
+                    let out_paths: Vec<_> = files
+                        .iter()
+                        .map(|f| commands::cutout::batch_output_path(f, &options))
+                        .collect();
+                    check_output_collisions(&options, commands::cutout::SUFFIX, &out_paths)?;
+                }
+                let result = batch::run_batch(Path::new(&path), &options, |file| {
+                    let img = image::open(file).map_err(|e| {
+                        format!("cutout: failed to open image '{}': {e}", file.display())
+                    })?;
+                    let cut = commands::cutout::fast_cutout(&img, tolerance);
+                    let out_path = commands::cutout::batch_output_path(file, &options);
+                    io::save_image(image::DynamicImage::ImageRgba8(cut), &out_path)?;
+                    Ok(out_path.to_string_lossy().to_string())
+                })?;
+                batch::print_summary(&result);
+                Ok(())
+            } else {
+                let output = output_mode(replace, preview, output);
+                commands::cutout::run_cutout(commands::cutout::CutoutArgs {
+                    src: path,
+                    tolerance,
+                    output,
+                })
+            }
+        }
         Command::Resize {
             width,
             height,

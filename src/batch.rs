@@ -221,6 +221,24 @@ pub(crate) fn resolve_output_path_with_ext(
     output_dir(input, options).join(format!("{stem}.{ext}"))
 }
 
+/// Like [`resolve_output_path`], but forces the output extension.
+///
+/// [`resolve_output_path_with_ext`] drops the suffix because a changed
+/// extension is enough to disambiguate there; cutout can map `png -> png`, so
+/// it needs both.
+pub(crate) fn resolve_output_path_with_suffix_ext(
+    input: &Path,
+    suffix: &str,
+    ext: &str,
+    options: &BatchOptions,
+) -> PathBuf {
+    let stem = input
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("output");
+    output_dir(input, options).join(format!("{stem}_{suffix}.{ext}"))
+}
+
 pub(crate) fn find_output_collisions(outputs: &[PathBuf]) -> Vec<PathBuf> {
     let mut seen = std::collections::HashSet::new();
     let mut collisions = std::collections::HashSet::new();
@@ -371,6 +389,54 @@ mod tests {
         };
         let result = resolve_output_path_with_ext(Path::new("/photos/img.png"), "webp", &options);
         assert_eq!(result, PathBuf::from("/out/img.webp"));
+    }
+
+    #[test]
+    fn test_resolve_output_path_with_suffix_ext_same_dir() {
+        let options = BatchOptions {
+            pattern: None,
+            output_dir: None,
+            recursive: false,
+        };
+        let result = resolve_output_path_with_suffix_ext(
+            Path::new("/photos/img.jpg"),
+            "cutout",
+            "png",
+            &options,
+        );
+        assert_eq!(result, PathBuf::from("/photos/img_cutout.png"));
+    }
+
+    #[test]
+    fn test_resolve_output_path_with_suffix_ext_honors_output_dir() {
+        let options = BatchOptions {
+            pattern: None,
+            output_dir: Some(PathBuf::from("/out")),
+            recursive: false,
+        };
+        let result = resolve_output_path_with_suffix_ext(
+            Path::new("/photos/img.jpg"),
+            "cutout",
+            "png",
+            &options,
+        );
+        assert_eq!(result, PathBuf::from("/out/img_cutout.png"));
+    }
+
+    #[test]
+    fn test_resolve_output_path_with_suffix_ext_keeps_suffix_when_ext_unchanged() {
+        let options = BatchOptions {
+            pattern: None,
+            output_dir: None,
+            recursive: false,
+        };
+        let result = resolve_output_path_with_suffix_ext(
+            Path::new("/photos/img.png"),
+            "cutout",
+            "png",
+            &options,
+        );
+        assert_eq!(result, PathBuf::from("/photos/img_cutout.png"));
     }
 
     #[test]
