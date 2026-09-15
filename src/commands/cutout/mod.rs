@@ -51,15 +51,19 @@ impl CutoutMode {
         }
     }
 
-    /// Worker count a batch run should be bounded to, if any.
+    /// Whether a batch run must process files one at a time.
     ///
-    /// tract already saturates every core within a single inference, so running
-    /// several at once buys no speed while multiplying peak memory by the
-    /// number of workers. The flood fill is cheap and parallelises normally.
-    pub(crate) fn batch_workers(&self) -> Option<usize> {
+    /// Inference is already parallel internally (see
+    /// `neural::MAX_INFERENCE_THREADS`) and blocks on tract's own pool while it
+    /// runs. Driving it from rayon lets rayon steal a second image onto the
+    /// blocked worker, re-entering tract's thread-local matmul scratch space
+    /// and aborting the process — so the neural path must stay off rayon
+    /// entirely, not merely be capped at one worker. The flood fill holds no
+    /// such state and parallelises normally.
+    pub(crate) fn serial_batch(&self) -> bool {
         match self {
-            CutoutMode::Fast { .. } => None,
-            CutoutMode::Neural(_) => Some(1),
+            CutoutMode::Fast { .. } => false,
+            CutoutMode::Neural(_) => true,
         }
     }
 }

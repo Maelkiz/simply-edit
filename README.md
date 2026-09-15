@@ -12,7 +12,7 @@ simply-edit is a convenient command-line utility for everyday image tasks: flip,
 
 - **Rust 1.85 or later** — Install from [rustup.rs](https://rustup.rs/)
 
-The installed binary is around 37 MB. It statically includes the ONNX inference
+The installed binary is around 43 MB. It statically includes the ONNX inference
 engine used by `cutout`, so background removal works without any extra runtime.
 The model weights are *not* included — they are an optional download, see
 [Background Removal](#background-removal).
@@ -171,7 +171,7 @@ simply cutout ./portrait.jpg
 # Fast algorithmic mode, for flat backgrounds
 simply cutout --fast ./logo.png
 
-# Crop the result down to what is left of the subject
+# Crop the result to the bounding box of the subject
 simply cutout --trim ./logo.png
 ```
 
@@ -180,16 +180,14 @@ quality ladder:
 
 - **Neural (default).** Segments the subject with the [U²-Net](https://github.com/xuebinqin/U-2-Net)
   model. Handles photographic subjects and gradient or cluttered backgrounds.
-  Takes a few seconds per image and requires a one-time model download.
+  Takes a second or two per image, using several cores, and requires a one-time
+  model download.
 - **`--fast`.** Flood-fills inward from the image border, clearing pixels that
   stay within `--tolerance` (default `12`, max `441.7`) of their neighbours.
   Roughly 50× quicker and exact on flat backgrounds — logos, screenshots,
   product shots on white. It is *not* suitable for gradient backgrounds, where
   it leaves speckle or eats into the subject. Regions enclosed by the subject
   are preserved even when they match the background colour.
-
-`--trim` crops the result to the bounding box of whatever survived, and works in
-either mode. Both modes support `--replace`, `--preview` and batch processing.
 
 #### The model download
 

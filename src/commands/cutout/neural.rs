@@ -5,6 +5,7 @@
 //! handle — at the cost of a ~168 MB model and a few seconds per image.
 
 use std::path::Path;
+use std::sync::Once;
 
 use image::{DynamicImage, GrayImage, Rgba, RgbaImage};
 use tract_onnx::prelude::*;
@@ -22,7 +23,37 @@ const STD: [f32; 3] = [0.229, 0.224, 0.225];
 /// threads.
 pub(crate) type CutoutModel = std::sync::Arc<TypedRunnableModel>;
 
+/// Upper bound on threads used inside a single inference.
+///
+/// tract runs matmuls on one core unless its parallel executor is installed.
+/// Measured on a 12-core machine, a 320x320 U²-Net inference took 3.92 s
+/// single-threaded, 1.70 s on 6 threads and 1.61 s on 12 — the extra six
+/// threads buy 5% because the work is memory-bandwidth bound, so the cap keeps
+/// the rest of the machine free for a marginal loss. Output is bit-identical
+/// at every thread count.
+const MAX_INFERENCE_THREADS: usize = 6;
+
+/// Installs tract's parallel executor, once per process.
+///
+/// The executor owns a private thread pool and blocks the calling thread while
+/// that pool works, which is why batch runs must drive inference serially
+/// rather than from rayon — see `CutoutMode::serial_batch`.
+fn init_executor() {
+    static ONCE: Once = Once::new();
+    ONCE.call_once(|| {
+        let threads = std::thread::available_parallelism()
+            .map_or(1, |n| n.get())
+            .min(MAX_INFERENCE_THREADS);
+        if threads > 1 {
+            tract_linalg::multithread::set_default_executor(
+                tract_linalg::multithread::Executor::multithread(threads),
+            );
+        }
+    });
+}
+
 pub(crate) fn load_model(path: &Path) -> Result<CutoutModel, String> {
+    init_executor();
     tract_onnx::onnx()
         .model_for_path(path)
         .and_then(|m| m.with_input_fact(0, f32::fact([1, 3, INPUT_SIZE, INPUT_SIZE]).into()))

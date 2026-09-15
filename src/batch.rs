@@ -114,7 +114,24 @@ pub(crate) fn run_batch<F>(
 where
     F: Fn(&Path) -> Result<String, String> + Sync + Send,
 {
-    run_batch_with_extensions(dir, options, RASTER_EXTENSIONS, process_file)
+    run_batch_with_extensions(dir, options, RASTER_EXTENSIONS, true, process_file)
+}
+
+/// Like [`run_batch`], but processes files one at a time on the calling thread.
+///
+/// For work that is already parallel internally. Running such work under rayon
+/// is not merely pointless but unsound when the work blocks on its own pool:
+/// rayon steals another file onto the blocked worker, re-entering code that
+/// assumed it had the thread to itself.
+pub(crate) fn run_batch_serial<F>(
+    dir: &Path,
+    options: &BatchOptions,
+    process_file: F,
+) -> Result<BatchResult, String>
+where
+    F: Fn(&Path) -> Result<String, String> + Sync + Send,
+{
+    run_batch_with_extensions(dir, options, RASTER_EXTENSIONS, false, process_file)
 }
 
 pub(crate) fn run_batch_svg<F>(
@@ -125,13 +142,14 @@ pub(crate) fn run_batch_svg<F>(
 where
     F: Fn(&Path) -> Result<String, String> + Sync + Send,
 {
-    run_batch_with_extensions(dir, options, SVG_EXTENSIONS, process_file)
+    run_batch_with_extensions(dir, options, SVG_EXTENSIONS, true, process_file)
 }
 
 fn run_batch_with_extensions<F>(
     dir: &Path,
     options: &BatchOptions,
     extensions: &[&str],
+    parallel: bool,
     process_file: F,
 ) -> Result<BatchResult, String>
 where
@@ -152,17 +170,19 @@ where
 
     let pb = create_progress_bar(files.len() as u64);
 
-    let results: Vec<Result<(), (PathBuf, String)>> = files
-        .par_iter()
-        .map(|file| {
-            let res = process_file(file);
-            pb.inc(1);
-            match res {
-                Ok(_) => Ok(()),
-                Err(e) => Err((file.clone(), e)),
-            }
-        })
-        .collect();
+    let run_one = |file: &PathBuf| -> Result<(), (PathBuf, String)> {
+        let res = process_file(file);
+        pb.inc(1);
+        match res {
+            Ok(_) => Ok(()),
+            Err(e) => Err((file.clone(), e)),
+        }
+    };
+    let results: Vec<Result<(), (PathBuf, String)>> = if parallel {
+        files.par_iter().map(run_one).collect()
+    } else {
+        files.iter().map(run_one).collect()
+    };
 
     pb.finish_and_clear();
 
@@ -279,6 +299,65 @@ mod tests {
 
     fn touch(dir: &Path, name: &str) {
         fs::write(dir.join(name), b"").expect("failed to write file");
+    }
+
+    fn opts() -> BatchOptions {
+        BatchOptions {
+            pattern: None,
+            output_dir: None,
+            recursive: false,
+        }
+    }
+
+    #[test]
+    fn test_run_batch_serial_processes_every_file_on_one_thread() {
+        let dir = temp_dir("serial-batch");
+        for name in ["a.png", "b.png", "c.png", "d.png"] {
+            touch(&dir, name);
+        }
+
+        let caller = std::thread::current().id();
+        let threads = std::sync::Mutex::new(std::collections::HashSet::new());
+        let result = run_batch_serial(&dir, &opts(), |file| {
+            threads.lock().unwrap().insert(std::thread::current().id());
+            Ok(file.to_string_lossy().to_string())
+        })
+        .unwrap();
+
+        assert_eq!(result.succeeded, 4);
+        assert!(result.failed.is_empty());
+        // The whole point of the serial path: the work never leaves the calling
+        // thread, so it cannot be re-entered by rayon stealing another file.
+        assert_eq!(
+            threads
+                .into_inner()
+                .unwrap()
+                .into_iter()
+                .collect::<Vec<_>>(),
+            vec![caller]
+        );
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_run_batch_serial_reports_failures() {
+        let dir = temp_dir("serial-batch-fail");
+        touch(&dir, "ok.png");
+        touch(&dir, "bad.png");
+
+        let result = run_batch_serial(&dir, &opts(), |file| {
+            if file.file_name().unwrap() == "bad.png" {
+                Err("boom".to_string())
+            } else {
+                Ok(String::new())
+            }
+        })
+        .unwrap();
+
+        assert_eq!(result.succeeded, 1);
+        assert_eq!(result.failed.len(), 1);
+        assert_eq!(result.failed[0].1, "boom");
+        let _ = fs::remove_dir_all(&dir);
     }
 
     #[test]

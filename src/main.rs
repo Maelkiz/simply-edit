@@ -349,14 +349,11 @@ fn run() -> Result<(), String> {
                     io::save_image(image::DynamicImage::ImageRgba8(cut), &out_path)?;
                     Ok(out_path.to_string_lossy().to_string())
                 };
-                let run = || batch::run_batch(Path::new(&path), &options, process);
-                let result = match mode.batch_workers() {
-                    Some(workers) => rayon::ThreadPoolBuilder::new()
-                        .num_threads(workers)
-                        .build()
-                        .map_err(|e| format!("cutout: failed to build a thread pool: {e}"))?
-                        .install(run),
-                    None => run(),
+                let dir = Path::new(&path);
+                let result = if mode.serial_batch() {
+                    batch::run_batch_serial(dir, &options, process)
+                } else {
+                    batch::run_batch(dir, &options, process)
                 }?;
                 batch::print_summary(&result);
                 Ok(())
