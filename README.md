@@ -27,7 +27,7 @@ command -v simply
 simply --help
 ```
 
-Cargo installs binaries to: 
+Cargo installs binaries to:
 
 ```
 $HOME/.cargo/bin
@@ -49,8 +49,8 @@ simply <command> <args>
 
 | Command | What it does |
 | --- | --- |
-| `help` | Prints an overview of the available commands |
-| `flip` | Mirror an image horizontally (`--horizontal`/`-H`), vertically (`--vertical`/`-V`), or both (interactive if no flag given) |
+| `help` | Prints an overview of the available commands (equivalent to `simply --help`) |
+| `flip` | Mirror an image horizontally (`--horizontal`), vertically (`--vertical`), both, or run it interactively by giving no flags |
 | `rotate` | Rotate image (interactive by default, or explicit `90`/`180`/`270`) |
 | `invert` | Invert image colors |
 | `grayscale` | Convert image to grayscale |
@@ -64,30 +64,13 @@ simply <command> <args>
 | `info` | Display image metadata and properties |
 | `view` | Display an image inline in the terminal (requires Kitty graphics protocol support (Kitty, WezTerm, or Ghostty)) |
 
-### Shorthands
-
-Common flag combinations have zero-flag shorthands. They accept exactly the same
-arguments as the command they stand for, including `--replace`, `--preview`, an
-explicit output path, and batch options.
-
-| Shorthand | Same as |
-| --- | --- |
-| `fliph` | `flip --horizontal` (mirror left to right) |
-| `flipv` | `flip --vertical` (mirror top to bottom) |
-| `rotate90` | `rotate --angle 90` |
-| `rotate180` | `rotate --angle 180` |
-| `rotate270` | `rotate --angle 270` |
-
-```bash
-simply fliph ./image.png
-simply rotate180 -r ./image.png
-```
-
 To get a more detailed description of any given command and its available flags, run:
 
 ```bash
 simply <command> --help
 ```
+
+### Interactive Commands
 
 For those who do not want to memorize a bunch of flags, you can run all commands with an image path as the only argument:
 
@@ -95,77 +78,29 @@ For those who do not want to memorize a bunch of flags, you can run all commands
 simply <command> <path-to-img>
 ```
 
-> **Note**:  
-> Currently, when only an image path is provided, some commands will start an interactive prompt while others run with a sane default.
+For some commands this will start an interactive prompt, while others run with a sane default. Use `simply <command> --help` for information on a specific command's behaviour.
 
-### Output Path
+### Shorthands
 
-If you omit the output path, the tool generates one automatically: transforms keep the source format (e.g., `image.png` → `image_flipv.png`, `image_fliph.png`, or `image_flipxy.png` for flip), while `vectorize` and `rasterize` switch to `.svg` and `.png` respectively. When you provide an explicit output path, the format is determined by its extension.
-
-### Common Examples
-
-#### Transforms
+Some frequently used commands have convenient shorthands:
 
 ```bash
-# Flip vertically (mirror top to bottom)
-simply flip --vertical ./image.png
+# Concisely flip an image horizontally or vertically
+simply fliph ./photo.png # Equivalent to `simply flip --horizontal ./photo.png`
+simply flipv ./photo.png # Equivalent to `simply flip --vertical ./photo.png`
 
-# Flip horizontally (mirror left to right)
-simply flip --horizontal ./image.png
+# Concisely rotate an image at a specific angle
+simply rotate90 ./image.png
+simply rotate180 ./image.png
+simply rotate270 ./image.png
 
-# Flip both axes at once
-simply flip --horizontal --vertical ./image.png
-
-# Flip interactively (prompts for axis when no flag is given)
-simply flip ./image.png
-
-# Rotate (interactive: choose 90, 180, or 270 degrees)
-simply rotate ./image.png
-
-# Rotate bypassing interactive mode
-simply rotate --angle 90 ./image.png
-
-# Replace original file in-place
-simply rotate --angle 180 --replace ./image.png
-
-# Binarize with default threshold (128)
-simply binarize ./image.png
-
-# Binarize with custom threshold
-simply binarize --threshold 200 ./image.png
-
-# Pad with 20px on every side (default when no size flags given)
-simply pad ./image.png
-
-# Pad individual sides
-simply pad --top 10 --bottom 10 ./image.png
-
-# Pad left and right equally using the -x shorthand
-simply pad -x 20 ./image.png
-
-# Pad top and bottom equally using the -y shorthand
-simply pad -y 15 ./image.png
-
-# Pad with a custom fill color (hex: rrggbb or rrggbbaa)
-simply pad --top 20 -x 15 --color 00ff00 ./image.png
-
-# Pad and replace the original file in-place
-simply pad --top 5 --replace ./image.png
-
-# Scale uniformly by factor
-simply scale --factor 0.5 ./image.png
-
-# Scale width only (height unchanged)
-simply scale -x 0.5 ./image.png
-
-# Scale height only (width unchanged)
-simply scale -y 2 ./image.png
-
-# Scale each axis independently
-simply scale -x 2 -y 0.5 ./image.png
+# Shorthands take the same flags as the command they stand for
+simply rotate180 -r ./image.png # Rotates in place, overwriting the source file
 ```
 
-#### Format Conversion
+### Format Conversion
+
+For explicit format conversions the following commands are available:
 
 ```bash
 # Convert between formats
@@ -174,26 +109,26 @@ simply convert ./photo.png ./photo.jpg
 # Convert a raster image to SVG
 simply vectorize ./image.png
 
-# Faster conversion with lower fidelity
-simply vectorize --fast ./image.png
-
-# Full-resolution vectorization (no downscaling, slow for large images)
-simply vectorize --full-quality ./image.png
-
 # Convert an SVG to a raster image
 simply rasterize ./icon.svg
-
-# Convert SVG to raster at 2× scale 
-simply rasterize --scale 2 ./icon.svg ./icon.png
 ```
 
-#### Batch Processing
+Implicit conversions are also supported. When you provide an explicit output path, its file extension determines the output format:
+
+```bash
+# Implicit conversion between formats
+simply <command> ./photo.png ./photo.jpg
+```
+
+### Batch Processing
+
+Batch image processing is supported and is used like this:
 
 ```bash
 # Invert all images in a directory
 simply invert ./photos/
 
-# Convert all JPGs to WebP, writing results to a separate directory
+# Convert all images in the directory to WebP, writing results to a separate directory
 simply convert --format webp ./photos/ --output-dir ./converted/
 
 # Grayscale only matching files, recursively
@@ -203,20 +138,16 @@ simply grayscale ./photos/ -R --pattern "^photo_"
 simply binarize --threshold 100 ./scans/ --output-dir ./cleaned/
 ```
 
-#### View & Preview
+### View & Preview
+
+If your terminal supports the [Kitty Terminal Graphics Protocol](https://sw.kovidgoyal.net/kitty/graphics-protocol) you can display images and preview the results of commands:
 
 ```bash
 # Display an image inline in the terminal
 simply view ./photo.png
 
 # Preview a transform without saving
-simply flip --vertical --preview ./photo.png
-simply flip --horizontal --preview ./photo.png
-simply rotate --angle 90 --preview ./photo.png
-simply grayscale --preview ./photo.png
-simply binarize --preview ./photo.png
-simply pad --top 20 -x 10 --preview ./photo.png
-simply vectorize --preview ./photo.png
+simply <command> --preview ./image.png
 ```
 
 ### Format Support
@@ -227,5 +158,9 @@ simply vectorize --preview ./photo.png
 - **WebP**: Supported for input and output
 - **SVG output**: Raster images can be vectorized to SVG via `vectorize` (or `convert` with an `.svg` destination). Images larger than 2000px on the long edge are automatically downscaled before vectorization for performance, with the SVG retaining the original dimensions via a `viewBox`. Pass `--full-quality` to vectorize at full resolution.
 - **SVG input**: SVG files can be rasterized via `rasterize` (supports `--scale`, `--width`, `--height`) or `convert` (at native resolution)
+
+### Output Path
+
+If you omit the output path, the tool generates one automatically: transforms keep the source format (e.g., `image.png` → `image_flipv.png`, `image_fliph.png`, or `image_flipxy.png` for flip), while `vectorize` and `rasterize` switch to `.svg` and `.png` respectively.
 
 ---
