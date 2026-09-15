@@ -1,3 +1,4 @@
+use std::ffi::OsString;
 use std::path::PathBuf;
 
 use clap::{Args, Parser, Subcommand};
@@ -28,7 +29,9 @@ pub(crate) struct BatchArgs {
 #[derive(Debug, Subcommand)]
 pub(crate) enum Command {
     /// Mirror an image along the X axis (vertical), Y axis (horizontal), or both
-    #[command(after_help = "Default behaviour: prompts interactively to choose an axis when neither -x nor -y is given.")]
+    #[command(
+        after_help = "Default behaviour: prompts interactively to choose an axis when neither -x nor -y is given."
+    )]
     Flip {
         /// Flip along the X axis (vertical mirror, top to bottom)
         #[arg(short = 'x', long)]
@@ -57,7 +60,9 @@ pub(crate) enum Command {
     },
 
     /// Rotate an image by 90, 180, or 270 degrees
-    #[command(after_help = "Default behaviour: prompts interactively to choose an angle when --angle is omitted.")]
+    #[command(
+        after_help = "Default behaviour: prompts interactively to choose an angle when --angle is omitted."
+    )]
     Rotate {
         /// Rotation angle: 90, 180, or 270 (interactive prompt if omitted)
         #[arg(long, value_parser = parse_rotation)]
@@ -82,7 +87,9 @@ pub(crate) enum Command {
     },
 
     /// Invert the colors of an image
-    #[command(after_help = "Default behaviour: inverts the image immediately with no additional input.")]
+    #[command(
+        after_help = "Default behaviour: inverts the image immediately with no additional input."
+    )]
     Invert {
         /// Overwrite target file (source if no output path given)
         #[arg(short, long)]
@@ -103,7 +110,9 @@ pub(crate) enum Command {
     },
 
     /// Convert an image to grayscale
-    #[command(after_help = "Default behaviour: converts to grayscale immediately with no additional input.")]
+    #[command(
+        after_help = "Default behaviour: converts to grayscale immediately with no additional input."
+    )]
     Grayscale {
         /// Overwrite target file (source if no output path given)
         #[arg(short, long)]
@@ -124,7 +133,9 @@ pub(crate) enum Command {
     },
 
     /// Convert an image to pure black and white at a brightness cutoff
-    #[command(after_help = "Default behaviour: uses a threshold of 128 when --threshold is omitted.")]
+    #[command(
+        after_help = "Default behaviour: uses a threshold of 128 when --threshold is omitted."
+    )]
     Binarize {
         /// Threshold value 0-255 (default: 128). Pixels brighter than this become white, others black
         #[arg(short, long, value_parser = parse_threshold)]
@@ -149,7 +160,9 @@ pub(crate) enum Command {
     },
 
     /// Resize an image to specified dimensions
-    #[command(after_help = "Default behaviour: prompts interactively for dimensions when neither --width nor --height is given.")]
+    #[command(
+        after_help = "Default behaviour: prompts interactively for dimensions when neither --width nor --height is given."
+    )]
     Resize {
         /// Target width in pixels
         #[arg(short, long, value_parser = parse_positive_u32)]
@@ -178,7 +191,9 @@ pub(crate) enum Command {
     },
 
     /// Scale an image by a factor (e.g. 0.5 to halve, 2.0 to double)
-    #[command(after_help = "Default behaviour: prompts interactively for a uniform scale factor when no scale flag is given.")]
+    #[command(
+        after_help = "Default behaviour: prompts interactively for a uniform scale factor when no scale flag is given."
+    )]
     Scale {
         /// Scale factor (e.g. 0.5 to halve, 2.0 to double)
         #[arg(short = 'f', long, value_parser = parse_positive_f32_factor)]
@@ -211,7 +226,9 @@ pub(crate) enum Command {
     },
 
     /// Convert between image formats (PNG, JPG, ICO, SVG, WebP)
-    #[command(after_help = "Default behaviour: prompts interactively for an output format when the output path is omitted.")]
+    #[command(
+        after_help = "Default behaviour: prompts interactively for an output format when the output path is omitted."
+    )]
     Convert {
         /// Output format for batch mode (e.g. png, jpg, webp)
         #[arg(long)]
@@ -228,7 +245,9 @@ pub(crate) enum Command {
     },
 
     /// Convert a raster image to SVG
-    #[command(after_help = "Default behaviour: runs immediately; auto-downscales images larger than 2000px on the long edge for speed.")]
+    #[command(
+        after_help = "Default behaviour: runs immediately; auto-downscales images larger than 2000px on the long edge for speed."
+    )]
     Vectorize {
         /// Faster conversion with lower fidelity
         #[arg(long)]
@@ -253,21 +272,27 @@ pub(crate) enum Command {
     },
 
     /// Display image metadata and properties
-    #[command(after_help = "Default behaviour: displays metadata immediately with no additional input.")]
+    #[command(
+        after_help = "Default behaviour: displays metadata immediately with no additional input."
+    )]
     Info {
         /// Path to the image file
         path: String,
     },
 
     /// Display an image inline in the terminal (requires Kitty graphics protocol support (Kitty, WezTerm, or Ghostty))
-    #[command(after_help = "Default behaviour: displays the image immediately with no additional input.")]
+    #[command(
+        after_help = "Default behaviour: displays the image immediately with no additional input."
+    )]
     View {
         /// Path to the image file
         path: String,
     },
 
     /// Add transparent (or colored) padding around an image
-    #[command(after_help = "Default behaviour: adds 20px on every side when no size flags are given.")]
+    #[command(
+        after_help = "Default behaviour: adds 20px on every side when no size flags are given."
+    )]
     Pad {
         /// Pixels to add on the top edge
         #[arg(long, value_parser = parse_positive_u32)]
@@ -320,7 +345,9 @@ pub(crate) enum Command {
     },
 
     /// Convert an SVG to a raster image
-    #[command(after_help = "Default behaviour: renders at native SVG resolution when no size flags are given.")]
+    #[command(
+        after_help = "Default behaviour: renders at native SVG resolution when no size flags are given."
+    )]
     Rasterize {
         /// Scale factor for rasterization
         #[arg(short, long, value_parser = parse_positive_f32)]
@@ -387,9 +414,7 @@ fn parse_positive_u32(s: &str) -> Result<u32, String> {
         .parse()
         .map_err(|_| format!("invalid value '{s}': use a positive integer"))?;
     if v == 0 {
-        return Err(format!(
-            "invalid value '{s}': use a positive integer"
-        ));
+        return Err(format!("invalid value '{s}': use a positive integer"));
     }
     Ok(v)
 }
@@ -419,6 +444,41 @@ fn parse_color(s: &str) -> Result<[u8; 4], String> {
     }
 }
 
+/// Shorthand subcommands: a leading `name` in argv is rewritten to the full
+/// command plus its preset flag. Everything after it is passed through untouched,
+/// so `--replace`, `--preview`, batch flags and an explicit output path still work.
+const SHORTHANDS: &[(&str, &[&str])] = &[
+    ("fliph", &["flip", "-y"]),
+    ("flipv", &["flip", "-x"]),
+    ("rotate90", &["rotate", "--angle", "90"]),
+    ("rotate180", &["rotate", "--angle", "180"]),
+    ("rotate270", &["rotate", "--angle", "270"]),
+];
+
+/// Rewrites a leading shorthand subcommand into its full form. Only argv[1] is
+/// considered, and only on an exact match, so a file named `fliph.png` or an
+/// argument that happens to equal a shorthand is never touched.
+pub(crate) fn expand_shorthands(args: impl IntoIterator<Item = OsString>) -> Vec<OsString> {
+    let mut args = args.into_iter();
+    let Some(program) = args.next() else {
+        return Vec::new();
+    };
+    let Some(first) = args.next() else {
+        return vec![program];
+    };
+
+    let mut out = vec![program];
+    match SHORTHANDS
+        .iter()
+        .find(|(name, _)| first.as_os_str() == *name)
+    {
+        Some((_, expansion)) => out.extend(expansion.iter().map(OsString::from)),
+        None => out.push(first),
+    }
+    out.extend(args);
+    out
+}
+
 fn parse_rotation(s: &str) -> Result<u16, String> {
     match s {
         "90" => Ok(90),
@@ -427,7 +487,6 @@ fn parse_rotation(s: &str) -> Result<u16, String> {
         _ => Err(format!("invalid rotation '{s}': use 90, 180, or 270")),
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -440,6 +499,112 @@ mod tests {
 
     fn try_parse(args: &[&str]) -> Result<Command, clap::Error> {
         Cli::try_parse_from(args).map(|cli| cli.command)
+    }
+
+    fn expand(args: &[&str]) -> Vec<String> {
+        expand_shorthands(args.iter().map(OsString::from))
+            .into_iter()
+            .map(|a| a.to_string_lossy().into_owned())
+            .collect()
+    }
+
+    /// Parses argv the way `main` does: shorthand expansion first, then clap.
+    fn parse_expanded(args: &[&str]) -> Command {
+        Cli::parse_from(expand_shorthands(args.iter().map(OsString::from))).command
+    }
+
+    #[test]
+    fn test_expand_fliph() {
+        assert_eq!(
+            expand(&["simply", "fliph", "image.png"]),
+            ["simply", "flip", "-y", "image.png"]
+        );
+    }
+
+    #[test]
+    fn test_expand_flipv() {
+        assert_eq!(
+            expand(&["simply", "flipv", "image.png"]),
+            ["simply", "flip", "-x", "image.png"]
+        );
+    }
+
+    #[test]
+    fn test_expand_rotate_shorthands() {
+        for (name, deg) in [
+            ("rotate90", "90"),
+            ("rotate180", "180"),
+            ("rotate270", "270"),
+        ] {
+            assert_eq!(
+                expand(&["simply", name, "image.png"]),
+                ["simply", "rotate", "--angle", deg, "image.png"]
+            );
+        }
+    }
+
+    #[test]
+    fn test_expand_preserves_trailing_args() {
+        assert_eq!(
+            expand(&["simply", "fliph", "-r", "image.png", "out.png"]),
+            ["simply", "flip", "-y", "-r", "image.png", "out.png"]
+        );
+    }
+
+    #[test]
+    fn test_expand_leaves_regular_commands_untouched() {
+        assert_eq!(
+            expand(&["simply", "flip", "-x", "image.png"]),
+            ["simply", "flip", "-x", "image.png"]
+        );
+    }
+
+    #[test]
+    fn test_expand_ignores_shorthand_in_argument_position() {
+        assert_eq!(
+            expand(&["simply", "flip", "fliph.png"]),
+            ["simply", "flip", "fliph.png"]
+        );
+        assert_eq!(
+            expand(&["simply", "view", "rotate90"]),
+            ["simply", "view", "rotate90"]
+        );
+    }
+
+    #[test]
+    fn test_expand_handles_short_argv() {
+        assert_eq!(expand(&["simply"]), ["simply"]);
+        assert!(expand(&[]).is_empty());
+    }
+
+    #[test]
+    fn test_shorthand_parses_to_expected_command() {
+        match parse_expanded(&["simply", "fliph", "image.png"]) {
+            Command::Flip {
+                x: false,
+                y: true,
+                path,
+                ..
+            } => assert_eq!(path, "image.png"),
+            other => panic!("unexpected: {other:?}"),
+        }
+        match parse_expanded(&["simply", "flipv", "-r", "image.png"]) {
+            Command::Flip {
+                x: true,
+                y: false,
+                replace: true,
+                ..
+            } => {}
+            other => panic!("unexpected: {other:?}"),
+        }
+        match parse_expanded(&["simply", "rotate180", "image.png"]) {
+            Command::Rotate {
+                angle: Some(180),
+                path,
+                ..
+            } => assert_eq!(path, "image.png"),
+            other => panic!("unexpected: {other:?}"),
+        }
     }
 
     #[test]
@@ -497,7 +662,12 @@ mod tests {
     #[test]
     fn test_flip_x_flag() {
         match parse(&["simply", "flip", "-x", "image.png"]) {
-            Command::Flip { x: true, y: false, path, .. } => assert_eq!(path, "image.png"),
+            Command::Flip {
+                x: true,
+                y: false,
+                path,
+                ..
+            } => assert_eq!(path, "image.png"),
             other => panic!("unexpected: {other:?}"),
         }
     }
@@ -505,7 +675,12 @@ mod tests {
     #[test]
     fn test_flip_y_flag() {
         match parse(&["simply", "flip", "-y", "image.png"]) {
-            Command::Flip { x: false, y: true, path, .. } => assert_eq!(path, "image.png"),
+            Command::Flip {
+                x: false,
+                y: true,
+                path,
+                ..
+            } => assert_eq!(path, "image.png"),
             other => panic!("unexpected: {other:?}"),
         }
     }
@@ -513,7 +688,12 @@ mod tests {
     #[test]
     fn test_flip_xy_flags() {
         match parse(&["simply", "flip", "-x", "-y", "image.png"]) {
-            Command::Flip { x: true, y: true, path, .. } => assert_eq!(path, "image.png"),
+            Command::Flip {
+                x: true,
+                y: true,
+                path,
+                ..
+            } => assert_eq!(path, "image.png"),
             other => panic!("unexpected: {other:?}"),
         }
     }
@@ -812,7 +992,15 @@ mod tests {
 
     #[test]
     fn test_resize_with_dimensions() {
-        match parse(&["simply", "resize", "--width", "800", "-H", "600", "image.png"]) {
+        match parse(&[
+            "simply",
+            "resize",
+            "--width",
+            "800",
+            "-H",
+            "600",
+            "image.png",
+        ]) {
             Command::Resize {
                 width: Some(800),
                 height: Some(600),
@@ -840,7 +1028,16 @@ mod tests {
 
     #[test]
     fn test_resize_replace() {
-        match parse(&["simply", "resize", "-r", "--width", "100", "-H", "100", "image.png"]) {
+        match parse(&[
+            "simply",
+            "resize",
+            "-r",
+            "--width",
+            "100",
+            "-H",
+            "100",
+            "image.png",
+        ]) {
             Command::Resize {
                 replace: true,
                 width: Some(100),
@@ -854,7 +1051,9 @@ mod tests {
 
     #[test]
     fn test_resize_with_output() {
-        match parse(&["simply", "resize", "--width", "50", "-H", "50", "in.png", "out.png"]) {
+        match parse(&[
+            "simply", "resize", "--width", "50", "-H", "50", "in.png", "out.png",
+        ]) {
             Command::Resize {
                 width: Some(50),
                 height: Some(50),
@@ -974,7 +1173,19 @@ mod tests {
 
     #[test]
     fn test_pad_individual_sides() {
-        match parse(&["simply", "pad", "--top", "10", "--bottom", "20", "--left", "5", "--right", "15", "image.png"]) {
+        match parse(&[
+            "simply",
+            "pad",
+            "--top",
+            "10",
+            "--bottom",
+            "20",
+            "--left",
+            "5",
+            "--right",
+            "15",
+            "image.png",
+        ]) {
             Command::Pad {
                 top: Some(10),
                 bottom: Some(20),
@@ -1027,7 +1238,15 @@ mod tests {
 
     #[test]
     fn test_pad_color_8digit_with_hash() {
-        match parse(&["simply", "pad", "--color", "#00ff0080", "--top", "5", "image.png"]) {
+        match parse(&[
+            "simply",
+            "pad",
+            "--color",
+            "#00ff0080",
+            "--top",
+            "5",
+            "image.png",
+        ]) {
             Command::Pad {
                 color: Some([0, 255, 0, 128]),
                 ..
@@ -1085,13 +1304,29 @@ mod tests {
 
     #[test]
     fn test_pad_invalid_color_rejected() {
-        let result = try_parse(&["simply", "pad", "--color", "zzzzzz", "--top", "5", "image.png"]);
+        let result = try_parse(&[
+            "simply",
+            "pad",
+            "--color",
+            "zzzzzz",
+            "--top",
+            "5",
+            "image.png",
+        ]);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_pad_batch_flags() {
-        match parse(&["simply", "pad", "-x", "10", "--output-dir", "/tmp/out", "images/"]) {
+        match parse(&[
+            "simply",
+            "pad",
+            "-x",
+            "10",
+            "--output-dir",
+            "/tmp/out",
+            "images/",
+        ]) {
             Command::Pad {
                 horizontal: Some(10),
                 batch,
@@ -1151,7 +1386,9 @@ mod tests {
     #[test]
     fn test_scale_short_factor() {
         match parse(&["simply", "scale", "-f", "2", "image.png"]) {
-            Command::Scale { factor: Some(f), .. } => assert!((f - 2.0).abs() < f32::EPSILON),
+            Command::Scale {
+                factor: Some(f), ..
+            } => assert!((f - 2.0).abs() < f32::EPSILON),
             other => panic!("unexpected: {other:?}"),
         }
     }
@@ -1159,7 +1396,12 @@ mod tests {
     #[test]
     fn test_scale_replace() {
         match parse(&["simply", "scale", "-r", "--factor", "1.5", "image.png"]) {
-            Command::Scale { replace: true, factor: Some(f), path, .. } => {
+            Command::Scale {
+                replace: true,
+                factor: Some(f),
+                path,
+                ..
+            } => {
                 assert!((f - 1.5).abs() < f32::EPSILON);
                 assert_eq!(path, "image.png");
             }
@@ -1170,7 +1412,12 @@ mod tests {
     #[test]
     fn test_scale_with_output() {
         match parse(&["simply", "scale", "--factor", "2", "in.png", "out.png"]) {
-            Command::Scale { factor: Some(f), path, output: Some(out), .. } => {
+            Command::Scale {
+                factor: Some(f),
+                path,
+                output: Some(out),
+                ..
+            } => {
                 assert!((f - 2.0).abs() < f32::EPSILON);
                 assert_eq!(path, "in.png");
                 assert_eq!(out, "out.png");

@@ -64,6 +64,25 @@ simply <command> <args>
 | `info` | Display image metadata and properties |
 | `view` | Display an image inline in the terminal (requires Kitty graphics protocol support (Kitty, WezTerm, or Ghostty)) |
 
+### Shorthands
+
+Common flag combinations have zero-flag shorthands. They accept exactly the same
+arguments as the command they stand for, including `--replace`, `--preview`, an
+explicit output path, and batch options.
+
+| Shorthand | Same as |
+| --- | --- |
+| `fliph` | `flip -y` (horizontal mirror, left to right) |
+| `flipv` | `flip -x` (vertical mirror, top to bottom) |
+| `rotate90` | `rotate --angle 90` |
+| `rotate180` | `rotate --angle 180` |
+| `rotate270` | `rotate --angle 270` |
+
+```bash
+simply fliph ./image.png
+simply rotate180 -r ./image.png
+```
+
 To get a more detailed description of any given command and its available flags, run:
 
 ```bash

@@ -1,6 +1,8 @@
 use std::process::Command;
 
-use crate::common::{TestDir, assert_valid_image, binary_path, create_png, create_svg, run, run_with_stdin};
+use crate::common::{
+    TestDir, assert_valid_image, binary_path, create_png, create_svg, run, run_with_stdin,
+};
 
 #[test]
 fn test_flip_generated_output() {
@@ -321,8 +323,10 @@ fn test_resize_with_explicit_width_and_height() {
 
     let output = run(&[
         "resize",
-        "--width", "20",
-        "-H", "10",
+        "--width",
+        "20",
+        "-H",
+        "10",
         input.to_str().expect("valid input path"),
         out.to_str().expect("valid output path"),
     ]);
@@ -343,8 +347,10 @@ fn test_resize_generated_output_suffix() {
 
     let output = run(&[
         "resize",
-        "--width", "20",
-        "-H", "10",
+        "--width",
+        "20",
+        "-H",
+        "10",
         input.to_str().expect("valid input path"),
     ]);
     assert!(output.status.success());
@@ -361,8 +367,10 @@ fn test_resize_replace_mode() {
     let output = run(&[
         "resize",
         "--replace",
-        "--width", "4",
-        "-H", "4",
+        "--width",
+        "4",
+        "-H",
+        "4",
         input.to_str().expect("valid input path"),
     ]);
     assert!(output.status.success());
@@ -382,7 +390,8 @@ fn test_scale_with_factor_flag() {
 
     let output = run(&[
         "scale",
-        "--factor", "2",
+        "--factor",
+        "2",
         input.to_str().expect("valid input path"),
         out.to_str().expect("valid output path"),
     ]);
@@ -402,7 +411,13 @@ fn test_resize_width_only_preserve_aspect_ratio() {
 
     // "1" selects "Preserve aspect ratio"
     let output = run_with_stdin(
-        &["resize", "--width", "24", input.to_str().expect("valid input path"), out.to_str().expect("valid output path")],
+        &[
+            "resize",
+            "--width",
+            "24",
+            input.to_str().expect("valid input path"),
+            out.to_str().expect("valid output path"),
+        ],
         "1\n",
     );
     assert!(output.status.success());
@@ -421,7 +436,13 @@ fn test_resize_width_only_stretch() {
 
     // "2" selects "Stretch"
     let output = run_with_stdin(
-        &["resize", "--width", "24", input.to_str().expect("valid input path"), out.to_str().expect("valid output path")],
+        &[
+            "resize",
+            "--width",
+            "24",
+            input.to_str().expect("valid input path"),
+            out.to_str().expect("valid output path"),
+        ],
         "2\n",
     );
     assert!(output.status.success());
@@ -440,7 +461,13 @@ fn test_resize_height_only_preserve_aspect_ratio() {
 
     // "1" selects "Preserve aspect ratio"
     let output = run_with_stdin(
-        &["resize", "-H", "12", input.to_str().expect("valid input path"), out.to_str().expect("valid output path")],
+        &[
+            "resize",
+            "-H",
+            "12",
+            input.to_str().expect("valid input path"),
+            out.to_str().expect("valid output path"),
+        ],
         "1\n",
     );
     assert!(output.status.success());
@@ -459,7 +486,11 @@ fn test_resize_interactive_both_dimensions_via_stdin() {
 
     // No width/height flags — prompt asks for both
     let output = run_with_stdin(
-        &["resize", input.to_str().expect("valid input path"), out.to_str().expect("valid output path")],
+        &[
+            "resize",
+            input.to_str().expect("valid input path"),
+            out.to_str().expect("valid output path"),
+        ],
         "20\n10\n",
     );
     assert!(output.status.success());
@@ -516,12 +547,24 @@ fn test_info_basic_png() {
     assert!(output.status.success());
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(stdout.contains("File: photo.png"), "missing File line: {stdout}");
-    assert!(stdout.contains("Format: PNG"), "missing Format line: {stdout}");
-    assert!(stdout.contains("Dimensions: 3\u{00d7}2"), "missing Dimensions line: {stdout}");
+    assert!(
+        stdout.contains("File: photo.png"),
+        "missing File line: {stdout}"
+    );
+    assert!(
+        stdout.contains("Format: PNG"),
+        "missing Format line: {stdout}"
+    );
+    assert!(
+        stdout.contains("Dimensions: 3\u{00d7}2"),
+        "missing Dimensions line: {stdout}"
+    );
     assert!(stdout.contains("Size:"), "missing Size line: {stdout}");
     assert!(stdout.contains("Color:"), "missing Color section: {stdout}");
-    assert!(stdout.contains("Metadata:"), "missing Metadata section: {stdout}");
+    assert!(
+        stdout.contains("Metadata:"),
+        "missing Metadata section: {stdout}"
+    );
 }
 
 #[test]
@@ -535,7 +578,10 @@ fn test_info_no_exif_png() {
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("EXIF: no"), "expected no EXIF: {stdout}");
-    assert!(stdout.contains("ICC profile: none"), "expected no ICC: {stdout}");
+    assert!(
+        stdout.contains("ICC profile: none"),
+        "expected no ICC: {stdout}"
+    );
 }
 
 #[test]
@@ -548,8 +594,14 @@ fn test_info_color_fields_rgb_png() {
     assert!(output.status.success());
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(stdout.contains("Space: sRGB"), "expected sRGB space: {stdout}");
-    assert!(stdout.contains("Depth: 8-bit"), "expected 8-bit depth: {stdout}");
+    assert!(
+        stdout.contains("Space: sRGB"),
+        "expected sRGB space: {stdout}"
+    );
+    assert!(
+        stdout.contains("Depth: 8-bit"),
+        "expected 8-bit depth: {stdout}"
+    );
 }
 
 #[test]
@@ -559,7 +611,12 @@ fn test_binarize_generated_output_mode() {
     let generated = temp.path().join("img_binarize.png");
     create_png(&input, 2, 2, [200, 200, 200, 255]);
 
-    let output = run(&["binarize", "-t", "128", input.to_str().expect("valid input path")]);
+    let output = run(&[
+        "binarize",
+        "-t",
+        "128",
+        input.to_str().expect("valid input path"),
+    ]);
     assert!(output.status.success());
     assert!(generated.exists());
     assert_valid_image(&generated);
@@ -599,7 +656,13 @@ fn test_binarize_replace_mode() {
     let before = image::open(&input).expect("failed to load initial image");
     let before_px = before.to_rgba8().get_pixel(0, 0).0;
 
-    let output = run(&["binarize", "-r", "-t", "128", input.to_str().expect("valid input path")]);
+    let output = run(&[
+        "binarize",
+        "-r",
+        "-t",
+        "128",
+        input.to_str().expect("valid input path"),
+    ]);
     assert!(output.status.success());
     assert!(input.exists());
 
@@ -633,7 +696,10 @@ fn test_info_missing_file() {
     assert!(!output.status.success());
 
     let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(stderr.contains("info:"), "expected 'info:' prefix in error: {stderr}");
+    assert!(
+        stderr.contains("info:"),
+        "expected 'info:' prefix in error: {stderr}"
+    );
     assert!(
         stderr.contains("does-not-exist.png"),
         "expected path in error: {stderr}"
@@ -647,7 +713,12 @@ fn test_pad_generated_output() {
     let generated = temp.path().join("img_pad.png");
     create_png(&input, 4, 3, [100, 150, 200, 255]);
 
-    let output = run(&["pad", "--top", "5", input.to_str().expect("valid input path")]);
+    let output = run(&[
+        "pad",
+        "--top",
+        "5",
+        input.to_str().expect("valid input path"),
+    ]);
     assert!(output.status.success());
     assert!(generated.exists());
     assert_valid_image(&generated);
@@ -662,7 +733,8 @@ fn test_pad_explicit_output() {
 
     let output = run(&[
         "pad",
-        "--left", "10",
+        "--left",
+        "10",
         input.to_str().expect("valid input path"),
         out.to_str().expect("valid output path"),
     ]);
@@ -677,7 +749,13 @@ fn test_pad_replace_mode() {
     let input = temp.path().join("img.png");
     create_png(&input, 4, 3, [100, 150, 200, 255]);
 
-    let output = run(&["pad", "--replace", "--bottom", "8", input.to_str().expect("valid input path")]);
+    let output = run(&[
+        "pad",
+        "--replace",
+        "--bottom",
+        "8",
+        input.to_str().expect("valid input path"),
+    ]);
     assert!(output.status.success());
     assert!(input.exists());
 
@@ -695,10 +773,14 @@ fn test_pad_dimensions_correct() {
 
     let output = run(&[
         "pad",
-        "--top", "2",
-        "--bottom", "4",
-        "--left", "6",
-        "--right", "8",
+        "--top",
+        "2",
+        "--bottom",
+        "4",
+        "--left",
+        "6",
+        "--right",
+        "8",
         input.to_str().expect("valid input path"),
         out.to_str().expect("valid output path"),
     ]);
@@ -718,7 +800,8 @@ fn test_pad_horizontal_shorthand() {
 
     let output = run(&[
         "pad",
-        "-x", "10",
+        "-x",
+        "10",
         input.to_str().expect("valid input path"),
         out.to_str().expect("valid output path"),
     ]);
@@ -738,8 +821,10 @@ fn test_pad_color_pixels() {
 
     let output = run(&[
         "pad",
-        "--top", "3",
-        "--color", "ff0000ff",
+        "--top",
+        "3",
+        "--color",
+        "ff0000ff",
         input.to_str().expect("valid input path"),
         out.to_str().expect("valid output path"),
     ]);
@@ -770,4 +855,108 @@ fn test_pad_default_padding() {
     let img = image::open(&out).expect("failed to open padded image");
     assert_eq!(img.width(), 4 + 20 + 20);
     assert_eq!(img.height(), 3 + 20 + 20);
+}
+
+/// Runs a shorthand and its long form on identical inputs and asserts both
+/// produce the same generated filename with byte-identical content.
+fn assert_shorthand_matches(shorthand: &[&str], long_form: &[&str], suffix: &str) {
+    let temp = TestDir::new("simply-shorthand-int");
+    let short_in = temp.path().join("short.png");
+    let long_in = temp.path().join("long.png");
+    create_png(&short_in, 4, 2, [220, 30, 30, 255]);
+    create_png(&long_in, 4, 2, [220, 30, 30, 255]);
+
+    let mut short_args: Vec<&str> = shorthand.to_vec();
+    short_args.push(short_in.to_str().expect("valid input path"));
+    let mut long_args: Vec<&str> = long_form.to_vec();
+    long_args.push(long_in.to_str().expect("valid input path"));
+
+    assert!(run(&short_args).status.success());
+    assert!(run(&long_args).status.success());
+
+    let short_out = temp.path().join(format!("short_{suffix}.png"));
+    let long_out = temp.path().join(format!("long_{suffix}.png"));
+    assert!(
+        short_out.exists(),
+        "shorthand did not produce {}",
+        short_out.display()
+    );
+    assert_valid_image(&short_out);
+    assert_eq!(
+        std::fs::read(&short_out).expect("read shorthand output"),
+        std::fs::read(&long_out).expect("read long-form output"),
+    );
+}
+
+#[test]
+fn test_shorthand_fliph_matches_flag() {
+    assert_shorthand_matches(&["fliph"], &["flip", "-y"], "fliph");
+}
+
+#[test]
+fn test_shorthand_flipv_matches_flag() {
+    assert_shorthand_matches(&["flipv"], &["flip", "-x"], "flipv");
+}
+
+#[test]
+fn test_shorthand_rotate90_matches_flag() {
+    assert_shorthand_matches(&["rotate90"], &["rotate", "--angle", "90"], "rotate90");
+}
+
+#[test]
+fn test_shorthand_rotate180_matches_flag() {
+    assert_shorthand_matches(&["rotate180"], &["rotate", "--angle", "180"], "rotate180");
+}
+
+#[test]
+fn test_shorthand_rotate270_matches_flag() {
+    assert_shorthand_matches(&["rotate270"], &["rotate", "--angle", "270"], "rotate270");
+}
+
+#[test]
+fn test_shorthand_accepts_replace_flag() {
+    let temp = TestDir::new("simply-shorthand-int");
+    let input = temp.path().join("img.png");
+    create_png(&input, 4, 2, [220, 30, 30, 255]);
+
+    let output = run(&["fliph", "-r", input.to_str().expect("valid input path")]);
+    assert!(output.status.success());
+    assert!(input.exists());
+    assert!(!temp.path().join("img_fliph.png").exists());
+    assert_valid_image(&input);
+}
+
+#[test]
+fn test_shorthand_accepts_explicit_output() {
+    let temp = TestDir::new("simply-shorthand-int");
+    let input = temp.path().join("img.png");
+    let out = temp.path().join("custom.png");
+    create_png(&input, 4, 2, [220, 30, 30, 255]);
+
+    let output = run(&[
+        "rotate90",
+        input.to_str().expect("valid input path"),
+        out.to_str().expect("valid output path"),
+    ]);
+    assert!(output.status.success());
+    assert_valid_image(&out);
+}
+
+#[test]
+fn test_shorthand_works_in_batch_mode() {
+    let temp = TestDir::new("simply-shorthand-batch");
+    let out = TestDir::new("simply-shorthand-batch-out");
+    for name in ["a.png", "b.png"] {
+        create_png(&temp.path().join(name), 4, 2, [220, 30, 30, 255]);
+    }
+
+    let output = run(&[
+        "flipv",
+        temp.path().to_str().expect("valid input dir"),
+        "--output-dir",
+        out.path().to_str().expect("valid output dir"),
+    ]);
+    assert!(output.status.success());
+    assert!(out.path().join("a_flipv.png").exists());
+    assert!(out.path().join("b_flipv.png").exists());
 }
