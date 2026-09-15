@@ -243,8 +243,10 @@ fn test_resize_non_square_dimensions_preserved_exactly() {
 
     let result = run(&[
         "resize",
-        "--width", "20",
-        "-H", "12",
+        "--width",
+        "20",
+        "-H",
+        "12",
         input.to_str().expect("valid input path"),
         out.to_str().expect("valid output path"),
     ]);
@@ -261,7 +263,15 @@ fn test_resize_replace_mode_cleans_up_no_tmp_file() {
     let input = temp.path().join("sample.png");
     create_png(&input, 4, 4, [10, 20, 30, 255]);
 
-    let result = run(&["resize", "-r", "--width", "2", "-H", "2", input.to_str().expect("valid input path")]);
+    let result = run(&[
+        "resize",
+        "-r",
+        "--width",
+        "2",
+        "-H",
+        "2",
+        input.to_str().expect("valid input path"),
+    ]);
     assert!(result.status.success());
 
     let tmp_files: Vec<_> = std::fs::read_dir(temp.path())
@@ -269,7 +279,10 @@ fn test_resize_replace_mode_cleans_up_no_tmp_file() {
         .filter_map(|e| e.ok())
         .filter(|e| e.file_name().to_string_lossy().contains("simple-edit-tmp"))
         .collect();
-    assert!(tmp_files.is_empty(), "temporary files should be cleaned up after replace");
+    assert!(
+        tmp_files.is_empty(),
+        "temporary files should be cleaned up after replace"
+    );
 }
 
 #[test]

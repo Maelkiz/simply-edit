@@ -32,7 +32,8 @@ pub(crate) fn run_convert(src: &str, dst: &str) -> Result<(), String> {
         return rasterize(src, &dst, RasterizeOptions::default(), false);
     }
 
-    let img = image::open(src).map_err(|e| format!("convert: failed to open image '{src}': {e}"))?;
+    let img =
+        image::open(src).map_err(|e| format!("convert: failed to open image '{src}': {e}"))?;
     crate::io::save_image(img, &dst)?;
     println!("Converted image to {}", dst);
     Ok(())
@@ -75,7 +76,13 @@ pub(crate) fn run_rasterize(args: RasterizeArgs) -> Result<(), String> {
     rasterize(&args.src, &dst, args.options, args.preview)
 }
 
-fn vectorize(src: &str, dst: &str, fast: bool, full_quality: bool, preview: bool) -> Result<(), String> {
+fn vectorize(
+    src: &str,
+    dst: &str,
+    fast: bool,
+    full_quality: bool,
+    preview: bool,
+) -> Result<(), String> {
     if is_svg_path(src) {
         return Err(format!(
             "vectorize: unsupported file format '{}'",
@@ -84,16 +91,31 @@ fn vectorize(src: &str, dst: &str, fast: bool, full_quality: bool, preview: bool
     }
 
     let src_path = Path::new(src);
-    let config = if fast { fast_vectorize_config() } else { Config::default() };
+    let config = if fast {
+        fast_vectorize_config()
+    } else {
+        Config::default()
+    };
 
-    let (color_img, config, orig_w, orig_h) = prepare_vectorize_input(src_path, config, full_quality)?;
+    let (color_img, config, orig_w, orig_h) =
+        prepare_vectorize_input(src_path, config, full_quality)?;
     let scaled_w = color_img.width;
     let scaled_h = color_img.height;
 
-    let spinner = start_spinner(if preview { "Vectorizing image for preview..." } else { "Vectorizing image..." });
-    let svg_result = vtracer::convert(color_img, config)
-        .map_err(|e| format!("vectorize: failed to vectorize '{}': {e}", src_path.display()));
-    if let Some(pb) = spinner { pb.finish_and_clear(); }
+    let spinner = start_spinner(if preview {
+        "Vectorizing image for preview..."
+    } else {
+        "Vectorizing image..."
+    });
+    let svg_result = vtracer::convert(color_img, config).map_err(|e| {
+        format!(
+            "vectorize: failed to vectorize '{}': {e}",
+            src_path.display()
+        )
+    });
+    if let Some(pb) = spinner {
+        pb.finish_and_clear();
+    }
     let svg_file = svg_result?;
 
     let svg_str = format!("{svg_file}");
@@ -133,15 +155,23 @@ fn prepare_vectorize_input(
     config: Config,
     full_quality: bool,
 ) -> Result<(ColorImage, Config, usize, usize), String> {
-    let img = image::open(src_path)
-        .map_err(|e| format!("vectorize: failed to open image '{}': {e}", src_path.display()))?;
+    let img = image::open(src_path).map_err(|e| {
+        format!(
+            "vectorize: failed to open image '{}': {e}",
+            src_path.display()
+        )
+    })?;
 
     let orig_w = img.width() as usize;
     let orig_h = img.height() as usize;
 
     let (img, config) = if !full_quality && orig_w.max(orig_h) > MAX_LONG_EDGE {
         let scale = MAX_LONG_EDGE as f64 / orig_w.max(orig_h) as f64;
-        let resized = img.resize(MAX_LONG_EDGE as u32, MAX_LONG_EDGE as u32, image::imageops::FilterType::Triangle);
+        let resized = img.resize(
+            MAX_LONG_EDGE as u32,
+            MAX_LONG_EDGE as u32,
+            image::imageops::FilterType::Triangle,
+        );
         let config = Config {
             filter_speckle: ((config.filter_speckle as f64 * scale).floor() as usize).max(1),
             length_threshold: config.length_threshold * scale,
@@ -155,12 +185,22 @@ fn prepare_vectorize_input(
     let rgba = img.to_rgba8();
     let w = rgba.width() as usize;
     let h = rgba.height() as usize;
-    let color_img = ColorImage { pixels: rgba.into_raw(), width: w, height: h };
+    let color_img = ColorImage {
+        pixels: rgba.into_raw(),
+        width: w,
+        height: h,
+    };
 
     Ok((color_img, config, orig_w, orig_h))
 }
 
-fn patch_svg_dimensions(svg: String, scaled_w: usize, scaled_h: usize, orig_w: usize, orig_h: usize) -> String {
+fn patch_svg_dimensions(
+    svg: String,
+    scaled_w: usize,
+    scaled_h: usize,
+    orig_w: usize,
+    orig_h: usize,
+) -> String {
     // vtracer's opening tag format is fixed — safe to do a targeted replace
     let old_tag = format!(
         r#"<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="{scaled_w}" height="{scaled_h}">"#
@@ -181,16 +221,24 @@ fn rasterize(src: &str, dst: &str, options: RasterizeOptions, preview: bool) -> 
 
     let src_path = Path::new(src);
     let dst_path = Path::new(dst);
-    let svg_data = fs::read(src_path)
-        .map_err(|e| format!("rasterize: failed to read SVG '{}': {e}", src_path.display()))?;
+    let svg_data = fs::read(src_path).map_err(|e| {
+        format!(
+            "rasterize: failed to read SVG '{}': {e}",
+            src_path.display()
+        )
+    })?;
 
     let usvg_options = Options {
         resources_dir: src_path.parent().map(Path::to_path_buf),
         ..Options::default()
     };
 
-    let tree = Tree::from_data(&svg_data, &usvg_options)
-        .map_err(|e| format!("rasterize: failed to parse SVG '{}': {e}", src_path.display()))?;
+    let tree = Tree::from_data(&svg_data, &usvg_options).map_err(|e| {
+        format!(
+            "rasterize: failed to parse SVG '{}': {e}",
+            src_path.display()
+        )
+    })?;
 
     let (render_width, render_height, scale_x, scale_y) =
         compute_render_dimensions(tree.size(), &options)?;
@@ -284,7 +332,12 @@ pub(crate) fn prompt_convert_format(src: &str) -> Result<String, String> {
         .and_then(|e| e.to_str())
         .unwrap_or("")
         .to_lowercase();
-    let src_ext = if src_ext == "jpeg" { "jpg" } else { src_ext.as_str() }.to_string();
+    let src_ext = if src_ext == "jpeg" {
+        "jpg"
+    } else {
+        src_ext.as_str()
+    }
+    .to_string();
 
     let all_formats: &[&str] = if is_svg_path(src) {
         &["png", "jpg", "webp", "ico"]
@@ -321,7 +374,8 @@ fn prompt_convert_format_non_tty(formats: &[&str]) -> Result<String, String> {
 
     let trimmed = input.trim();
     if let Ok(n) = trimmed.parse::<usize>()
-        && n >= 1 && n <= formats.len()
+        && n >= 1
+        && n <= formats.len()
     {
         return Ok(formats[n - 1].to_string());
     }
@@ -419,11 +473,8 @@ mod tests {
             .save(&input_path)
             .expect("failed to save test png");
 
-        run_convert(
-            input_path.to_str().unwrap(),
-            output_path.to_str().unwrap(),
-        )
-        .expect("png to webp conversion failed");
+        run_convert(input_path.to_str().unwrap(), output_path.to_str().unwrap())
+            .expect("png to webp conversion failed");
 
         assert!(output_path.exists());
         let converted = image::open(&output_path).expect("failed to open converted webp");
@@ -453,11 +504,8 @@ mod tests {
             .save(&input_path)
             .expect("failed to save test webp");
 
-        run_convert(
-            input_path.to_str().unwrap(),
-            output_path.to_str().unwrap(),
-        )
-        .expect("webp to png conversion failed");
+        run_convert(input_path.to_str().unwrap(), output_path.to_str().unwrap())
+            .expect("webp to png conversion failed");
 
         assert!(output_path.exists());
         let converted = image::open(&output_path).expect("failed to open converted png");
@@ -489,11 +537,8 @@ mod tests {
         )
         .expect("failed to write svg");
 
-        run_convert(
-            input_path.to_str().unwrap(),
-            output_path.to_str().unwrap(),
-        )
-        .expect("svg to webp conversion failed");
+        run_convert(input_path.to_str().unwrap(), output_path.to_str().unwrap())
+            .expect("svg to webp conversion failed");
 
         assert!(output_path.exists());
         let converted = image::open(&output_path).expect("failed to open converted webp");
@@ -506,7 +551,9 @@ mod tests {
     fn make_temp_png(dir: &std::path::Path, name: &str, w: u32, h: u32) -> std::path::PathBuf {
         let path = dir.join(name);
         image::DynamicImage::ImageRgba8(image::ImageBuffer::from_pixel(
-            w, h, image::Rgba([100u8, 100, 100, 255]),
+            w,
+            h,
+            image::Rgba([100u8, 100, 100, 255]),
         ))
         .save(&path)
         .expect("failed to save test png");
@@ -518,7 +565,10 @@ mod tests {
         let temp_root = std::env::temp_dir().join(format!(
             "simply-edit-pvi-under-{}-{}",
             std::process::id(),
-            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
         ));
         fs::create_dir_all(&temp_root).unwrap();
         let img_path = make_temp_png(&temp_root, "input.png", 1000, 500);
@@ -539,7 +589,10 @@ mod tests {
         let temp_root = std::env::temp_dir().join(format!(
             "simply-edit-pvi-large-{}-{}",
             std::process::id(),
-            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
         ));
         fs::create_dir_all(&temp_root).unwrap();
         // Long edge 2200 > 2000 threshold; scale = 2000/2200 ≈ 0.9091
@@ -553,7 +606,10 @@ mod tests {
         assert_eq!(color_img.width, 2000);
         assert_eq!(color_img.height, (100.0 * scale).round() as usize);
         // filter_speckle: floor(4 * scale) = floor(3.636) = 3
-        assert_eq!(out_config.filter_speckle, (4.0_f64 * scale).floor() as usize);
+        assert_eq!(
+            out_config.filter_speckle,
+            (4.0_f64 * scale).floor() as usize
+        );
         assert!((out_config.length_threshold - 4.0 * scale).abs() < 1e-9);
 
         let _ = fs::remove_dir_all(&temp_root);
@@ -564,7 +620,10 @@ mod tests {
         let temp_root = std::env::temp_dir().join(format!(
             "simply-edit-pvi-fullq-{}-{}",
             std::process::id(),
-            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
         ));
         fs::create_dir_all(&temp_root).unwrap();
         let img_path = make_temp_png(&temp_root, "input.png", 2200, 100);
@@ -591,10 +650,22 @@ mod tests {
 
         let patched = patch_svg_dimensions(svg, 2000, 837, 3440, 1440);
 
-        assert!(patched.contains(r#"width="3440""#), "original width not restored");
-        assert!(patched.contains(r#"height="1440""#), "original height not restored");
-        assert!(patched.contains(r#"viewBox="0 0 2000 837""#), "viewBox not injected");
-        assert!(!patched.contains(r#"width="2000" height="837""#), "old tag still present");
+        assert!(
+            patched.contains(r#"width="3440""#),
+            "original width not restored"
+        );
+        assert!(
+            patched.contains(r#"height="1440""#),
+            "original height not restored"
+        );
+        assert!(
+            patched.contains(r#"viewBox="0 0 2000 837""#),
+            "viewBox not injected"
+        );
+        assert!(
+            !patched.contains(r#"width="2000" height="837""#),
+            "old tag still present"
+        );
     }
 
     #[test]

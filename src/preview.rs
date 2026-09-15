@@ -33,19 +33,26 @@ impl LivePreview {
         }
         RESIZED.store(false, Ordering::Relaxed);
 
-        terminal::enable_raw_mode().map_err(|e| format!("preview: failed to enter raw mode: {e}"))?;
+        terminal::enable_raw_mode()
+            .map_err(|e| format!("preview: failed to enter raw mode: {e}"))?;
 
         // Save cursor position, hide the real cursor (we use a reverse-video block instead).
         let stdout = io::stdout();
         let mut out = stdout.lock();
         write!(out, "\x1b7\x1b[?25l").map_err(|e| format!("preview: write error: {e}"))?;
-        out.flush().map_err(|e| format!("preview: write error: {e}"))?;
+        out.flush()
+            .map_err(|e| format!("preview: write error: {e}"))?;
         drop(out);
 
         let term_px = terminal_pixel_size();
         let content = scale_content(img, term_px);
         let scaled = pad_to_budget(content.clone(), term_px);
-        Ok(Self { content, scaled, term_px, finished: false })
+        Ok(Self {
+            content,
+            scaled,
+            term_px,
+            finished: false,
+        })
     }
 
     /// Restore cursor to the saved position, clear below, and render the RGBA buffer.
@@ -55,7 +62,8 @@ impl LivePreview {
         let stdout = io::stdout();
         let mut out = stdout.lock();
         write!(out, "\x1b8\x1b[J").map_err(|e| format!("preview: write error: {e}"))?;
-        out.flush().map_err(|e| format!("preview: write error: {e}"))?;
+        out.flush()
+            .map_err(|e| format!("preview: write error: {e}"))?;
         drop(out);
         display_raw_rgba(rgba.width(), rgba.height(), rgba.as_raw())
     }
@@ -88,9 +96,11 @@ impl LivePreview {
         let mut out = stdout.lock();
         // Restore cursor position, clear below, and show the real cursor again.
         write!(out, "\x1b8\x1b[J\x1b[?25h").map_err(|e| format!("preview: write error: {e}"))?;
-        out.flush().map_err(|e| format!("preview: write error: {e}"))?;
+        out.flush()
+            .map_err(|e| format!("preview: write error: {e}"))?;
         drop(out);
-        terminal::disable_raw_mode().map_err(|e| format!("preview: failed to exit raw mode: {e}"))?;
+        terminal::disable_raw_mode()
+            .map_err(|e| format!("preview: failed to exit raw mode: {e}"))?;
         self.finished = true;
         Ok(())
     }
@@ -125,7 +135,8 @@ pub(crate) fn print_prompt(label: &str, typed: &str) -> Result<(), String> {
          \r\x1b[36m└\x1b[0m  \r\n"
     )
     .map_err(|e| format!("preview: write error: {e}"))?;
-    out.flush().map_err(|e| format!("preview: write error: {e}"))
+    out.flush()
+        .map_err(|e| format!("preview: write error: {e}"))
 }
 
 /// Print a cliclack-styled active select prompt below a live preview image.
@@ -137,7 +148,11 @@ pub(crate) fn print_prompt(label: &str, typed: &str) -> Result<(), String> {
 ///   └                   ← cyan └
 ///
 /// Raw mode disables output post-processing, so `\r\n` is used for line breaks.
-pub(crate) fn print_select_prompt(label: &str, items: &[&str], cursor: usize) -> Result<(), String> {
+pub(crate) fn print_select_prompt(
+    label: &str,
+    items: &[&str],
+    cursor: usize,
+) -> Result<(), String> {
     let stdout = io::stdout();
     let mut out = stdout.lock();
     write!(out, "\r\x1b[36m◆\x1b[0m  {label}\r\n")
@@ -146,13 +161,16 @@ pub(crate) fn print_select_prompt(label: &str, items: &[&str], cursor: usize) ->
         if i == cursor {
             write!(out, "\r\x1b[36m│\x1b[0m  \x1b[32m●\x1b[0m {item}\r\n")
         } else {
-            write!(out, "\r\x1b[36m│\x1b[0m  \x1b[2m○\x1b[0m \x1b[2m{item}\x1b[0m\r\n")
+            write!(
+                out,
+                "\r\x1b[36m│\x1b[0m  \x1b[2m○\x1b[0m \x1b[2m{item}\x1b[0m\r\n"
+            )
         }
         .map_err(|e| format!("preview: write error: {e}"))?;
     }
-    write!(out, "\r\x1b[36m└\x1b[0m\r\n")
-        .map_err(|e| format!("preview: write error: {e}"))?;
-    out.flush().map_err(|e| format!("preview: write error: {e}"))
+    write!(out, "\r\x1b[36m└\x1b[0m\r\n").map_err(|e| format!("preview: write error: {e}"))?;
+    out.flush()
+        .map_err(|e| format!("preview: write error: {e}"))
 }
 
 impl Drop for LivePreview {
@@ -169,12 +187,19 @@ impl Drop for LivePreview {
 const PREVIEW_HEIGHT_FRACTION: f32 = 0.65;
 
 /// Scale `img` to fit within `(term_w, budget_h)`, preserving aspect ratio. No padding.
-fn scale_content(img: &DynamicImage, term_px: (Option<u32>, Option<u32>)) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
+fn scale_content(
+    img: &DynamicImage,
+    term_px: (Option<u32>, Option<u32>),
+) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
     let (px_w, px_h) = term_px;
     let budget_h = px_h.map(|h| ((h as f32 * PREVIEW_HEIGHT_FRACTION).round() as u32).max(1));
 
-    let scale_w = px_w.filter(|&w| img.width() > w).map(|w| w as f32 / img.width() as f32);
-    let scale_h = budget_h.filter(|&h| img.height() > h).map(|h| h as f32 / img.height() as f32);
+    let scale_w = px_w
+        .filter(|&w| img.width() > w)
+        .map(|w| w as f32 / img.width() as f32);
+    let scale_h = budget_h
+        .filter(|&h| img.height() > h)
+        .map(|h| h as f32 / img.height() as f32);
     let scale = match (scale_w, scale_h) {
         (Some(sw), Some(sh)) => Some(sw.min(sh)),
         (Some(sw), None) => Some(sw),
@@ -192,8 +217,13 @@ fn scale_content(img: &DynamicImage, term_px: (Option<u32>, Option<u32>)) -> Ima
 
 /// Pad `content` to exactly `budget_h` with transparent rows so the rendered area is a
 /// stable number of terminal rows regardless of image dimensions or orientation.
-fn pad_to_budget(content: ImageBuffer<Rgba<u8>, Vec<u8>>, term_px: (Option<u32>, Option<u32>)) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
-    let budget_h = term_px.1.map(|h| ((h as f32 * PREVIEW_HEIGHT_FRACTION).round() as u32).max(1));
+fn pad_to_budget(
+    content: ImageBuffer<Rgba<u8>, Vec<u8>>,
+    term_px: (Option<u32>, Option<u32>),
+) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
+    let budget_h = term_px
+        .1
+        .map(|h| ((h as f32 * PREVIEW_HEIGHT_FRACTION).round() as u32).max(1));
     if let Some(bh) = budget_h
         && content.height() < bh
     {

@@ -308,7 +308,8 @@ fn test_batch_scale_with_factor() {
 
     let output = run(&[
         "scale",
-        "--factor", "2",
+        "--factor",
+        "2",
         temp.path().to_str().unwrap(),
         "--output-dir",
         out.path().to_str().unwrap(),
@@ -332,8 +333,10 @@ fn test_batch_resize_with_width_and_height() {
 
     let output = run(&[
         "resize",
-        "--width", "8",
-        "-H", "8",
+        "--width",
+        "8",
+        "-H",
+        "8",
         temp.path().to_str().unwrap(),
         "--output-dir",
         out.path().to_str().unwrap(),

@@ -5,8 +5,7 @@ use std::path::Path;
 use image::GenericImageView;
 
 pub(crate) fn run_info(path: &str) -> Result<(), String> {
-    let meta =
-        fs::metadata(path).map_err(|e| format!("info: failed to read '{path}': {e}"))?;
+    let meta = fs::metadata(path).map_err(|e| format!("info: failed to read '{path}': {e}"))?;
 
     let reader = image::ImageReader::open(path)
         .map_err(|e| format!("info: failed to open '{path}': {e}"))?
@@ -189,8 +188,7 @@ fn parse_icc_description(icc: &[u8]) -> Option<String> {
     if icc.len() < 132 {
         return None;
     }
-    let tag_count =
-        u32::from_be_bytes([icc[128], icc[129], icc[130], icc[131]]) as usize;
+    let tag_count = u32::from_be_bytes([icc[128], icc[129], icc[130], icc[131]]) as usize;
 
     for i in 0..tag_count {
         let entry = 132 + i * 12;
@@ -200,8 +198,18 @@ fn parse_icc_description(icc: &[u8]) -> Option<String> {
         if &icc[entry..entry + 4] != b"desc" {
             continue;
         }
-        let offset = u32::from_be_bytes([icc[entry + 4], icc[entry + 5], icc[entry + 6], icc[entry + 7]]) as usize;
-        let size = u32::from_be_bytes([icc[entry + 8], icc[entry + 9], icc[entry + 10], icc[entry + 11]]) as usize;
+        let offset = u32::from_be_bytes([
+            icc[entry + 4],
+            icc[entry + 5],
+            icc[entry + 6],
+            icc[entry + 7],
+        ]) as usize;
+        let size = u32::from_be_bytes([
+            icc[entry + 8],
+            icc[entry + 9],
+            icc[entry + 10],
+            icc[entry + 11],
+        ]) as usize;
         if offset + size > icc.len() || size < 12 {
             return None;
         }
@@ -220,7 +228,11 @@ fn parse_icc_description(icc: &[u8]) -> Option<String> {
                 return None;
             }
             let s = std::str::from_utf8(&tag[12..12 + ascii_count.saturating_sub(1)]).ok()?;
-            return if s.is_empty() { None } else { Some(s.to_string()) };
+            return if s.is_empty() {
+                None
+            } else {
+                Some(s.to_string())
+            };
         }
     }
     None
@@ -238,8 +250,10 @@ fn parse_mluc(tag: &[u8]) -> Option<String> {
         if rec + 12 > tag.len() {
             break;
         }
-        let str_len = u32::from_be_bytes([tag[rec + 4], tag[rec + 5], tag[rec + 6], tag[rec + 7]]) as usize;
-        let str_off = u32::from_be_bytes([tag[rec + 8], tag[rec + 9], tag[rec + 10], tag[rec + 11]]) as usize;
+        let str_len =
+            u32::from_be_bytes([tag[rec + 4], tag[rec + 5], tag[rec + 6], tag[rec + 7]]) as usize;
+        let str_off =
+            u32::from_be_bytes([tag[rec + 8], tag[rec + 9], tag[rec + 10], tag[rec + 11]]) as usize;
         if str_off + str_len > tag.len() || !str_len.is_multiple_of(2) {
             continue;
         }

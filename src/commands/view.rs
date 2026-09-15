@@ -28,7 +28,10 @@ pub(crate) fn display_raw_rgba(width: u32, height: u32, rgba: &[u8]) -> Result<(
         let chunk = std::str::from_utf8(chunk).expect("base64 is always valid UTF-8");
         let m = if i == total - 1 { 0 } else { 1 };
         if i == 0 {
-            write!(out, "\x1b_Ga=T,f=32,s={width},v={height},i=1,q=1,m={m};{chunk}\x1b\\")
+            write!(
+                out,
+                "\x1b_Ga=T,f=32,s={width},v={height},i=1,q=1,m={m};{chunk}\x1b\\"
+            )
         } else {
             write!(out, "\x1b_Gm={m};{chunk}\x1b\\")
         }
@@ -49,8 +52,7 @@ pub(crate) fn delete_kitty_image() -> Result<(), String> {
 }
 
 pub fn run_view(path: &str) -> Result<(), String> {
-    let img = image::open(path)
-        .map_err(|e| format!("view: failed to open '{path}': {e}"))?;
+    let img = image::open(path).map_err(|e| format!("view: failed to open '{path}': {e}"))?;
     display_image(img)
 }
 
@@ -58,7 +60,10 @@ pub(crate) fn detect_kitty_support() -> bool {
     if std::env::var("KITTY_WINDOW_ID").is_ok() {
         return true;
     }
-    if std::env::var("TERM").map(|t| t == "xterm-kitty").unwrap_or(false) {
+    if std::env::var("TERM")
+        .map(|t| t == "xterm-kitty")
+        .unwrap_or(false)
+    {
         return true;
     }
     std::env::var("TERM_PROGRAM")
@@ -80,7 +85,11 @@ pub(crate) fn terminal_pixel_size() -> (Option<u32>, Option<u32>) {
     if ret != 0 {
         return (None, None);
     }
-    let w = if ws.ws_xpixel > 0 { Some(ws.ws_xpixel as u32) } else { None };
+    let w = if ws.ws_xpixel > 0 {
+        Some(ws.ws_xpixel as u32)
+    } else {
+        None
+    };
     let h = if ws.ws_ypixel > 0 && ws.ws_row > 0 {
         let row_px = ws.ws_ypixel as u32 / ws.ws_row as u32;
         Some((ws.ws_ypixel as u32).saturating_sub(row_px * 2))
@@ -98,8 +107,12 @@ pub(crate) fn terminal_pixel_size() -> (Option<u32>, Option<u32>) {
 fn fit_to_terminal(img: DynamicImage) -> (DynamicImage, Option<u16>) {
     let (px_w, px_h) = terminal_pixel_size();
     if px_w.is_some() || px_h.is_some() {
-        let scale_w = px_w.filter(|&w| img.width() > w).map(|w| w as f32 / img.width() as f32);
-        let scale_h = px_h.filter(|&h| img.height() > h).map(|h| h as f32 / img.height() as f32);
+        let scale_w = px_w
+            .filter(|&w| img.width() > w)
+            .map(|w| w as f32 / img.width() as f32);
+        let scale_h = px_h
+            .filter(|&h| img.height() > h)
+            .map(|h| h as f32 / img.height() as f32);
         let scale = match (scale_w, scale_h) {
             (Some(sw), Some(sh)) => Some(sw.min(sh)),
             (Some(sw), None) => Some(sw),

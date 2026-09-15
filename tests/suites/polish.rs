@@ -215,7 +215,8 @@ fn test_scale_half_produces_half_size() {
 
     let output = run(&[
         "scale",
-        "--factor", "0.5",
+        "--factor",
+        "0.5",
         input.to_str().expect("valid input path"),
         out.to_str().expect("valid output path"),
     ]);
@@ -235,7 +236,8 @@ fn test_scale_double_produces_double_size() {
 
     let output = run(&[
         "scale",
-        "--factor", "2",
+        "--factor",
+        "2",
         input.to_str().expect("valid input path"),
         out.to_str().expect("valid output path"),
     ]);
@@ -255,7 +257,8 @@ fn test_scale_small_factor_clamps_to_minimum_one() {
 
     let output = run(&[
         "scale",
-        "--factor", "0.01",
+        "--factor",
+        "0.01",
         input.to_str().expect("valid input path"),
         out.to_str().expect("valid output path"),
     ]);

@@ -16,7 +16,12 @@ fn dispatch_save(
             Ok(None)
         }
         OutputMode::Generated => {
-            let p = save_transformed_image(img, source, SaveMode::Generated(suffix.to_string()), suffix)?;
+            let p = save_transformed_image(
+                img,
+                source,
+                SaveMode::Generated(suffix.to_string()),
+                suffix,
+            )?;
             Ok(Some(p))
         }
         OutputMode::Explicit(p) => {
@@ -58,8 +63,8 @@ pub(crate) fn run_flip(
     };
 
     let result: Result<Option<String>, String> = (|| {
-        let img = image::open(path)
-            .map_err(|e| format!("flip: failed to open image '{path}': {e}"))?;
+        let img =
+            image::open(path).map_err(|e| format!("flip: failed to open image '{path}': {e}"))?;
         let flipped = match axis {
             FlipAxis::Horizontal => img.fliph(),
             FlipAxis::Vertical => img.flipv(),
@@ -77,10 +82,7 @@ pub(crate) fn run_flip(
     Ok(())
 }
 
-pub(crate) fn run_flip_both(
-    path: &str,
-    output: OutputMode,
-) -> Result<(), String> {
+pub(crate) fn run_flip_both(path: &str, output: OutputMode) -> Result<(), String> {
     let spinner = if matches!(output, OutputMode::Preview) {
         None
     } else {
@@ -88,8 +90,8 @@ pub(crate) fn run_flip_both(
     };
 
     let result: Result<Option<String>, String> = (|| {
-        let img = image::open(path)
-            .map_err(|e| format!("flip: failed to open image '{path}': {e}"))?;
+        let img =
+            image::open(path).map_err(|e| format!("flip: failed to open image '{path}': {e}"))?;
         let flipped = img.flipv().fliph();
         dispatch_save(flipped, path, output, "flipxy")
     })();
@@ -111,7 +113,11 @@ fn prompt_flip_axis() -> Result<FlipAxis, String> {
 
     select("Choose flip axis:")
         .item(FlipAxis::Vertical, "X axis (vertical, top to bottom)", "")
-        .item(FlipAxis::Horizontal, "Y axis (horizontal, left to right)", "")
+        .item(
+            FlipAxis::Horizontal,
+            "Y axis (horizontal, left to right)",
+            "",
+        )
         .interact()
         .map_err(|e| format!("failed to read flip axis: {e}"))
 }
@@ -147,13 +153,17 @@ pub(crate) fn run_rotate(
     };
 
     let result: Result<Option<String>, String> = (|| {
-        let img = image::open(path)
-            .map_err(|e| format!("rotate: failed to open image '{path}': {e}"))?;
+        let img =
+            image::open(path).map_err(|e| format!("rotate: failed to open image '{path}': {e}"))?;
         let rotated = match deg {
             90 => img.rotate90(),
             180 => img.rotate180(),
             270 => img.rotate270(),
-            _ => return Err(format!("rotate: invalid rotation '{deg}': use 90, 180, or 270")),
+            _ => {
+                return Err(format!(
+                    "rotate: invalid rotation '{deg}': use 90, 180, or 270"
+                ));
+            }
         };
         let suffix = format!("rotate{deg}");
         dispatch_save(rotated, path, output, &suffix)
@@ -217,8 +227,8 @@ pub(crate) fn run_resize(
     };
 
     let result: Result<(), String> = (|| {
-        let img = image::open(path)
-            .map_err(|e| format!("resize: failed to open image '{path}': {e}"))?;
+        let img =
+            image::open(path).map_err(|e| format!("resize: failed to open image '{path}': {e}"))?;
         let (w, h) = match known_dims {
             Some(dims) => dims,
             None => resolve_partial_resize(width, height, img.width(), img.height())?,
@@ -261,8 +271,8 @@ pub(crate) fn run_scale(
     };
 
     let result: Result<(), String> = (|| {
-        let img = image::open(path)
-            .map_err(|e| format!("scale: failed to open image '{path}': {e}"))?;
+        let img =
+            image::open(path).map_err(|e| format!("scale: failed to open image '{path}': {e}"))?;
         let w = ((img.width() as f64 * x_factor as f64).round() as u32).max(1);
         let h = ((img.height() as f64 * y_factor as f64).round() as u32).max(1);
         save_resize(img, path, output, w, h)
@@ -277,12 +287,10 @@ pub(crate) fn run_scale(
 
 pub(crate) fn prompt_scale_factor_cliclack() -> Result<f32, String> {
     let s: String = cliclack::input("Enter scale factor (e.g. 0.5 to halve, 2 to double):")
-        .validate(|s: &String| {
-            match s.parse::<f32>() {
-                Err(_) => Err("Please enter a positive number"),
-                Ok(v) if v <= 0.0 || !v.is_finite() => Err("Scale factor must be greater than 0"),
-                Ok(_) => Ok(()),
-            }
+        .validate(|s: &String| match s.parse::<f32>() {
+            Err(_) => Err("Please enter a positive number"),
+            Ok(v) if v <= 0.0 || !v.is_finite() => Err("Scale factor must be greater than 0"),
+            Ok(_) => Ok(()),
         })
         .interact()
         .map_err(|e| format!("failed to read scale factor: {e}"))?;
@@ -294,10 +302,12 @@ pub(crate) fn prompt_scale_factor_stdin() -> Result<f32, String> {
     stdin()
         .read_line(&mut buf)
         .map_err(|e| format!("scale: failed to read factor: {e}"))?;
-    let v: f32 = buf
-        .trim()
-        .parse()
-        .map_err(|_| format!("invalid scale factor '{}': use a positive number", buf.trim()))?;
+    let v: f32 = buf.trim().parse().map_err(|_| {
+        format!(
+            "invalid scale factor '{}': use a positive number",
+            buf.trim()
+        )
+    })?;
     if v <= 0.0 || !v.is_finite() {
         return Err("scale factor must be greater than 0".to_string());
     }
@@ -428,8 +438,8 @@ fn prompt_resize_dimensions_non_tty() -> Result<(u32, u32), String> {
 }
 
 pub(crate) fn run_invert(path: &str, output: OutputMode) -> Result<(), String> {
-    let img = image::open(path)
-        .map_err(|e| format!("invert: failed to open image '{path}': {e}"))?;
+    let img =
+        image::open(path).map_err(|e| format!("invert: failed to open image '{path}': {e}"))?;
     let inverted = invert_colors(img);
     if let Some(output_path) = dispatch_save(inverted, path, output, "invert")? {
         println!("Saved inverted image to {output_path}");
@@ -438,8 +448,8 @@ pub(crate) fn run_invert(path: &str, output: OutputMode) -> Result<(), String> {
 }
 
 pub(crate) fn run_grayscale(path: &str, output: OutputMode) -> Result<(), String> {
-    let img = image::open(path)
-        .map_err(|e| format!("grayscale: failed to open image '{path}': {e}"))?;
+    let img =
+        image::open(path).map_err(|e| format!("grayscale: failed to open image '{path}': {e}"))?;
     let grayscale = img.grayscale();
     if let Some(output_path) = dispatch_save(grayscale, path, output, "grayscale")? {
         println!("Saved grayscale image to {output_path}");
@@ -448,8 +458,8 @@ pub(crate) fn run_grayscale(path: &str, output: OutputMode) -> Result<(), String
 }
 
 pub(crate) fn run_binarize(path: &str, output: OutputMode, threshold: u8) -> Result<(), String> {
-    let img = image::open(path)
-        .map_err(|e| format!("binarize: failed to open image '{path}': {e}"))?;
+    let img =
+        image::open(path).map_err(|e| format!("binarize: failed to open image '{path}': {e}"))?;
     let binarized = binarize_image(img, threshold);
     if let Some(output_path) = dispatch_save(binarized, path, output, "binarize")? {
         println!("Saved binarized image to {output_path}");
@@ -479,8 +489,7 @@ pub(crate) fn run_pad(
     left: u32,
     color: image::Rgba<u8>,
 ) -> Result<(), String> {
-    let img = image::open(path)
-        .map_err(|e| format!("pad: failed to open image '{path}': {e}"))?;
+    let img = image::open(path).map_err(|e| format!("pad: failed to open image '{path}': {e}"))?;
     let padded = pad_image(img, top, right, bottom, left, color)?;
     if let Some(output_path) = dispatch_save(padded, path, output, "pad")? {
         println!("Saved padded image to {output_path}");
@@ -528,8 +537,8 @@ pub(crate) fn interactive_binarize(path: &str, output: OutputMode) -> Result<(),
     use crossterm::event::KeyCode;
 
     // Open up front so a missing/unreadable file fails immediately on all code paths.
-    let img = image::open(path)
-        .map_err(|e| format!("binarize: failed to open image '{path}': {e}"))?;
+    let img =
+        image::open(path).map_err(|e| format!("binarize: failed to open image '{path}': {e}"))?;
 
     if !stdin().is_terminal() {
         let threshold = prompt_binarize_threshold_stdin()?;
@@ -562,7 +571,11 @@ pub(crate) fn interactive_binarize(path: &str, output: OutputMode) -> Result<(),
                 preview.finish()?;
                 return Ok(());
             }
-            KeyCode::Char('c') if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) => {
+            KeyCode::Char('c')
+                if key
+                    .modifiers
+                    .contains(crossterm::event::KeyModifiers::CONTROL) =>
+            {
                 preview.finish()?;
                 return Ok(());
             }
@@ -617,8 +630,8 @@ pub(crate) fn interactive_rotate(path: &str, output: OutputMode) -> Result<(), S
         return run_rotate(path, output, None);
     }
 
-    let img = image::open(path)
-        .map_err(|e| format!("rotate: failed to open image '{path}': {e}"))?;
+    let img =
+        image::open(path).map_err(|e| format!("rotate: failed to open image '{path}': {e}"))?;
 
     let mut preview = LivePreview::new(&img)?;
     let mut cursor = 0usize;
@@ -696,7 +709,11 @@ fn save_rotated(
         90 => img.rotate90(),
         180 => img.rotate180(),
         270 => img.rotate270(),
-        _ => return Err(format!("rotate: invalid rotation '{degrees}': use 90, 180, or 270")),
+        _ => {
+            return Err(format!(
+                "rotate: invalid rotation '{degrees}': use 90, 180, or 270"
+            ));
+        }
     };
     let suffix = format!("rotate{degrees}");
     if let Some(output_path) = dispatch_save(rotated, path, output, &suffix)? {
@@ -710,9 +727,12 @@ fn prompt_binarize_threshold_stdin() -> Result<u8, String> {
     stdin()
         .read_line(&mut buf)
         .map_err(|e| format!("binarize: failed to read threshold: {e}"))?;
-    buf.trim()
-        .parse()
-        .map_err(|_| format!("binarize: invalid threshold '{}': expected 0-255", buf.trim()))
+    buf.trim().parse().map_err(|_| {
+        format!(
+            "binarize: invalid threshold '{}': expected 0-255",
+            buf.trim()
+        )
+    })
 }
 
 fn save_binarized(
@@ -757,7 +777,6 @@ fn binarize_rgba(
     }
     out
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -898,9 +917,11 @@ mod tests {
 
     #[test]
     fn test_pad_dimensions_uniform() {
-        let img = image::DynamicImage::ImageRgba8(
-            image::ImageBuffer::from_pixel(4, 3, image::Rgba([255, 0, 0, 255])),
-        );
+        let img = image::DynamicImage::ImageRgba8(image::ImageBuffer::from_pixel(
+            4,
+            3,
+            image::Rgba([255, 0, 0, 255]),
+        ));
         let result = pad_image(img, 2, 3, 4, 5, image::Rgba([0, 0, 0, 0])).unwrap();
         assert_eq!(result.width(), 4 + 5 + 3);
         assert_eq!(result.height(), 3 + 2 + 4);
@@ -908,9 +929,11 @@ mod tests {
 
     #[test]
     fn test_pad_zero_padding_same_size() {
-        let img = image::DynamicImage::ImageRgba8(
-            image::ImageBuffer::from_pixel(5, 5, image::Rgba([100, 100, 100, 255])),
-        );
+        let img = image::DynamicImage::ImageRgba8(image::ImageBuffer::from_pixel(
+            5,
+            5,
+            image::Rgba([100, 100, 100, 255]),
+        ));
         let result = pad_image(img, 0, 0, 0, 0, image::Rgba([0, 0, 0, 0])).unwrap();
         assert_eq!(result.width(), 5);
         assert_eq!(result.height(), 5);
@@ -918,9 +941,11 @@ mod tests {
 
     #[test]
     fn test_pad_fill_color_in_padding_region() {
-        let img = image::DynamicImage::ImageRgba8(
-            image::ImageBuffer::from_pixel(1, 1, image::Rgba([255, 0, 0, 255])),
-        );
+        let img = image::DynamicImage::ImageRgba8(image::ImageBuffer::from_pixel(
+            1,
+            1,
+            image::Rgba([255, 0, 0, 255]),
+        ));
         let fill = image::Rgba([0, 255, 0, 255]);
         let result = pad_image(img, 2, 2, 2, 2, fill).unwrap();
         // Top-left corner is padding
@@ -933,9 +958,11 @@ mod tests {
 
     #[test]
     fn test_pad_original_preserved_at_offset() {
-        let img = image::DynamicImage::ImageRgba8(
-            image::ImageBuffer::from_pixel(1, 1, image::Rgba([200, 100, 50, 255])),
-        );
+        let img = image::DynamicImage::ImageRgba8(image::ImageBuffer::from_pixel(
+            1,
+            1,
+            image::Rgba([200, 100, 50, 255]),
+        ));
         let result = pad_image(img, 3, 0, 0, 5, image::Rgba([0, 0, 0, 0])).unwrap();
         // Original image placed at (left=5, top=3)
         assert_eq!(result.to_rgba8().get_pixel(5, 3).0, [200, 100, 50, 255]);

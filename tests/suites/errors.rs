@@ -233,7 +233,12 @@ fn test_resize_scale_flag_unrecognized() {
     create_png(&input, 4, 4, [255, 0, 0, 255]);
 
     // --scale is no longer a valid flag on resize; clap should reject it
-    let output = run(&["resize", "--scale", "2", input.to_str().expect("valid input path")]);
+    let output = run(&[
+        "resize",
+        "--scale",
+        "2",
+        input.to_str().expect("valid input path"),
+    ]);
     assert!(!output.status.success());
 }
 
@@ -246,7 +251,13 @@ fn test_resize_invalid_mode_input_rejected() {
 
     // "3" is not a valid mode (only 1 or 2)
     let output = run_with_stdin(
-        &["resize", "--width", "24", input.to_str().expect("valid input path"), out.to_str().expect("valid output path")],
+        &[
+            "resize",
+            "--width",
+            "24",
+            input.to_str().expect("valid input path"),
+            out.to_str().expect("valid output path"),
+        ],
         "3\n",
     );
     assert!(!output.status.success());
@@ -264,7 +275,13 @@ fn test_preview_rejected_in_batch_flip() {
 #[test]
 fn test_preview_rejected_in_batch_rotate() {
     let temp = TestDir::new("simply-preview-batch-err");
-    let output = run(&["rotate", "--angle", "90", "--preview", temp.path().to_str().unwrap()]);
+    let output = run(&[
+        "rotate",
+        "--angle",
+        "90",
+        "--preview",
+        temp.path().to_str().unwrap(),
+    ]);
     assert!(!output.status.success());
     assert!(stderr(&output).contains("--preview cannot be used in batch mode"));
 }
@@ -288,7 +305,15 @@ fn test_preview_rejected_in_batch_grayscale() {
 #[test]
 fn test_preview_rejected_in_batch_resize() {
     let temp = TestDir::new("simply-preview-batch-err");
-    let output = run(&["resize", "--width", "4", "-H", "4", "--preview", temp.path().to_str().unwrap()]);
+    let output = run(&[
+        "resize",
+        "--width",
+        "4",
+        "-H",
+        "4",
+        "--preview",
+        temp.path().to_str().unwrap(),
+    ]);
     assert!(!output.status.success());
     assert!(stderr(&output).contains("--preview cannot be used in batch mode"));
 }
@@ -349,7 +374,11 @@ fn test_binarize_unknown_flag_rejected() {
     let input = temp.path().join("input.png");
     create_png(&input, 2, 2, [255, 0, 0, 255]);
 
-    let output = run(&["binarize", "--foo", input.to_str().expect("valid input path")]);
+    let output = run(&[
+        "binarize",
+        "--foo",
+        input.to_str().expect("valid input path"),
+    ]);
     assert!(!output.status.success());
     assert!(stderr(&output).contains("--foo"));
 }

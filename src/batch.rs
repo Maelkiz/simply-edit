@@ -200,12 +200,11 @@ fn output_dir(input: &Path, options: &BatchOptions) -> PathBuf {
     }
 }
 
-pub(crate) fn resolve_output_path(
-    input: &Path,
-    suffix: &str,
-    options: &BatchOptions,
-) -> PathBuf {
-    let stem = input.file_stem().and_then(|s| s.to_str()).unwrap_or("output");
+pub(crate) fn resolve_output_path(input: &Path, suffix: &str, options: &BatchOptions) -> PathBuf {
+    let stem = input
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("output");
     let ext = input.extension().and_then(|e| e.to_str()).unwrap_or("png");
     output_dir(input, options).join(format!("{stem}_{suffix}.{ext}"))
 }
@@ -215,7 +214,10 @@ pub(crate) fn resolve_output_path_with_ext(
     ext: &str,
     options: &BatchOptions,
 ) -> PathBuf {
-    let stem = input.file_stem().and_then(|s| s.to_str()).unwrap_or("output");
+    let stem = input
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("output");
     output_dir(input, options).join(format!("{stem}.{ext}"))
 }
 
@@ -367,8 +369,7 @@ mod tests {
             output_dir: Some(PathBuf::from("/out")),
             recursive: false,
         };
-        let result =
-            resolve_output_path_with_ext(Path::new("/photos/img.png"), "webp", &options);
+        let result = resolve_output_path_with_ext(Path::new("/photos/img.png"), "webp", &options);
         assert_eq!(result, PathBuf::from("/out/img.webp"));
     }
 
@@ -624,7 +625,10 @@ mod tests {
         ];
         let mut collisions = find_output_collisions(&paths);
         collisions.sort();
-        assert_eq!(collisions, vec![PathBuf::from("/out/a.png"), PathBuf::from("/out/b.png")]);
+        assert_eq!(
+            collisions,
+            vec![PathBuf::from("/out/a.png"), PathBuf::from("/out/b.png")]
+        );
     }
 
     #[test]
@@ -645,8 +649,7 @@ mod tests {
             output_dir: None,
             recursive: false,
         };
-        let result =
-            resolve_output_path_with_ext(Path::new("/dir/photo.png"), "webp", &options);
+        let result = resolve_output_path_with_ext(Path::new("/dir/photo.png"), "webp", &options);
         assert_eq!(result, PathBuf::from("/dir/photo.webp"));
     }
 }
