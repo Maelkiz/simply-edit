@@ -173,7 +173,7 @@ pub(crate) enum Command {
 
     /// Remove an image's background, producing a transparent cutout
     #[command(
-        after_help = "Default behaviour: removes a flat background by flood-filling inward from the image border with a tolerance of 12. Output is always written in an alpha-capable format (png, or webp when the source is webp). Use --trim to crop the result to the remaining subject."
+        after_help = "Default behaviour: removes a flat background by flood-filling inward from the image border with a tolerance of 12. Output is always written in an alpha-capable format (png, or webp when the source is webp). Use --trim to crop the result to the remaining subject. --download-model fetches the background removal model for later use."
     )]
     Cutout {
         /// Colour-distance tolerance 0-441.7 (default: 12). Higher values remove more of the background
@@ -184,6 +184,10 @@ pub(crate) enum Command {
         #[arg(long)]
         trim: bool,
 
+        /// Download the background removal model and exit
+        #[arg(long, conflicts_with_all = ["path", "output", "replace", "preview", "trim"])]
+        download_model: bool,
+
         /// Overwrite target file (source if no output path given)
         #[arg(long)]
         replace: bool,
@@ -193,7 +197,8 @@ pub(crate) enum Command {
         preview: bool,
 
         /// Path to image file or directory
-        path: String,
+        #[arg(required_unless_present = "download_model")]
+        path: Option<String>,
 
         /// Output path (auto-generated if omitted)
         output: Option<String>,

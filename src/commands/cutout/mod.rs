@@ -3,6 +3,10 @@ use std::path::Path;
 
 use image::{DynamicImage, RgbaImage};
 
+mod model;
+
+pub(crate) use model::run_download_model;
+
 use crate::OutputMode;
 use crate::io;
 

@@ -1,6 +1,6 @@
 use std::fs;
 
-use crate::common::{TestDir, create_png, create_svg, run, run_with_stdin, stderr};
+use crate::common::{TestDir, create_png, create_svg, run, run_with_env, run_with_stdin, stderr};
 
 #[test]
 fn test_no_args_prints_usage() {
@@ -497,4 +497,39 @@ fn test_cutout_trim_on_fully_removed_image_errors() {
     let output = run(&["cutout", "--trim", input.to_str().expect("valid path")]);
     assert!(!output.status.success());
     assert!(stderr(&output).contains("empty image"));
+}
+
+#[test]
+fn test_cutout_download_model_reports_a_cached_model_without_network() {
+    let temp = TestDir::new("simply-model-cached");
+    fs::write(temp.path().join("u2net.onnx"), b"stand-in weights").expect("write stub model");
+
+    let output = run_with_env(
+        &["cutout", "--download-model"],
+        &[("SIMPLY_MODEL_DIR", temp.path())],
+    );
+    assert!(output.status.success());
+    assert!(String::from_utf8_lossy(&output.stdout).contains("already present"));
+}
+
+#[test]
+fn test_cutout_download_model_conflicts_with_an_image_path() {
+    let temp = TestDir::new("simply-model-conflict");
+    let input = temp.path().join("input.png");
+    create_png(&input, 2, 2, [255, 0, 0, 255]);
+
+    let output = run(&[
+        "cutout",
+        "--download-model",
+        input.to_str().expect("valid path"),
+    ]);
+    assert!(!output.status.success());
+    assert!(stderr(&output).contains("cannot be used with"));
+}
+
+#[test]
+fn test_cutout_requires_a_path_without_download_model() {
+    let output = run(&["cutout"]);
+    assert!(!output.status.success());
+    assert!(stderr(&output).contains("Usage:"));
 }

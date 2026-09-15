@@ -302,12 +302,18 @@ fn run() -> Result<(), String> {
         Command::Cutout {
             tolerance,
             trim,
+            download_model,
             replace,
             preview,
             batch,
             path,
             output,
         } => {
+            if download_model {
+                return commands::cutout::run_download_model();
+            }
+            // clap guarantees a path whenever --download-model is absent.
+            let path = path.ok_or_else(|| "cutout: no image path given".to_string())?;
             let tolerance = tolerance.unwrap_or(commands::cutout::DEFAULT_TOLERANCE);
             if is_batch(&path, &batch) {
                 if preview {

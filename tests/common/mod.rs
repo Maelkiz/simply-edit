@@ -67,6 +67,16 @@ pub fn run(args: &[&str]) -> Output {
         .expect("failed to run simply binary")
 }
 
+/// Like [`run`], but with extra environment variables set for the child.
+pub fn run_with_env(args: &[&str], env: &[(&str, &Path)]) -> Output {
+    let mut cmd = Command::new(binary_path());
+    cmd.args(args);
+    for (key, value) in env {
+        cmd.env(key, value);
+    }
+    cmd.output().expect("failed to run simply binary")
+}
+
 pub fn run_with_stdin(args: &[&str], stdin_input: &str) -> Output {
     let mut child = Command::new(binary_path())
         .args(args)
