@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::common::{TestDir, assert_valid_image, create_png, run, run_with_stdin};
+use crate::common::{TestDir, assert_valid_image, create_png, run};
 
 fn pixel(path: &Path, x: u32, y: u32) -> [u8; 4] {
     image::open(path)
@@ -296,10 +296,8 @@ fn test_resize_replace_mode_cleans_up_no_tmp_file() {
 #[test]
 fn test_absolute_paths_work_for_transforms() {
     let temp = TestDir::new("simply-phase2");
-    let input = std::fs::canonicalize(temp.path().join("abs_in.png")).unwrap_or_else(|_| {
-        let p = temp.path().join("abs_in.png");
-        p
-    });
+    let input = std::fs::canonicalize(temp.path().join("abs_in.png"))
+        .unwrap_or_else(|_| temp.path().join("abs_in.png"));
     let output = temp.path().join("abs_out.png");
 
     create_png(&input, 2, 2, [1, 2, 3, 255]);

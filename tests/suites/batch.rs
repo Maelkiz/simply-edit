@@ -269,7 +269,7 @@ fn test_batch_convert_with_format() {
     let jpg_count = fs::read_dir(out.path())
         .unwrap()
         .filter_map(|e| e.ok())
-        .filter(|e| e.path().extension().map_or(false, |ext| ext == "jpg"))
+        .filter(|e| e.path().extension().is_some_and(|ext| ext == "jpg"))
         .count();
     assert_eq!(jpg_count, 2);
 }
@@ -296,7 +296,7 @@ fn test_batch_rasterize_processes_svgs() {
     let png_count = fs::read_dir(out.path())
         .unwrap()
         .filter_map(|e| e.ok())
-        .filter(|e| e.path().extension().map_or(false, |ext| ext == "png"))
+        .filter(|e| e.path().extension().is_some_and(|ext| ext == "png"))
         .count();
     assert_eq!(png_count, 2);
 }

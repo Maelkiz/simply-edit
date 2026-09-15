@@ -205,7 +205,7 @@ pub(crate) fn run_download_model() -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::testutil::testutil::temp_dir;
+    use crate::testutil::temp_dir;
 
     /// `SIMPLY_MODEL_DIR` is process-global, so every test that touches it must
     /// hold this lock.

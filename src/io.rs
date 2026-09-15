@@ -152,7 +152,7 @@ pub(crate) fn enumerate_if_exists(path: &Path) -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::testutil::testutil::temp_dir;
+    use crate::testutil::temp_dir;
 
     #[test]
     fn test_output_path_with_suffix_simple() {

@@ -29,7 +29,10 @@ impl LivePreview {
     pub(crate) fn new(img: &DynamicImage) -> Result<Self, String> {
         #[cfg(unix)]
         unsafe {
-            libc::signal(libc::SIGWINCH, handle_sigwinch as libc::sighandler_t);
+            libc::signal(
+                libc::SIGWINCH,
+                handle_sigwinch as extern "C" fn(libc::c_int) as libc::sighandler_t,
+            );
         }
         RESIZED.store(false, Ordering::Relaxed);
 

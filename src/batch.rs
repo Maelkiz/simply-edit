@@ -294,7 +294,7 @@ pub(crate) fn print_summary(result: &BatchResult) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::testutil::testutil::temp_dir;
+    use crate::testutil::temp_dir;
     use std::fs;
 
     fn touch(dir: &Path, name: &str) {
