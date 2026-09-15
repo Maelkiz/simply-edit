@@ -29,9 +29,10 @@ pub(crate) struct BatchArgs {
 #[derive(Debug, Subcommand)]
 pub(crate) enum Command {
     /// Mirror an image horizontally (left to right), vertically (top to bottom), or both
-    #[command(
-        after_help = "Default behaviour: prompts interactively to choose an axis when neither --horizontal nor --vertical is given."
-    )]
+    #[command(after_help = "Shorthands:\n  \
+                      simply fliph <PATH>   Same as: simply flip --horizontal\n  \
+                      simply flipv <PATH>   Same as: simply flip --vertical\n\n\
+                      Default behaviour: prompts interactively to choose an axis when neither --horizontal nor --vertical is given.")]
     Flip {
         /// Mirror horizontally, left to right
         #[arg(short = 'H', long)]
@@ -60,9 +61,11 @@ pub(crate) enum Command {
     },
 
     /// Rotate an image by 90, 180, or 270 degrees
-    #[command(
-        after_help = "Default behaviour: prompts interactively to choose an angle when --angle is omitted."
-    )]
+    #[command(after_help = "Shorthands:\n  \
+                      simply rotate90 <PATH>    Same as: simply rotate --angle 90\n  \
+                      simply rotate180 <PATH>   Same as: simply rotate --angle 180\n  \
+                      simply rotate270 <PATH>   Same as: simply rotate --angle 270\n\n\
+                      Default behaviour: prompts interactively to choose an angle when --angle is omitted.")]
     Rotate {
         /// Rotation angle: 90, 180, or 270 (interactive prompt if omitted)
         #[arg(long, value_parser = parse_rotation)]

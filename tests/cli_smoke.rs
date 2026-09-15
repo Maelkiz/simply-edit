@@ -101,3 +101,64 @@ fn test_cli_invert_creates_output_file() {
     let _ = fs::remove_file(&output_path);
     let _ = fs::remove_dir(&temp_dir);
 }
+
+#[test]
+fn test_cli_flip_help_lists_shorthands() {
+    for flag in ["--help", "-h"] {
+        let output = Command::new(binary_path())
+            .args(["flip", flag])
+            .output()
+            .expect("failed to run simply binary");
+
+        assert!(output.status.success());
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("Shorthands:"));
+        assert!(stdout.contains("simply fliph <PATH>   Same as: simply flip --horizontal"));
+        assert!(stdout.contains("simply flipv <PATH>   Same as: simply flip --vertical"));
+        // The shorthands block precedes the existing default-behaviour note.
+        let shorthands = stdout.find("Shorthands:").expect("shorthands section");
+        let default = stdout
+            .find("Default behaviour:")
+            .expect("default behaviour note");
+        assert!(shorthands < default);
+    }
+}
+
+#[test]
+fn test_cli_rotate_help_lists_shorthands() {
+    for flag in ["--help", "-h"] {
+        let output = Command::new(binary_path())
+            .args(["rotate", flag])
+            .output()
+            .expect("failed to run simply binary");
+
+        assert!(output.status.success());
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("Shorthands:"));
+        for (name, deg) in [
+            ("rotate90", "90"),
+            ("rotate180", "180"),
+            ("rotate270", "270"),
+        ] {
+            assert!(stdout.contains(&format!("simply {name} <PATH>")));
+            assert!(stdout.contains(&format!("Same as: simply rotate --angle {deg}")));
+        }
+        let shorthands = stdout.find("Shorthands:").expect("shorthands section");
+        let default = stdout
+            .find("Default behaviour:")
+            .expect("default behaviour note");
+        assert!(shorthands < default);
+    }
+}
+
+#[test]
+fn test_cli_top_level_help_omits_shorthands() {
+    let output = Command::new(binary_path())
+        .arg("--help")
+        .output()
+        .expect("failed to run simply binary");
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(!stdout.contains("fliph"));
+    assert!(!stdout.contains("rotate90"));
+}
