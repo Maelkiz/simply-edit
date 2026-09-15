@@ -300,6 +300,7 @@ fn run() -> Result<(), String> {
             }
         }
         Command::Cutout {
+            fast,
             tolerance,
             trim,
             download_model,
@@ -333,24 +334,37 @@ fn run() -> Result<(), String> {
                         .collect();
                     check_output_collisions(&options, commands::cutout::SUFFIX, &out_paths)?;
                 }
-                let result = batch::run_batch(Path::new(&path), &options, |file| {
+                // Resolved after the inputs validate, so a bad batch directory
+                // never triggers a model download.
+                let mode = commands::cutout::CutoutMode::resolve(fast, tolerance)?;
+                let process = |file: &Path| {
                     let img = image::open(file).map_err(|e| {
                         format!("cutout: failed to open image '{}': {e}", file.display())
                     })?;
-                    let mut cut = commands::cutout::fast_cutout(&img, tolerance);
+                    let mut cut = mode.apply(&img)?;
                     if trim {
                         cut = commands::cutout::trim_to_alpha_bbox(&cut)?;
                     }
                     let out_path = commands::cutout::batch_output_path(file, &options);
                     io::save_image(image::DynamicImage::ImageRgba8(cut), &out_path)?;
                     Ok(out_path.to_string_lossy().to_string())
-                })?;
+                };
+                let run = || batch::run_batch(Path::new(&path), &options, process);
+                let result = match mode.batch_workers() {
+                    Some(workers) => rayon::ThreadPoolBuilder::new()
+                        .num_threads(workers)
+                        .build()
+                        .map_err(|e| format!("cutout: failed to build a thread pool: {e}"))?
+                        .install(run),
+                    None => run(),
+                }?;
                 batch::print_summary(&result);
                 Ok(())
             } else {
                 let output = output_mode(replace, preview, output);
                 commands::cutout::run_cutout(commands::cutout::CutoutArgs {
                     src: path,
+                    fast,
                     tolerance,
                     trim,
                     output,

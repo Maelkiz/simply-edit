@@ -173,10 +173,14 @@ pub(crate) enum Command {
 
     /// Remove an image's background, producing a transparent cutout
     #[command(
-        after_help = "Default behaviour: removes a flat background by flood-filling inward from the image border with a tolerance of 12. Output is always written in an alpha-capable format (png, or webp when the source is webp). Use --trim to crop the result to the remaining subject. --download-model fetches the background removal model for later use."
+        after_help = "Default behaviour: segments the subject with the U2-Net neural model, downloading it on first use (~168 MB, opt-in). --fast instead flood-fills inward from the image border, which is far quicker but only correct on flat backgrounds. Output is always written in an alpha-capable format (png, or webp when the source is webp). Use --trim to crop the result to the remaining subject, and --download-model to fetch the model ahead of time."
     )]
     Cutout {
-        /// Colour-distance tolerance 0-441.7 (default: 12). Higher values remove more of the background
+        /// Use the fast algorithmic mode instead of the neural model. Suited to flat backgrounds
+        #[arg(long)]
+        fast: bool,
+
+        /// Colour-distance tolerance 0-441.7 for --fast (default: 12). Higher values remove more of the background
         #[arg(long, value_parser = parse_tolerance)]
         tolerance: Option<f32>,
 
@@ -185,7 +189,7 @@ pub(crate) enum Command {
         trim: bool,
 
         /// Download the background removal model and exit
-        #[arg(long, conflicts_with_all = ["path", "output", "replace", "preview", "trim"])]
+        #[arg(long, conflicts_with_all = ["path", "output", "replace", "preview", "trim", "fast"])]
         download_model: bool,
 
         /// Overwrite target file (source if no output path given)

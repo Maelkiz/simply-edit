@@ -21,6 +21,7 @@ vtracer = "0.6"
 ureq = "3"
 sha2 = "0.10"
 dirs = "6"
+tract-onnx = "0.23"
 
 [[bin]]
 name = "simply"

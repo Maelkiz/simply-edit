@@ -429,6 +429,7 @@ fn test_cutout_rejects_jpeg_destination() {
 
     let output = run(&[
         "cutout",
+        "--fast",
         input.to_str().expect("valid input path"),
         temp.path().join("out.jpg").to_str().expect("valid path"),
     ]);
@@ -448,7 +449,12 @@ fn test_cutout_rejects_replace_on_jpeg_source() {
         .save(&jpeg)
         .expect("failed to write jpeg");
 
-    let output = run(&["cutout", "--replace", jpeg.to_str().expect("valid path")]);
+    let output = run(&[
+        "cutout",
+        "--fast",
+        "--replace",
+        jpeg.to_str().expect("valid path"),
+    ]);
     assert!(!output.status.success());
     assert!(stderr(&output).contains("only png and webp can store transparency"));
 }
@@ -459,7 +465,7 @@ fn test_cutout_rejects_svg_input() {
     let input = temp.path().join("shape.svg");
     create_svg(&input, 10, 10, "red");
 
-    let output = run(&["cutout", input.to_str().expect("valid path")]);
+    let output = run(&["cutout", "--fast", input.to_str().expect("valid path")]);
     assert!(!output.status.success());
     assert!(stderr(&output).contains("unsupported file format"));
 }
@@ -472,6 +478,7 @@ fn test_cutout_rejects_invalid_tolerance() {
 
     let output = run(&[
         "cutout",
+        "--fast",
         "--tolerance",
         "900",
         input.to_str().expect("valid path"),
@@ -483,7 +490,12 @@ fn test_cutout_rejects_invalid_tolerance() {
 #[test]
 fn test_preview_rejected_in_batch_cutout() {
     let temp = TestDir::new("simply-cutout-preview-batch-err");
-    let output = run(&["cutout", "--preview", temp.path().to_str().unwrap()]);
+    let output = run(&[
+        "cutout",
+        "--fast",
+        "--preview",
+        temp.path().to_str().unwrap(),
+    ]);
     assert!(!output.status.success());
     assert!(stderr(&output).contains("--preview cannot be used in batch mode"));
 }
@@ -494,7 +506,12 @@ fn test_cutout_trim_on_fully_removed_image_errors() {
     let input = temp.path().join("blank.png");
     create_png(&input, 6, 6, [255, 255, 255, 255]);
 
-    let output = run(&["cutout", "--trim", input.to_str().expect("valid path")]);
+    let output = run(&[
+        "cutout",
+        "--fast",
+        "--trim",
+        input.to_str().expect("valid path"),
+    ]);
     assert!(!output.status.success());
     assert!(stderr(&output).contains("empty image"));
 }
@@ -532,4 +549,54 @@ fn test_cutout_requires_a_path_without_download_model() {
     let output = run(&["cutout"]);
     assert!(!output.status.success());
     assert!(stderr(&output).contains("Usage:"));
+}
+
+#[test]
+fn test_cutout_without_a_cached_model_errors_instead_of_downloading() {
+    let temp = TestDir::new("simply-cutout-nomodel");
+    let models = TestDir::new("simply-cutout-nomodel-cache");
+    let input = temp.path().join("input.png");
+    create_png(&input, 4, 4, [255, 255, 255, 255]);
+
+    // No TTY here, so the neural default must refuse rather than fetch 168 MB.
+    let output = run_with_env(
+        &["cutout", input.to_str().expect("valid path")],
+        &[("SIMPLY_MODEL_DIR", models.path())],
+    );
+    assert!(!output.status.success());
+    let err = stderr(&output);
+    assert!(err.contains("--download-model"), "{err}");
+    assert!(err.contains("--fast"), "{err}");
+    assert!(!models.path().join("u2net.onnx").exists());
+}
+
+#[test]
+fn test_cutout_fast_never_consults_the_model_cache() {
+    let temp = TestDir::new("simply-cutout-fast-nomodel");
+    let models = TestDir::new("simply-cutout-fast-nomodel-cache");
+    let input = temp.path().join("input.png");
+    create_png(&input, 4, 4, [255, 255, 255, 255]);
+
+    let output = run_with_env(
+        &["cutout", "--fast", input.to_str().expect("valid path")],
+        &[("SIMPLY_MODEL_DIR", models.path())],
+    );
+    assert!(output.status.success(), "{}", stderr(&output));
+    assert!(temp.path().join("input_cutout.png").exists());
+}
+
+#[test]
+fn test_cutout_rejects_an_unreadable_model_file() {
+    let temp = TestDir::new("simply-cutout-badmodel");
+    let models = TestDir::new("simply-cutout-badmodel-cache");
+    let input = temp.path().join("input.png");
+    create_png(&input, 4, 4, [255, 255, 255, 255]);
+    fs::write(models.path().join("u2net.onnx"), b"not an onnx graph").expect("write stub");
+
+    let output = run_with_env(
+        &["cutout", input.to_str().expect("valid path")],
+        &[("SIMPLY_MODEL_DIR", models.path())],
+    );
+    assert!(!output.status.success());
+    assert!(stderr(&output).contains("failed to load the background removal model"));
 }

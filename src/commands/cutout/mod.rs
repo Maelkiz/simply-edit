@@ -4,6 +4,7 @@ use std::path::Path;
 use image::{DynamicImage, RgbaImage};
 
 mod model;
+mod neural;
 
 pub(crate) use model::run_download_model;
 
@@ -16,8 +17,56 @@ pub(crate) const SUFFIX: &str = "cutout";
 /// Default neighbour-distance tolerance for [`fast_cutout`].
 pub(crate) const DEFAULT_TOLERANCE: f32 = 12.0;
 
+/// How a cutout's alpha mask is produced.
+///
+/// The two modes are not a quality ladder but disjoint competence domains:
+/// the flood fill is exact and ~50x faster on flat backgrounds and provably
+/// wrong on gradients, which is precisely where the network works.
+pub(crate) enum CutoutMode {
+    Fast { tolerance: f32 },
+    Neural(neural::CutoutModel),
+}
+
+impl CutoutMode {
+    /// Selects a mode, loading (and if necessary downloading) the model.
+    ///
+    /// Done once up front so a batch run pays the load cost a single time.
+    pub(crate) fn resolve(fast: bool, tolerance: f32) -> Result<Self, String> {
+        if fast {
+            return Ok(CutoutMode::Fast { tolerance });
+        }
+        let path = model::ensure_model(false)?;
+        let spinner = super::start_spinner("Loading background removal model...");
+        let model = neural::load_model(&path);
+        if let Some(pb) = spinner {
+            pb.finish_and_clear();
+        }
+        Ok(CutoutMode::Neural(model?))
+    }
+
+    pub(crate) fn apply(&self, img: &DynamicImage) -> Result<RgbaImage, String> {
+        match self {
+            CutoutMode::Fast { tolerance } => Ok(fast_cutout(img, *tolerance)),
+            CutoutMode::Neural(model) => neural::neural_cutout(model, img),
+        }
+    }
+
+    /// Worker count a batch run should be bounded to, if any.
+    ///
+    /// tract already saturates every core within a single inference, so running
+    /// several at once buys no speed while multiplying peak memory by the
+    /// number of workers. The flood fill is cheap and parallelises normally.
+    pub(crate) fn batch_workers(&self) -> Option<usize> {
+        match self {
+            CutoutMode::Fast { .. } => None,
+            CutoutMode::Neural(_) => Some(1),
+        }
+    }
+}
+
 pub(crate) struct CutoutArgs {
     pub src: String,
+    pub fast: bool,
     pub tolerance: f32,
     pub trim: bool,
     pub output: OutputMode,
@@ -149,6 +198,7 @@ pub(crate) fn batch_output_path(
 pub(crate) fn run_cutout(args: CutoutArgs) -> Result<(), String> {
     let CutoutArgs {
         src,
+        fast,
         tolerance,
         trim,
         output,
@@ -164,7 +214,17 @@ pub(crate) fn run_cutout(args: CutoutArgs) -> Result<(), String> {
     let img =
         image::open(&src).map_err(|e| format!("cutout: failed to open image '{src}': {e}"))?;
 
-    let mut result = fast_cutout(&img, tolerance);
+    // Resolved only once the input is known good, so a bad path never triggers
+    // a model download.
+    let mode = CutoutMode::resolve(fast, tolerance)?;
+
+    let spinner = super::start_spinner("Removing background...");
+    let result = mode.apply(&img);
+    if let Some(pb) = spinner {
+        pb.finish_and_clear();
+    }
+
+    let mut result = result?;
     if trim {
         result = trim_to_alpha_bbox(&result)?;
     }

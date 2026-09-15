@@ -1040,7 +1040,11 @@ fn test_cutout_generated_output_makes_background_transparent() {
     let generated = temp.path().join("flat_cutout.png");
     create_png(&input, 8, 8, [255, 255, 255, 255]);
 
-    let output = run(&["cutout", input.to_str().expect("valid input path")]);
+    let output = run(&[
+        "cutout",
+        "--fast",
+        input.to_str().expect("valid input path"),
+    ]);
     assert!(output.status.success());
     assert!(generated.exists());
     assert_valid_image(&generated);
@@ -1061,7 +1065,7 @@ fn test_cutout_forces_png_for_jpeg_source() {
         .save(&jpeg)
         .expect("failed to write jpeg");
 
-    let output = run(&["cutout", jpeg.to_str().expect("valid input path")]);
+    let output = run(&["cutout", "--fast", jpeg.to_str().expect("valid input path")]);
     assert!(output.status.success());
     assert!(temp.path().join("photo_cutout.png").exists());
     assert!(!temp.path().join("photo_cutout.jpg").exists());
@@ -1073,7 +1077,11 @@ fn test_cutout_preserves_dimensions() {
     let input = temp.path().join("img.png");
     create_png(&input, 6, 4, [10, 10, 10, 255]);
 
-    let output = run(&["cutout", input.to_str().expect("valid input path")]);
+    let output = run(&[
+        "cutout",
+        "--fast",
+        input.to_str().expect("valid input path"),
+    ]);
     assert!(output.status.success());
 
     let img = image::open(temp.path().join("img_cutout.png")).expect("valid output");
@@ -1088,6 +1096,7 @@ fn test_cutout_replace_rewrites_png_in_place() {
 
     let output = run(&[
         "cutout",
+        "--fast",
         "--replace",
         input.to_str().expect("valid input path"),
     ]);
@@ -1114,6 +1123,7 @@ fn test_cutout_trim_crops_to_subject() {
 
     let output = run(&[
         "cutout",
+        "--fast",
         "--trim",
         input.to_str().expect("valid input path"),
     ]);
@@ -1136,7 +1146,11 @@ fn test_cutout_without_trim_keeps_original_dimensions() {
     }
     img.save(&input).expect("failed to write input");
 
-    let output = run(&["cutout", input.to_str().expect("valid input path")]);
+    let output = run(&[
+        "cutout",
+        "--fast",
+        input.to_str().expect("valid input path"),
+    ]);
     assert!(output.status.success());
 
     let cut = image::open(temp.path().join("logo_cutout.png")).expect("valid output");

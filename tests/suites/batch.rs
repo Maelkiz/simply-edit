@@ -447,6 +447,7 @@ fn test_batch_cutout_output_dir() {
 
     let output = run(&[
         "cutout",
+        "--fast",
         temp.path().to_str().unwrap(),
         "--output-dir",
         out.path().to_str().unwrap(),
