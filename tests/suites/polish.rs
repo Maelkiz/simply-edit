@@ -11,7 +11,7 @@ fn test_rasterize_scale_half_produces_half_size() {
 
     let output = run(&[
         "rasterize",
-        "-s",
+        "--scale",
         "0.5",
         src.to_str().expect("valid source path"),
         dst.to_str().expect("valid destination path"),
@@ -32,7 +32,7 @@ fn test_rasterize_scale_double_produces_double_size() {
 
     let output = run(&[
         "rasterize",
-        "-s",
+        "--scale",
         "2",
         src.to_str().expect("valid source path"),
         dst.to_str().expect("valid destination path"),
@@ -53,7 +53,7 @@ fn test_rasterize_small_scale_still_produces_non_zero_dimensions() {
 
     let output = run(&[
         "rasterize",
-        "-s",
+        "--scale",
         "0.1",
         src.to_str().expect("valid source path"),
         dst.to_str().expect("valid destination path"),
@@ -74,7 +74,7 @@ fn test_rasterize_width_minimum_value_one_is_valid() {
 
     let output = run(&[
         "rasterize",
-        "-w",
+        "--width",
         "1",
         src.to_str().expect("valid source path"),
         dst.to_str().expect("valid destination path"),
@@ -94,7 +94,7 @@ fn test_rasterize_height_minimum_value_one_is_valid() {
 
     let output = run(&[
         "rasterize",
-        "-H",
+        "--height",
         "1",
         src.to_str().expect("valid source path"),
         dst.to_str().expect("valid destination path"),
@@ -107,7 +107,7 @@ fn test_rasterize_height_minimum_value_one_is_valid() {
 
 #[test]
 fn test_rasterize_rejects_nan_scale() {
-    let output = run(&["rasterize", "-s", "NaN", "in.svg", "out.png"]);
+    let output = run(&["rasterize", "--scale", "NaN", "in.svg", "out.png"]);
     assert!(!output.status.success());
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(stderr.contains("invalid value 'NaN' for --scale"));
@@ -115,7 +115,7 @@ fn test_rasterize_rejects_nan_scale() {
 
 #[test]
 fn test_rasterize_rejects_infinite_scale() {
-    let output = run(&["rasterize", "-s", "inf", "in.svg", "out.png"]);
+    let output = run(&["rasterize", "--scale", "inf", "in.svg", "out.png"]);
     assert!(!output.status.success());
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(stderr.contains("invalid value 'inf' for --scale"));

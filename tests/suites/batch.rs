@@ -335,7 +335,7 @@ fn test_batch_resize_with_width_and_height() {
         "resize",
         "--width",
         "8",
-        "-H",
+        "--height",
         "8",
         temp.path().to_str().unwrap(),
         "--output-dir",

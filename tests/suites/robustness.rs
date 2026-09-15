@@ -249,7 +249,7 @@ fn test_resize_non_square_dimensions_preserved_exactly() {
         "resize",
         "--width",
         "20",
-        "-H",
+        "--height",
         "12",
         input.to_str().expect("valid input path"),
         out.to_str().expect("valid output path"),
@@ -272,7 +272,7 @@ fn test_resize_replace_mode_cleans_up_no_tmp_file() {
         "-r",
         "--width",
         "2",
-        "-H",
+        "--height",
         "2",
         input.to_str().expect("valid input path"),
     ]);

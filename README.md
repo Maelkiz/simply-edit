@@ -2,7 +2,7 @@
 
 > A simple CLI tool for manipulating images.
 
-simply-edit is a convenient command-line utility for everyday image tasks: flip, rotate, invert, grayscale, binarize, pad, resize, scale, and convert between common formats. It is designed to be easy to use, with sensible defaults, straightforward commands, and quality-of-life features, such as optional in-place replacement, batch operations, and view/preview functionality using the [Kitty Terminal Graphics Protocol](https://sw.kovidgoyal.net/kitty/graphics-protocol).
+simply-edit is a convenient command-line utility for everyday image tasks: flip, rotate, invert, grayscale, binarize, pad, resize, scale, stretch, and convert between common formats. It is designed to be easy to use, with sensible defaults, straightforward commands, and quality-of-life features, such as optional in-place replacement, batch operations, and view/preview functionality using the [Kitty Terminal Graphics Protocol](https://sw.kovidgoyal.net/kitty/graphics-protocol).
 
 ---
 
@@ -57,7 +57,8 @@ simply <command> <args>
 | `binarize` | Convert image to pure black and white at a brightness cutoff |
 | `pad` | Add padding (transparent or colored) around an image |
 | `resize` | Resize an image to specified dimensions |
-| `scale` | Scale an image by a factor (`--factor`), width only (`-x`), or height only (`-y`) |
+| `scale` | Scale an image uniformly by a factor (`--factor`) |
+| `stretch` | Stretch an image independently along each axis (`--horizontal`, `--vertical`) |
 | `convert` | Convert between PNG/JPG/ICO/WebP formats |
 | `vectorize` | Convert a raster image to SVG (auto-downscales large images for speed; use `--full-quality` to disable) |
 | `rasterize` | Convert an SVG to a raster image |

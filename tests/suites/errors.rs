@@ -93,23 +93,23 @@ fn test_rotate_interactive_non_tty_invalid_input_rejected() {
 
 #[test]
 fn test_rasterize_missing_value_for_scale_rejected() {
-    let output = run(&["rasterize", "-s"]);
+    let output = run(&["rasterize", "--scale"]);
     assert!(!output.status.success());
     let err = stderr(&output);
-    assert!(err.contains("--scale") || err.contains("-s"));
+    assert!(err.contains("--scale"));
 }
 
 #[test]
 fn test_rasterize_missing_value_for_width_rejected() {
-    let output = run(&["rasterize", "-w"]);
+    let output = run(&["rasterize", "--width"]);
     assert!(!output.status.success());
     let err = stderr(&output);
-    assert!(err.contains("--width") || err.contains("-w"));
+    assert!(err.contains("--width"));
 }
 
 #[test]
 fn test_rasterize_invalid_scale_rejected() {
-    let output = run(&["rasterize", "-s", "abc", "in.svg", "out.png"]);
+    let output = run(&["rasterize", "--scale", "abc", "in.svg", "out.png"]);
     assert!(!output.status.success());
     let err = stderr(&output);
     assert!(err.contains("abc"));
@@ -117,7 +117,7 @@ fn test_rasterize_invalid_scale_rejected() {
 
 #[test]
 fn test_rasterize_zero_width_rejected() {
-    let output = run(&["rasterize", "-w", "0", "in.svg", "out.png"]);
+    let output = run(&["rasterize", "--width", "0", "in.svg", "out.png"]);
     assert!(!output.status.success());
     let err = stderr(&output);
     assert!(err.contains("invalid value '0'") && err.contains("--width"));
@@ -125,7 +125,7 @@ fn test_rasterize_zero_width_rejected() {
 
 #[test]
 fn test_rasterize_negative_scale_rejected() {
-    let output = run(&["rasterize", "-s", "-5", "in.svg", "out.png"]);
+    let output = run(&["rasterize", "--scale", "-5", "in.svg", "out.png"]);
     assert!(!output.status.success());
 }
 
@@ -205,7 +205,7 @@ fn test_resize_unknown_flag_rejected() {
 
 #[test]
 fn test_resize_zero_width_rejected() {
-    let output = run(&["resize", "--width", "0", "-H", "100", "image.png"]);
+    let output = run(&["resize", "--width", "0", "--height", "100", "image.png"]);
     assert!(!output.status.success());
     let err = stderr(&output);
     assert!(err.contains("invalid value '0'") && err.contains("--width"));
@@ -213,7 +213,7 @@ fn test_resize_zero_width_rejected() {
 
 #[test]
 fn test_resize_zero_height_rejected() {
-    let output = run(&["resize", "--width", "100", "-H", "0", "image.png"]);
+    let output = run(&["resize", "--width", "100", "--height", "0", "image.png"]);
     assert!(!output.status.success());
     let err = stderr(&output);
     assert!(err.contains("invalid value '0'") && err.contains("height"));
@@ -309,7 +309,7 @@ fn test_preview_rejected_in_batch_resize() {
         "resize",
         "--width",
         "4",
-        "-H",
+        "--height",
         "4",
         "--preview",
         temp.path().to_str().unwrap(),

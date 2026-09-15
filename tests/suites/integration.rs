@@ -169,7 +169,7 @@ fn test_rasterize_svg_to_png_with_scale() {
 
     let output = run(&[
         "rasterize",
-        "-s",
+        "--scale",
         "2",
         src.to_str().expect("valid source path"),
         dst.to_str().expect("valid destination path"),
@@ -191,7 +191,7 @@ fn test_rasterize_svg_to_png_with_width_preserves_aspect_ratio() {
 
     let output = run(&[
         "rasterize",
-        "-w",
+        "--width",
         "20",
         src.to_str().expect("valid source path"),
         dst.to_str().expect("valid destination path"),
@@ -212,7 +212,7 @@ fn test_rasterize_svg_to_png_with_height_preserves_aspect_ratio() {
 
     let output = run(&[
         "rasterize",
-        "-H",
+        "--height",
         "15",
         src.to_str().expect("valid source path"),
         dst.to_str().expect("valid destination path"),
@@ -233,9 +233,9 @@ fn test_rasterize_svg_to_png_with_width_and_height() {
 
     let output = run(&[
         "rasterize",
-        "-w",
+        "--width",
         "12",
-        "-H",
+        "--height",
         "9",
         src.to_str().expect("valid source path"),
         dst.to_str().expect("valid destination path"),
@@ -333,7 +333,7 @@ fn test_resize_with_explicit_width_and_height() {
         "resize",
         "--width",
         "20",
-        "-H",
+        "--height",
         "10",
         input.to_str().expect("valid input path"),
         out.to_str().expect("valid output path"),
@@ -357,7 +357,7 @@ fn test_resize_generated_output_suffix() {
         "resize",
         "--width",
         "20",
-        "-H",
+        "--height",
         "10",
         input.to_str().expect("valid input path"),
     ]);
@@ -377,7 +377,7 @@ fn test_resize_replace_mode() {
         "--replace",
         "--width",
         "4",
-        "-H",
+        "--height",
         "4",
         input.to_str().expect("valid input path"),
     ]);
@@ -471,7 +471,7 @@ fn test_resize_height_only_preserve_aspect_ratio() {
     let output = run_with_stdin(
         &[
             "resize",
-            "-H",
+            "--height",
             "12",
             input.to_str().expect("valid input path"),
             out.to_str().expect("valid output path"),
@@ -621,7 +621,7 @@ fn test_binarize_generated_output_mode() {
 
     let output = run(&[
         "binarize",
-        "-t",
+        "--threshold",
         "128",
         input.to_str().expect("valid input path"),
     ]);
@@ -667,7 +667,7 @@ fn test_binarize_replace_mode() {
     let output = run(&[
         "binarize",
         "-r",
-        "-t",
+        "--threshold",
         "128",
         input.to_str().expect("valid input path"),
     ]);
@@ -688,7 +688,7 @@ fn test_binarize_explicit_output() {
 
     let output = run(&[
         "binarize",
-        "-t",
+        "--threshold",
         "128",
         input.to_str().expect("valid input path"),
         out.to_str().expect("valid output path"),
@@ -800,7 +800,7 @@ fn test_pad_dimensions_correct() {
 }
 
 #[test]
-fn test_pad_horizontal_shorthand() {
+fn test_pad_horizontal_flag() {
     let temp = TestDir::new("simply-pad-int");
     let input = temp.path().join("img.png");
     let out = temp.path().join("out.png");
@@ -808,7 +808,7 @@ fn test_pad_horizontal_shorthand() {
 
     let output = run(&[
         "pad",
-        "-x",
+        "--horizontal",
         "10",
         input.to_str().expect("valid input path"),
         out.to_str().expect("valid output path"),

@@ -1,11 +1,20 @@
 use std::ffi::OsString;
 use std::path::PathBuf;
 
-use clap::{Args, Parser, Subcommand};
+use clap::{ArgAction, Args, Parser, Subcommand};
 
 #[derive(Parser)]
-#[command(name = "simply", about = "Image editing from the terminal", version)]
+#[command(
+    name = "simply",
+    about = "Image editing from the terminal",
+    version,
+    disable_version_flag = true
+)]
 pub(crate) struct Cli {
+    /// Print version
+    #[arg(short = 'v', long = "version", action = ArgAction::Version)]
+    version: (),
+
     #[command(subcommand)]
     pub command: Command,
 }
@@ -35,11 +44,11 @@ pub(crate) enum Command {
                       Default behaviour: prompts interactively to choose an axis when neither --horizontal nor --vertical is given.")]
     Flip {
         /// Mirror horizontally, left to right
-        #[arg(short = 'H', long)]
+        #[arg(long)]
         horizontal: bool,
 
         /// Mirror vertically, top to bottom
-        #[arg(short = 'V', long)]
+        #[arg(long)]
         vertical: bool,
 
         /// Overwrite target file (source if no output path given)
@@ -141,7 +150,7 @@ pub(crate) enum Command {
     )]
     Binarize {
         /// Threshold value 0-255 (default: 128). Pixels brighter than this become white, others black
-        #[arg(short, long, value_parser = parse_threshold)]
+        #[arg(long, value_parser = parse_threshold)]
         threshold: Option<u8>,
 
         /// Overwrite target file (source if no output path given)
@@ -168,11 +177,11 @@ pub(crate) enum Command {
     )]
     Resize {
         /// Target width in pixels
-        #[arg(short, long, value_parser = parse_positive_u32)]
+        #[arg(long, value_parser = parse_positive_u32)]
         width: Option<u32>,
 
         /// Target height in pixels
-        #[arg(short = 'H', long, value_parser = parse_positive_u32)]
+        #[arg(long, value_parser = parse_positive_u32)]
         height: Option<u32>,
 
         /// Overwrite target file (source if no output path given)
@@ -193,22 +202,45 @@ pub(crate) enum Command {
         batch: BatchArgs,
     },
 
-    /// Scale an image by a factor (e.g. 0.5 to halve, 2.0 to double)
+    /// Scale an image uniformly by a factor (e.g. 0.5 to halve, 2.0 to double)
     #[command(
-        after_help = "Default behaviour: prompts interactively for a uniform scale factor when no scale flag is given."
+        after_help = "Default behaviour: prompts interactively for a uniform scale factor when --factor is omitted."
     )]
     Scale {
         /// Scale factor (e.g. 0.5 to halve, 2.0 to double)
-        #[arg(short = 'f', long, value_parser = parse_positive_f32_factor)]
+        #[arg(long, value_parser = parse_positive_f32_factor)]
         factor: Option<f32>,
 
+        /// Overwrite target file (source if no output path given)
+        #[arg(short, long)]
+        replace: bool,
+
+        /// Preview the result in the terminal without saving (requires Kitty graphics protocol support (Kitty, WezTerm, or Ghostty))
+        #[arg(short = 'p', long)]
+        preview: bool,
+
+        /// Path to image file or directory
+        path: String,
+
+        /// Output path (auto-generated if omitted)
+        output: Option<String>,
+
+        #[command(flatten)]
+        batch: BatchArgs,
+    },
+
+    /// Stretch an image independently along each axis (e.g. --horizontal 2.0 to double width only)
+    #[command(
+        after_help = "Default behaviour: at least one of --horizontal or --vertical is required."
+    )]
+    Stretch {
         /// Scale factor for width only (e.g. 0.5 to halve width)
-        #[arg(short = 'x', long, value_parser = parse_positive_f32_x)]
-        x: Option<f32>,
+        #[arg(long, value_parser = parse_positive_f32_horizontal)]
+        horizontal: Option<f32>,
 
         /// Scale factor for height only (e.g. 2.0 to double height)
-        #[arg(short = 'y', long, value_parser = parse_positive_f32_y)]
-        y: Option<f32>,
+        #[arg(long, value_parser = parse_positive_f32_vertical)]
+        vertical: Option<f32>,
 
         /// Overwrite target file (source if no output path given)
         #[arg(short, long)]
@@ -313,20 +345,20 @@ pub(crate) enum Command {
         #[arg(long, value_parser = parse_positive_u32)]
         right: Option<u32>,
 
-        /// Pixels to add on every side (overridden by -x, -y, or individual side flags)
+        /// Pixels to add on every side (overridden by --horizontal, --vertical, or individual side flags)
         #[arg(long, value_parser = parse_positive_u32)]
         px: Option<u32>,
 
         /// Shorthand: pixels to add on both left and right (overridden by --left/--right)
-        #[arg(short = 'x', value_parser = parse_positive_u32)]
+        #[arg(long, value_parser = parse_positive_u32)]
         horizontal: Option<u32>,
 
         /// Shorthand: pixels to add on both top and bottom (overridden by --top/--bottom)
-        #[arg(short = 'y', value_parser = parse_positive_u32)]
+        #[arg(long, value_parser = parse_positive_u32)]
         vertical: Option<u32>,
 
         /// Fill color as hex (e.g. ffffff, #ff0000, #ff000080). Defaults to transparent
-        #[arg(short = 'c', long, value_parser = parse_color)]
+        #[arg(long, value_parser = parse_color)]
         color: Option<[u8; 4]>,
 
         /// Overwrite target file (source if no output path given)
@@ -353,15 +385,15 @@ pub(crate) enum Command {
     )]
     Rasterize {
         /// Scale factor for rasterization
-        #[arg(short, long, value_parser = parse_positive_f32)]
+        #[arg(long, value_parser = parse_positive_f32)]
         scale: Option<f32>,
 
         /// Output width in pixels
-        #[arg(short, long, value_parser = parse_positive_u32)]
+        #[arg(long, value_parser = parse_positive_u32)]
         width: Option<u32>,
 
         /// Output height in pixels
-        #[arg(short = 'H', long, value_parser = parse_positive_u32)]
+        #[arg(long, value_parser = parse_positive_u32)]
         height: Option<u32>,
 
         /// Preview the result in the terminal without saving (requires Kitty graphics protocol support (Kitty, WezTerm, or Ghostty))
@@ -404,12 +436,12 @@ fn parse_positive_f32_factor(s: &str) -> Result<f32, String> {
     parse_positive_f32_impl(s, "--factor")
 }
 
-fn parse_positive_f32_x(s: &str) -> Result<f32, String> {
-    parse_positive_f32_impl(s, "--x")
+fn parse_positive_f32_horizontal(s: &str) -> Result<f32, String> {
+    parse_positive_f32_impl(s, "--horizontal")
 }
 
-fn parse_positive_f32_y(s: &str) -> Result<f32, String> {
-    parse_positive_f32_impl(s, "--y")
+fn parse_positive_f32_vertical(s: &str) -> Result<f32, String> {
+    parse_positive_f32_impl(s, "--vertical")
 }
 
 fn parse_positive_u32(s: &str) -> Result<u32, String> {
@@ -699,19 +731,8 @@ mod tests {
     fn test_flip_old_axis_flags_rejected() {
         assert!(try_parse(&["simply", "flip", "-x", "image.png"]).is_err());
         assert!(try_parse(&["simply", "flip", "-y", "image.png"]).is_err());
-    }
-
-    #[test]
-    fn test_flip_short_axis_flags() {
-        match parse(&["simply", "flip", "-H", "-V", "image.png"]) {
-            Command::Flip {
-                horizontal: true,
-                vertical: true,
-                path,
-                ..
-            } => assert_eq!(path, "image.png"),
-            other => panic!("unexpected: {other:?}"),
-        }
+        assert!(try_parse(&["simply", "flip", "-H", "image.png"]).is_err());
+        assert!(try_parse(&["simply", "flip", "-V", "image.png"]).is_err());
     }
 
     #[test]
@@ -964,11 +985,11 @@ mod tests {
         match parse(&[
             "simply",
             "rasterize",
-            "-s",
+            "--scale",
             "2.5",
-            "-w",
+            "--width",
             "200",
-            "-H",
+            "--height",
             "100",
             "in.svg",
             "out.png",
@@ -1026,7 +1047,7 @@ mod tests {
             "resize",
             "--width",
             "800",
-            "-H",
+            "--height",
             "600",
             "image.png",
         ]) {
@@ -1063,7 +1084,7 @@ mod tests {
             "-r",
             "--width",
             "100",
-            "-H",
+            "--height",
             "100",
             "image.png",
         ]) {
@@ -1081,7 +1102,7 @@ mod tests {
     #[test]
     fn test_resize_with_output() {
         match parse(&[
-            "simply", "resize", "--width", "50", "-H", "50", "in.png", "out.png",
+            "simply", "resize", "--width", "50", "--height", "50", "in.png", "out.png",
         ]) {
             Command::Resize {
                 width: Some(50),
@@ -1124,15 +1145,8 @@ mod tests {
     }
 
     #[test]
-    fn test_binarize_short_threshold() {
-        match parse(&["simply", "binarize", "-t", "100", "image.png"]) {
-            Command::Binarize {
-                threshold: Some(100),
-                path,
-                ..
-            } => assert_eq!(path, "image.png"),
-            other => panic!("unexpected: {other:?}"),
-        }
+    fn test_binarize_short_threshold_rejected() {
+        assert!(try_parse(&["simply", "binarize", "-t", "100", "image.png"]).is_err());
     }
 
     #[test]
@@ -1229,7 +1243,7 @@ mod tests {
 
     #[test]
     fn test_pad_horizontal_shorthand() {
-        match parse(&["simply", "pad", "-x", "40", "image.png"]) {
+        match parse(&["simply", "pad", "--horizontal", "40", "image.png"]) {
             Command::Pad {
                 horizontal: Some(40),
                 vertical: None,
@@ -1242,7 +1256,7 @@ mod tests {
 
     #[test]
     fn test_pad_vertical_shorthand() {
-        match parse(&["simply", "pad", "-y", "15", "image.png"]) {
+        match parse(&["simply", "pad", "--vertical", "15", "image.png"]) {
             Command::Pad {
                 vertical: Some(15),
                 horizontal: None,
@@ -1255,7 +1269,15 @@ mod tests {
 
     #[test]
     fn test_pad_color_6digit() {
-        match parse(&["simply", "pad", "-c", "ff0000", "--top", "5", "image.png"]) {
+        match parse(&[
+            "simply",
+            "pad",
+            "--color",
+            "ff0000",
+            "--top",
+            "5",
+            "image.png",
+        ]) {
             Command::Pad {
                 color: Some([255, 0, 0, 255]),
                 top: Some(5),
@@ -1350,7 +1372,7 @@ mod tests {
         match parse(&[
             "simply",
             "pad",
-            "-x",
+            "--horizontal",
             "10",
             "--output-dir",
             "/tmp/out",
@@ -1413,13 +1435,8 @@ mod tests {
     }
 
     #[test]
-    fn test_scale_short_factor() {
-        match parse(&["simply", "scale", "-f", "2", "image.png"]) {
-            Command::Scale {
-                factor: Some(f), ..
-            } => assert!((f - 2.0).abs() < f32::EPSILON),
-            other => panic!("unexpected: {other:?}"),
-        }
+    fn test_scale_short_factor_rejected() {
+        assert!(try_parse(&["simply", "scale", "-f", "2", "image.png"]).is_err());
     }
 
     #[test]
@@ -1464,6 +1481,115 @@ mod tests {
     #[test]
     fn test_scale_negative_factor_rejected() {
         let result = try_parse(&["simply", "scale", "--factor", "-1", "image.png"]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_stretch_horizontal_only() {
+        match parse(&["simply", "stretch", "--horizontal", "2", "image.png"]) {
+            Command::Stretch {
+                horizontal: Some(h),
+                vertical: None,
+                path,
+                ..
+            } => {
+                assert!((h - 2.0).abs() < f32::EPSILON);
+                assert_eq!(path, "image.png");
+            }
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_stretch_vertical_only() {
+        match parse(&["simply", "stretch", "--vertical", "0.5", "image.png"]) {
+            Command::Stretch {
+                horizontal: None,
+                vertical: Some(v),
+                path,
+                ..
+            } => {
+                assert!((v - 0.5).abs() < f32::EPSILON);
+                assert_eq!(path, "image.png");
+            }
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_stretch_both_axes() {
+        match parse(&[
+            "simply",
+            "stretch",
+            "--horizontal",
+            "2",
+            "--vertical",
+            "0.5",
+            "image.png",
+        ]) {
+            Command::Stretch {
+                horizontal: Some(h),
+                vertical: Some(v),
+                path,
+                ..
+            } => {
+                assert!((h - 2.0).abs() < f32::EPSILON);
+                assert!((v - 0.5).abs() < f32::EPSILON);
+                assert_eq!(path, "image.png");
+            }
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_stretch_replace() {
+        match parse(&["simply", "stretch", "-r", "--horizontal", "2", "image.png"]) {
+            Command::Stretch {
+                replace: true,
+                horizontal: Some(h),
+                path,
+                ..
+            } => {
+                assert!((h - 2.0).abs() < f32::EPSILON);
+                assert_eq!(path, "image.png");
+            }
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_stretch_with_output() {
+        match parse(&[
+            "simply",
+            "stretch",
+            "--horizontal",
+            "2",
+            "in.png",
+            "out.png",
+        ]) {
+            Command::Stretch {
+                horizontal: Some(h),
+                path,
+                output: Some(out),
+                ..
+            } => {
+                assert!((h - 2.0).abs() < f32::EPSILON);
+                assert_eq!(path, "in.png");
+                assert_eq!(out, "out.png");
+            }
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_stretch_zero_factor_rejected() {
+        let result = try_parse(&["simply", "stretch", "--horizontal", "0", "image.png"]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_stretch_negative_factor_rejected() {
+        let result = try_parse(&["simply", "stretch", "--vertical", "-1", "image.png"]);
         assert!(result.is_err());
     }
 }
