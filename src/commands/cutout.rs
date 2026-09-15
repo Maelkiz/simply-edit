@@ -15,6 +15,7 @@ pub(crate) const DEFAULT_TOLERANCE: f32 = 12.0;
 pub(crate) struct CutoutArgs {
     pub src: String,
     pub tolerance: f32,
+    pub trim: bool,
     pub output: OutputMode,
 }
 
@@ -104,6 +105,34 @@ pub(crate) fn fast_cutout(img: &DynamicImage, tolerance: f32) -> RgbaImage {
     out
 }
 
+/// Crops `img` to the bounding box of its non-transparent pixels.
+///
+/// Errors rather than returning a zero-sized image when nothing survived the
+/// cutout, since no image format can store an empty raster.
+pub(crate) fn trim_to_alpha_bbox(img: &RgbaImage) -> Result<RgbaImage, String> {
+    let mut bounds: Option<(u32, u32, u32, u32)> = None;
+    for (x, y, pixel) in img.enumerate_pixels() {
+        if pixel.0[3] == 0 {
+            continue;
+        }
+        bounds = Some(match bounds {
+            None => (x, y, x, y),
+            Some((min_x, min_y, max_x, max_y)) => {
+                (min_x.min(x), min_y.min(y), max_x.max(x), max_y.max(y))
+            }
+        });
+    }
+
+    let (min_x, min_y, max_x, max_y) = bounds.ok_or_else(|| {
+        "cutout: --trim produced an empty image: every pixel was removed as background".to_string()
+    })?;
+
+    Ok(
+        image::imageops::crop_imm(img, min_x, min_y, max_x - min_x + 1, max_y - min_y + 1)
+            .to_image(),
+    )
+}
+
 /// Batch output path for `input`, forcing an alpha-capable extension.
 pub(crate) fn batch_output_path(
     input: &Path,
@@ -117,6 +146,7 @@ pub(crate) fn run_cutout(args: CutoutArgs) -> Result<(), String> {
     let CutoutArgs {
         src,
         tolerance,
+        trim,
         output,
     } = args;
 
@@ -130,7 +160,10 @@ pub(crate) fn run_cutout(args: CutoutArgs) -> Result<(), String> {
     let img =
         image::open(&src).map_err(|e| format!("cutout: failed to open image '{src}': {e}"))?;
 
-    let result = fast_cutout(&img, tolerance);
+    let mut result = fast_cutout(&img, tolerance);
+    if trim {
+        result = trim_to_alpha_bbox(&result)?;
+    }
 
     if let Some(output_path) = dispatch_save(DynamicImage::ImageRgba8(result), &src, output)? {
         println!("Saved cutout to {output_path}");
@@ -275,5 +308,61 @@ mod tests {
         assert!(reject_opaque_replace_target("a/b.WEBP").is_ok());
         assert!(reject_opaque_replace_target("a/b.jpg").is_err());
         assert!(reject_opaque_replace_target("a/b.ico").is_err());
+    }
+}
+
+#[cfg(test)]
+mod trim_tests {
+    use super::*;
+    use image::{Rgba, RgbaImage};
+
+    /// Fully transparent canvas with a single opaque 2x3 block at (4, 2).
+    fn image_with_offset_subject() -> RgbaImage {
+        let mut img = RgbaImage::from_pixel(10, 10, Rgba([0, 0, 0, 0]));
+        for y in 2..5 {
+            for x in 4..6 {
+                img.put_pixel(x, y, Rgba([200, 30, 30, 255]));
+            }
+        }
+        img
+    }
+
+    #[test]
+    fn test_trim_crops_to_subject_bounds() {
+        let out = trim_to_alpha_bbox(&image_with_offset_subject()).expect("subject present");
+        assert_eq!((out.width(), out.height()), (2, 3));
+    }
+
+    #[test]
+    fn test_trim_keeps_content_unshifted_within_the_crop() {
+        let out = trim_to_alpha_bbox(&image_with_offset_subject()).expect("subject present");
+        for y in 0..3 {
+            for x in 0..2 {
+                assert_eq!(out.get_pixel(x, y).0, [200, 30, 30, 255]);
+            }
+        }
+    }
+
+    #[test]
+    fn test_trim_is_a_noop_when_the_subject_fills_the_frame() {
+        let img = RgbaImage::from_pixel(4, 5, Rgba([10, 20, 30, 255]));
+        let out = trim_to_alpha_bbox(&img).expect("subject present");
+        assert_eq!((out.width(), out.height()), (4, 5));
+    }
+
+    #[test]
+    fn test_trim_errors_when_everything_is_transparent() {
+        let img = RgbaImage::from_pixel(4, 4, Rgba([0, 0, 0, 0]));
+        let err = trim_to_alpha_bbox(&img).expect_err("empty image should error");
+        assert!(err.contains("empty image"));
+    }
+
+    #[test]
+    fn test_trim_includes_partially_transparent_pixels() {
+        let mut img = RgbaImage::from_pixel(6, 6, Rgba([0, 0, 0, 0]));
+        img.put_pixel(1, 1, Rgba([255, 0, 0, 1]));
+        img.put_pixel(3, 4, Rgba([255, 0, 0, 255]));
+        let out = trim_to_alpha_bbox(&img).expect("subject present");
+        assert_eq!((out.width(), out.height()), (3, 4));
     }
 }

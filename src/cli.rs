@@ -173,12 +173,16 @@ pub(crate) enum Command {
 
     /// Remove an image's background, producing a transparent cutout
     #[command(
-        after_help = "Default behaviour: removes a flat background by flood-filling inward from the image border with a tolerance of 12. Output is always written in an alpha-capable format (png, or webp when the source is webp)."
+        after_help = "Default behaviour: removes a flat background by flood-filling inward from the image border with a tolerance of 12. Output is always written in an alpha-capable format (png, or webp when the source is webp). Use --trim to crop the result to the remaining subject."
     )]
     Cutout {
         /// Colour-distance tolerance 0-441.7 (default: 12). Higher values remove more of the background
         #[arg(long, value_parser = parse_tolerance)]
         tolerance: Option<f32>,
+
+        /// Crop the result to the bounding box of the remaining subject
+        #[arg(long)]
+        trim: bool,
 
         /// Overwrite target file (source if no output path given)
         #[arg(long)]

@@ -1096,3 +1096,49 @@ fn test_cutout_replace_rewrites_png_in_place() {
     let img = image::open(&input).expect("valid replaced image");
     assert_eq!(img.to_rgba8().get_pixel(0, 0).0[3], 0);
 }
+
+#[test]
+fn test_cutout_trim_crops_to_subject() {
+    let temp = TestDir::new("simply-cutout-trim");
+    let input = temp.path().join("logo.png");
+
+    // White field with an off-centre red block: the flood fill clears the
+    // white, and --trim should shrink the output to just the block.
+    let mut img = image::RgbaImage::from_pixel(20, 20, image::Rgba([255, 255, 255, 255]));
+    for y in 5..11 {
+        for x in 8..12 {
+            img.put_pixel(x, y, image::Rgba([200, 30, 30, 255]));
+        }
+    }
+    img.save(&input).expect("failed to write input");
+
+    let output = run(&[
+        "cutout",
+        "--trim",
+        input.to_str().expect("valid input path"),
+    ]);
+    assert!(output.status.success());
+
+    let cut = image::open(temp.path().join("logo_cutout.png")).expect("valid output");
+    assert_eq!((cut.width(), cut.height()), (4, 6));
+}
+
+#[test]
+fn test_cutout_without_trim_keeps_original_dimensions() {
+    let temp = TestDir::new("simply-cutout-no-trim");
+    let input = temp.path().join("logo.png");
+
+    let mut img = image::RgbaImage::from_pixel(20, 20, image::Rgba([255, 255, 255, 255]));
+    for y in 5..11 {
+        for x in 8..12 {
+            img.put_pixel(x, y, image::Rgba([200, 30, 30, 255]));
+        }
+    }
+    img.save(&input).expect("failed to write input");
+
+    let output = run(&["cutout", input.to_str().expect("valid input path")]);
+    assert!(output.status.success());
+
+    let cut = image::open(temp.path().join("logo_cutout.png")).expect("valid output");
+    assert_eq!((cut.width(), cut.height()), (20, 20));
+}

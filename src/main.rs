@@ -301,6 +301,7 @@ fn run() -> Result<(), String> {
         }
         Command::Cutout {
             tolerance,
+            trim,
             replace,
             preview,
             batch,
@@ -330,7 +331,10 @@ fn run() -> Result<(), String> {
                     let img = image::open(file).map_err(|e| {
                         format!("cutout: failed to open image '{}': {e}", file.display())
                     })?;
-                    let cut = commands::cutout::fast_cutout(&img, tolerance);
+                    let mut cut = commands::cutout::fast_cutout(&img, tolerance);
+                    if trim {
+                        cut = commands::cutout::trim_to_alpha_bbox(&cut)?;
+                    }
                     let out_path = commands::cutout::batch_output_path(file, &options);
                     io::save_image(image::DynamicImage::ImageRgba8(cut), &out_path)?;
                     Ok(out_path.to_string_lossy().to_string())
@@ -342,6 +346,7 @@ fn run() -> Result<(), String> {
                 commands::cutout::run_cutout(commands::cutout::CutoutArgs {
                     src: path,
                     tolerance,
+                    trim,
                     output,
                 })
             }

@@ -487,3 +487,14 @@ fn test_preview_rejected_in_batch_cutout() {
     assert!(!output.status.success());
     assert!(stderr(&output).contains("--preview cannot be used in batch mode"));
 }
+
+#[test]
+fn test_cutout_trim_on_fully_removed_image_errors() {
+    let temp = TestDir::new("simply-cutout-trim-err");
+    let input = temp.path().join("blank.png");
+    create_png(&input, 6, 6, [255, 255, 255, 255]);
+
+    let output = run(&["cutout", "--trim", input.to_str().expect("valid path")]);
+    assert!(!output.status.success());
+    assert!(stderr(&output).contains("empty image"));
+}
