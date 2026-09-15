@@ -38,8 +38,8 @@ fn run() -> Result<(), String> {
     let cli = Cli::parse_from(expand_shorthands(std::env::args_os()));
     match cli.command {
         Command::Flip {
-            x,
-            y,
+            horizontal,
+            vertical,
             replace,
             preview,
             batch,
@@ -50,10 +50,12 @@ fn run() -> Result<(), String> {
                 if preview {
                     return Err("flip: --preview cannot be used in batch mode".to_string());
                 }
-                if !x && !y {
-                    return Err("flip: --x or --y required in batch mode".to_string());
+                if !horizontal && !vertical {
+                    return Err(
+                        "flip: --horizontal or --vertical required in batch mode".to_string()
+                    );
                 }
-                let suffix = match (x, y) {
+                let suffix = match (vertical, horizontal) {
                     (true, true) => "flipxy",
                     (true, false) => "flipv",
                     (false, true) => "fliph",
@@ -77,7 +79,7 @@ fn run() -> Result<(), String> {
                     let img = image::open(file).map_err(|e| {
                         format!("flip: failed to open image '{}': {e}", file.display())
                     })?;
-                    let flipped = match (x, y) {
+                    let flipped = match (vertical, horizontal) {
                         (true, true) => img.flipv().fliph(),
                         (true, false) => img.flipv(),
                         (false, true) => img.fliph(),
@@ -91,7 +93,7 @@ fn run() -> Result<(), String> {
                 Ok(())
             } else {
                 let output = output_mode(replace, preview, output);
-                match (x, y) {
+                match (vertical, horizontal) {
                     (true, true) => commands::transforms::run_flip_both(&path, output),
                     (true, false) => commands::transforms::run_flip(
                         &path,

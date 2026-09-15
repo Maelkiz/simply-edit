@@ -28,18 +28,18 @@ pub(crate) struct BatchArgs {
 
 #[derive(Debug, Subcommand)]
 pub(crate) enum Command {
-    /// Mirror an image along the X axis (vertical), Y axis (horizontal), or both
+    /// Mirror an image horizontally (left to right), vertically (top to bottom), or both
     #[command(
-        after_help = "Default behaviour: prompts interactively to choose an axis when neither -x nor -y is given."
+        after_help = "Default behaviour: prompts interactively to choose an axis when neither --horizontal nor --vertical is given."
     )]
     Flip {
-        /// Flip along the X axis (vertical mirror, top to bottom)
-        #[arg(short = 'x', long)]
-        x: bool,
+        /// Mirror horizontally, left to right
+        #[arg(short = 'H', long)]
+        horizontal: bool,
 
-        /// Flip along the Y axis (horizontal mirror, left to right)
-        #[arg(short = 'y', long)]
-        y: bool,
+        /// Mirror vertically, top to bottom
+        #[arg(short = 'V', long)]
+        vertical: bool,
 
         /// Overwrite target file (source if no output path given)
         #[arg(short, long)]
@@ -448,8 +448,8 @@ fn parse_color(s: &str) -> Result<[u8; 4], String> {
 /// command plus its preset flag. Everything after it is passed through untouched,
 /// so `--replace`, `--preview`, batch flags and an explicit output path still work.
 const SHORTHANDS: &[(&str, &[&str])] = &[
-    ("fliph", &["flip", "-y"]),
-    ("flipv", &["flip", "-x"]),
+    ("fliph", &["flip", "--horizontal"]),
+    ("flipv", &["flip", "--vertical"]),
     ("rotate90", &["rotate", "--angle", "90"]),
     ("rotate180", &["rotate", "--angle", "180"]),
     ("rotate270", &["rotate", "--angle", "270"]),
@@ -517,7 +517,7 @@ mod tests {
     fn test_expand_fliph() {
         assert_eq!(
             expand(&["simply", "fliph", "image.png"]),
-            ["simply", "flip", "-y", "image.png"]
+            ["simply", "flip", "--horizontal", "image.png"]
         );
     }
 
@@ -525,7 +525,7 @@ mod tests {
     fn test_expand_flipv() {
         assert_eq!(
             expand(&["simply", "flipv", "image.png"]),
-            ["simply", "flip", "-x", "image.png"]
+            ["simply", "flip", "--vertical", "image.png"]
         );
     }
 
@@ -547,15 +547,22 @@ mod tests {
     fn test_expand_preserves_trailing_args() {
         assert_eq!(
             expand(&["simply", "fliph", "-r", "image.png", "out.png"]),
-            ["simply", "flip", "-y", "-r", "image.png", "out.png"]
+            [
+                "simply",
+                "flip",
+                "--horizontal",
+                "-r",
+                "image.png",
+                "out.png"
+            ]
         );
     }
 
     #[test]
     fn test_expand_leaves_regular_commands_untouched() {
         assert_eq!(
-            expand(&["simply", "flip", "-x", "image.png"]),
-            ["simply", "flip", "-x", "image.png"]
+            expand(&["simply", "flip", "--vertical", "image.png"]),
+            ["simply", "flip", "--vertical", "image.png"]
         );
     }
 
@@ -581,8 +588,8 @@ mod tests {
     fn test_shorthand_parses_to_expected_command() {
         match parse_expanded(&["simply", "fliph", "image.png"]) {
             Command::Flip {
-                x: false,
-                y: true,
+                vertical: false,
+                horizontal: true,
                 path,
                 ..
             } => assert_eq!(path, "image.png"),
@@ -590,8 +597,8 @@ mod tests {
         }
         match parse_expanded(&["simply", "flipv", "-r", "image.png"]) {
             Command::Flip {
-                x: true,
-                y: false,
+                vertical: true,
+                horizontal: false,
                 replace: true,
                 ..
             } => {}
@@ -660,11 +667,11 @@ mod tests {
     }
 
     #[test]
-    fn test_flip_x_flag() {
-        match parse(&["simply", "flip", "-x", "image.png"]) {
+    fn test_flip_vertical_flag() {
+        match parse(&["simply", "flip", "--vertical", "image.png"]) {
             Command::Flip {
-                x: true,
-                y: false,
+                vertical: true,
+                horizontal: false,
                 path,
                 ..
             } => assert_eq!(path, "image.png"),
@@ -673,11 +680,11 @@ mod tests {
     }
 
     #[test]
-    fn test_flip_y_flag() {
-        match parse(&["simply", "flip", "-y", "image.png"]) {
+    fn test_flip_horizontal_flag() {
+        match parse(&["simply", "flip", "--horizontal", "image.png"]) {
             Command::Flip {
-                x: false,
-                y: true,
+                vertical: false,
+                horizontal: true,
                 path,
                 ..
             } => assert_eq!(path, "image.png"),
@@ -686,11 +693,17 @@ mod tests {
     }
 
     #[test]
-    fn test_flip_xy_flags() {
-        match parse(&["simply", "flip", "-x", "-y", "image.png"]) {
+    fn test_flip_old_axis_flags_rejected() {
+        assert!(try_parse(&["simply", "flip", "-x", "image.png"]).is_err());
+        assert!(try_parse(&["simply", "flip", "-y", "image.png"]).is_err());
+    }
+
+    #[test]
+    fn test_flip_short_axis_flags() {
+        match parse(&["simply", "flip", "-H", "-V", "image.png"]) {
             Command::Flip {
-                x: true,
-                y: true,
+                horizontal: true,
+                vertical: true,
                 path,
                 ..
             } => assert_eq!(path, "image.png"),
@@ -699,11 +712,24 @@ mod tests {
     }
 
     #[test]
-    fn test_flip_y_basic() {
-        match parse(&["simply", "flip", "-y", "image.png"]) {
+    fn test_flip_both_axis_flags() {
+        match parse(&["simply", "flip", "--vertical", "--horizontal", "image.png"]) {
             Command::Flip {
-                x: false,
-                y: true,
+                vertical: true,
+                horizontal: true,
+                path,
+                ..
+            } => assert_eq!(path, "image.png"),
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_flip_horizontal_basic() {
+        match parse(&["simply", "flip", "--horizontal", "image.png"]) {
+            Command::Flip {
+                vertical: false,
+                horizontal: true,
                 replace: false,
                 path,
                 output: None,
@@ -714,10 +740,10 @@ mod tests {
     }
 
     #[test]
-    fn test_flip_y_with_output() {
-        match parse(&["simply", "flip", "-y", "image.png", "out.png"]) {
+    fn test_flip_horizontal_with_output() {
+        match parse(&["simply", "flip", "--horizontal", "image.png", "out.png"]) {
             Command::Flip {
-                y: true,
+                horizontal: true,
                 path,
                 output: Some(out),
                 ..
@@ -730,10 +756,10 @@ mod tests {
     }
 
     #[test]
-    fn test_flip_y_replace() {
-        match parse(&["simply", "flip", "-y", "-r", "image.png"]) {
+    fn test_flip_horizontal_replace() {
+        match parse(&["simply", "flip", "--horizontal", "-r", "image.png"]) {
             Command::Flip {
-                y: true,
+                horizontal: true,
                 replace: true,
                 path,
                 ..

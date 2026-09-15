@@ -50,7 +50,7 @@ simply <command> <args>
 | Command | What it does |
 | --- | --- |
 | `help` | Prints an overview of the available commands |
-| `flip` | Mirror an image along the X axis (`-x`, vertical), Y axis (`-y`, horizontal), or both (interactive if no flag given) |
+| `flip` | Mirror an image horizontally (`--horizontal`/`-H`), vertically (`--vertical`/`-V`), or both (interactive if no flag given) |
 | `rotate` | Rotate image (interactive by default, or explicit `90`/`180`/`270`) |
 | `invert` | Invert image colors |
 | `grayscale` | Convert image to grayscale |
@@ -72,8 +72,8 @@ explicit output path, and batch options.
 
 | Shorthand | Same as |
 | --- | --- |
-| `fliph` | `flip -y` (horizontal mirror, left to right) |
-| `flipv` | `flip -x` (vertical mirror, top to bottom) |
+| `fliph` | `flip --horizontal` (mirror left to right) |
+| `flipv` | `flip --vertical` (mirror top to bottom) |
 | `rotate90` | `rotate --angle 90` |
 | `rotate180` | `rotate --angle 180` |
 | `rotate270` | `rotate --angle 270` |
@@ -107,14 +107,14 @@ If you omit the output path, the tool generates one automatically: transforms ke
 #### Transforms
 
 ```bash
-# Flip along X axis (vertical mirror, top to bottom)
-simply flip -x ./image.png
+# Flip vertically (mirror top to bottom)
+simply flip --vertical ./image.png
 
-# Flip along Y axis (horizontal mirror, left to right)
-simply flip -y ./image.png
+# Flip horizontally (mirror left to right)
+simply flip --horizontal ./image.png
 
 # Flip both axes at once
-simply flip -x -y ./image.png
+simply flip --horizontal --vertical ./image.png
 
 # Flip interactively (prompts for axis when no flag is given)
 simply flip ./image.png
@@ -210,8 +210,8 @@ simply binarize --threshold 100 ./scans/ --output-dir ./cleaned/
 simply view ./photo.png
 
 # Preview a transform without saving
-simply flip -x --preview ./photo.png
-simply flip -y --preview ./photo.png
+simply flip --vertical --preview ./photo.png
+simply flip --horizontal --preview ./photo.png
 simply rotate --angle 90 --preview ./photo.png
 simply grayscale --preview ./photo.png
 simply binarize --preview ./photo.png

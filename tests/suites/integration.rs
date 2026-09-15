@@ -11,7 +11,11 @@ fn test_flip_generated_output() {
     let generated = temp.path().join("img_flipv.png");
     create_png(&input, 3, 2, [220, 30, 30, 255]);
 
-    let output = run(&["flip", "-x", input.to_str().expect("valid input path")]);
+    let output = run(&[
+        "flip",
+        "--vertical",
+        input.to_str().expect("valid input path"),
+    ]);
     assert!(output.status.success());
     assert!(generated.exists());
     assert_valid_image(&generated);
@@ -26,7 +30,7 @@ fn test_flip_explicit_output() {
 
     let output = run(&[
         "flip",
-        "-x",
+        "--vertical",
         input.to_str().expect("valid input path"),
         out.to_str().expect("valid output path"),
     ]);
@@ -42,7 +46,11 @@ fn test_flip_y_generated_output() {
     let generated = temp.path().join("img_fliph.png");
     create_png(&input, 3, 2, [220, 30, 30, 255]);
 
-    let output = run(&["flip", "-y", input.to_str().expect("valid input path")]);
+    let output = run(&[
+        "flip",
+        "--horizontal",
+        input.to_str().expect("valid input path"),
+    ]);
     assert!(output.status.success());
     assert!(generated.exists());
     assert_valid_image(&generated);
@@ -57,7 +65,7 @@ fn test_flip_y_explicit_output() {
 
     let output = run(&[
         "flip",
-        "-y",
+        "--horizontal",
         input.to_str().expect("valid input path"),
         out.to_str().expect("valid output path"),
     ]);
@@ -890,12 +898,12 @@ fn assert_shorthand_matches(shorthand: &[&str], long_form: &[&str], suffix: &str
 
 #[test]
 fn test_shorthand_fliph_matches_flag() {
-    assert_shorthand_matches(&["fliph"], &["flip", "-y"], "fliph");
+    assert_shorthand_matches(&["fliph"], &["flip", "--horizontal"], "fliph");
 }
 
 #[test]
 fn test_shorthand_flipv_matches_flag() {
-    assert_shorthand_matches(&["flipv"], &["flip", "-x"], "flipv");
+    assert_shorthand_matches(&["flipv"], &["flip", "--vertical"], "flipv");
 }
 
 #[test]
@@ -959,4 +967,60 @@ fn test_shorthand_works_in_batch_mode() {
     assert!(output.status.success());
     assert!(out.path().join("a_flipv.png").exists());
     assert!(out.path().join("b_flipv.png").exists());
+}
+
+/// Writes a 2x2 PNG whose four pixels are all distinct, so a mirror in either
+/// direction is detectable from the pixel values alone.
+fn create_asymmetric_png(path: &std::path::Path) {
+    let mut img = image::RgbaImage::new(2, 2);
+    img.put_pixel(0, 0, image::Rgba([255, 0, 0, 255]));
+    img.put_pixel(1, 0, image::Rgba([0, 255, 0, 255]));
+    img.put_pixel(0, 1, image::Rgba([0, 0, 255, 255]));
+    img.put_pixel(1, 1, image::Rgba([255, 255, 0, 255]));
+    image::DynamicImage::ImageRgba8(img)
+        .save(path)
+        .expect("failed to save asymmetric png fixture");
+}
+
+fn pixels(path: &std::path::Path) -> Vec<[u8; 4]> {
+    let img = image::open(path).expect("failed to open image").to_rgba8();
+    img.pixels().map(|p| p.0).collect()
+}
+
+#[test]
+fn test_flip_horizontal_mirrors_left_to_right() {
+    let temp = TestDir::new("simply-flip-axis");
+    let input = temp.path().join("img.png");
+    create_asymmetric_png(&input);
+
+    let output = run(&[
+        "flip",
+        "--horizontal",
+        input.to_str().expect("valid input path"),
+    ]);
+    assert!(output.status.success());
+
+    let before = pixels(&input);
+    let after = pixels(&temp.path().join("img_fliph.png"));
+    // Rows keep their order; columns swap within each row.
+    assert_eq!(after, vec![before[1], before[0], before[3], before[2]]);
+}
+
+#[test]
+fn test_flip_vertical_mirrors_top_to_bottom() {
+    let temp = TestDir::new("simply-flip-axis");
+    let input = temp.path().join("img.png");
+    create_asymmetric_png(&input);
+
+    let output = run(&[
+        "flip",
+        "--vertical",
+        input.to_str().expect("valid input path"),
+    ]);
+    assert!(output.status.success());
+
+    let before = pixels(&input);
+    let after = pixels(&temp.path().join("img_flipv.png"));
+    // Columns keep their order; rows swap.
+    assert_eq!(after, vec![before[2], before[3], before[0], before[1]]);
 }

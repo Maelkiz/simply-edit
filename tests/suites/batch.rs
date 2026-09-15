@@ -67,7 +67,7 @@ fn test_batch_flip() {
 
     let output = run(&[
         "flip",
-        "-x",
+        "--vertical",
         temp.path().to_str().unwrap(),
         "--output-dir",
         out.path().to_str().unwrap(),
@@ -85,7 +85,7 @@ fn test_batch_flip_y() {
 
     let output = run(&[
         "flip",
-        "-y",
+        "--horizontal",
         temp.path().to_str().unwrap(),
         "--output-dir",
         out.path().to_str().unwrap(),
