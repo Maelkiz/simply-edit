@@ -96,7 +96,7 @@ simply rotate180 ./image.png
 simply rotate270 ./image.png
 
 # Shorthands take the same flags as the command they stand for
-simply rotate180 -r ./image.png # Rotates in place, overwriting the source file
+simply rotate180 --replace ./image.png # Rotates in place, overwriting the source file
 ```
 
 ### Format Conversion
@@ -133,7 +133,7 @@ simply invert ./photos/
 simply convert --format webp ./photos/ --output-dir ./converted/
 
 # Grayscale only matching files, recursively
-simply grayscale ./photos/ -R --pattern "^photo_"
+simply grayscale ./photos/ -r --pattern "^photo_"
 
 # Binarize all images in a directory with a custom threshold
 simply binarize --threshold 100 ./scans/ --output-dir ./cleaned/

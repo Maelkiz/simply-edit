@@ -31,7 +31,7 @@ pub(crate) struct BatchArgs {
     pub output_dir: Option<PathBuf>,
 
     /// Process subdirectories recursively
-    #[arg(short = 'R', long)]
+    #[arg(short = 'r', long)]
     pub recursive: bool,
 }
 
@@ -52,7 +52,7 @@ pub(crate) enum Command {
         vertical: bool,
 
         /// Overwrite target file (source if no output path given)
-        #[arg(short, long)]
+        #[arg(long)]
         replace: bool,
 
         /// Preview the result in the terminal without saving (requires Kitty graphics protocol support (Kitty, WezTerm, or Ghostty))
@@ -81,7 +81,7 @@ pub(crate) enum Command {
         angle: Option<u16>,
 
         /// Overwrite target file (source if no output path given)
-        #[arg(short, long)]
+        #[arg(long)]
         replace: bool,
 
         /// Preview the result in the terminal without saving (requires Kitty graphics protocol support (Kitty, WezTerm, or Ghostty))
@@ -104,7 +104,7 @@ pub(crate) enum Command {
     )]
     Invert {
         /// Overwrite target file (source if no output path given)
-        #[arg(short, long)]
+        #[arg(long)]
         replace: bool,
 
         /// Preview the result in the terminal without saving (requires Kitty graphics protocol support (Kitty, WezTerm, or Ghostty))
@@ -127,7 +127,7 @@ pub(crate) enum Command {
     )]
     Grayscale {
         /// Overwrite target file (source if no output path given)
-        #[arg(short, long)]
+        #[arg(long)]
         replace: bool,
 
         /// Preview the result in the terminal without saving (requires Kitty graphics protocol support (Kitty, WezTerm, or Ghostty))
@@ -154,7 +154,7 @@ pub(crate) enum Command {
         threshold: Option<u8>,
 
         /// Overwrite target file (source if no output path given)
-        #[arg(short, long)]
+        #[arg(long)]
         replace: bool,
 
         /// Preview the result in the terminal without saving (requires Kitty graphics protocol support (Kitty, WezTerm, or Ghostty))
@@ -185,7 +185,7 @@ pub(crate) enum Command {
         height: Option<u32>,
 
         /// Overwrite target file (source if no output path given)
-        #[arg(short, long)]
+        #[arg(long)]
         replace: bool,
 
         /// Preview the result in the terminal without saving (requires Kitty graphics protocol support (Kitty, WezTerm, or Ghostty))
@@ -212,7 +212,7 @@ pub(crate) enum Command {
         factor: Option<f32>,
 
         /// Overwrite target file (source if no output path given)
-        #[arg(short, long)]
+        #[arg(long)]
         replace: bool,
 
         /// Preview the result in the terminal without saving (requires Kitty graphics protocol support (Kitty, WezTerm, or Ghostty))
@@ -243,7 +243,7 @@ pub(crate) enum Command {
         vertical: Option<f32>,
 
         /// Overwrite target file (source if no output path given)
-        #[arg(short, long)]
+        #[arg(long)]
         replace: bool,
 
         /// Preview the result in the terminal without saving (requires Kitty graphics protocol support (Kitty, WezTerm, or Ghostty))
@@ -362,7 +362,7 @@ pub(crate) enum Command {
         color: Option<[u8; 4]>,
 
         /// Overwrite target file (source if no output path given)
-        #[arg(short, long)]
+        #[arg(long)]
         replace: bool,
 
         /// Preview the result in the terminal without saving (requires Kitty graphics protocol support (Kitty, WezTerm, or Ghostty))
@@ -581,12 +581,12 @@ mod tests {
     #[test]
     fn test_expand_preserves_trailing_args() {
         assert_eq!(
-            expand(&["simply", "fliph", "-r", "image.png", "out.png"]),
+            expand(&["simply", "fliph", "--replace", "image.png", "out.png"]),
             [
                 "simply",
                 "flip",
                 "--horizontal",
-                "-r",
+                "--replace",
                 "image.png",
                 "out.png"
             ]
@@ -630,7 +630,7 @@ mod tests {
             } => assert_eq!(path, "image.png"),
             other => panic!("unexpected: {other:?}"),
         }
-        match parse_expanded(&["simply", "flipv", "-r", "image.png"]) {
+        match parse_expanded(&["simply", "flipv", "--replace", "image.png"]) {
             Command::Flip {
                 vertical: true,
                 horizontal: false,
@@ -691,7 +691,7 @@ mod tests {
 
     #[test]
     fn test_flip_replace_short() {
-        match parse(&["simply", "flip", "-r", "image.png"]) {
+        match parse(&["simply", "flip", "--replace", "image.png"]) {
             Command::Flip {
                 replace: true,
                 path,
@@ -781,7 +781,7 @@ mod tests {
 
     #[test]
     fn test_flip_horizontal_replace() {
-        match parse(&["simply", "flip", "--horizontal", "-r", "image.png"]) {
+        match parse(&["simply", "flip", "--horizontal", "--replace", "image.png"]) {
             Command::Flip {
                 horizontal: true,
                 replace: true,
@@ -895,7 +895,7 @@ mod tests {
 
     #[test]
     fn test_grayscale_replace() {
-        match parse(&["simply", "grayscale", "-r", "image.png"]) {
+        match parse(&["simply", "grayscale", "--replace", "image.png"]) {
             Command::Grayscale {
                 replace: true,
                 path,
@@ -1081,7 +1081,7 @@ mod tests {
         match parse(&[
             "simply",
             "resize",
-            "-r",
+            "--replace",
             "--width",
             "100",
             "--height",
@@ -1151,7 +1151,7 @@ mod tests {
 
     #[test]
     fn test_binarize_replace() {
-        match parse(&["simply", "binarize", "-r", "image.png"]) {
+        match parse(&["simply", "binarize", "--replace", "image.png"]) {
             Command::Binarize {
                 replace: true,
                 path,
@@ -1308,7 +1308,7 @@ mod tests {
 
     #[test]
     fn test_pad_replace() {
-        match parse(&["simply", "pad", "-r", "--top", "10", "image.png"]) {
+        match parse(&["simply", "pad", "--replace", "--top", "10", "image.png"]) {
             Command::Pad {
                 replace: true,
                 top: Some(10),
@@ -1441,7 +1441,14 @@ mod tests {
 
     #[test]
     fn test_scale_replace() {
-        match parse(&["simply", "scale", "-r", "--factor", "1.5", "image.png"]) {
+        match parse(&[
+            "simply",
+            "scale",
+            "--replace",
+            "--factor",
+            "1.5",
+            "image.png",
+        ]) {
             Command::Scale {
                 replace: true,
                 factor: Some(f),
@@ -1543,7 +1550,14 @@ mod tests {
 
     #[test]
     fn test_stretch_replace() {
-        match parse(&["simply", "stretch", "-r", "--horizontal", "2", "image.png"]) {
+        match parse(&[
+            "simply",
+            "stretch",
+            "--replace",
+            "--horizontal",
+            "2",
+            "image.png",
+        ]) {
             Command::Stretch {
                 replace: true,
                 horizontal: Some(h),

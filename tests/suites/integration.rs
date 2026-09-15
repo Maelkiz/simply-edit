@@ -83,7 +83,11 @@ fn test_invert_replace_mode() {
     let before = image::open(&input).expect("failed to load initial image");
     let before_px = before.to_rgba8().get_pixel(0, 0).0;
 
-    let output = run(&["invert", "-r", input.to_str().expect("valid input path")]);
+    let output = run(&[
+        "invert",
+        "--replace",
+        input.to_str().expect("valid input path"),
+    ]);
     assert!(output.status.success());
     assert!(input.exists());
 
@@ -666,7 +670,7 @@ fn test_binarize_replace_mode() {
 
     let output = run(&[
         "binarize",
-        "-r",
+        "--replace",
         "--threshold",
         "128",
         input.to_str().expect("valid input path"),
@@ -927,7 +931,11 @@ fn test_shorthand_accepts_replace_flag() {
     let input = temp.path().join("img.png");
     create_png(&input, 4, 2, [220, 30, 30, 255]);
 
-    let output = run(&["fliph", "-r", input.to_str().expect("valid input path")]);
+    let output = run(&[
+        "fliph",
+        "--replace",
+        input.to_str().expect("valid input path"),
+    ]);
     assert!(output.status.success());
     assert!(input.exists());
     assert!(!temp.path().join("img_fliph.png").exists());

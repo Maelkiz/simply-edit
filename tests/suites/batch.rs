@@ -195,7 +195,7 @@ fn test_batch_recursive_finds_nested_files() {
 
     let output = run(&[
         "invert",
-        "-R",
+        "-r",
         temp.path().to_str().unwrap(),
         "--output-dir",
         out.path().to_str().unwrap(),

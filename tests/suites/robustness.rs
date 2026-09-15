@@ -173,7 +173,11 @@ fn test_replace_mode_cleans_up_tmp_file() {
     let tmp = temp.path().join("sample_invert.simple-edit-tmp.png");
     create_png(&input, 1, 1, [10, 20, 30, 255]);
 
-    let result = run(&["invert", "-r", input.to_str().expect("valid input path")]);
+    let result = run(&[
+        "invert",
+        "--replace",
+        input.to_str().expect("valid input path"),
+    ]);
     assert!(result.status.success());
     assert!(!tmp.exists());
 }
@@ -190,7 +194,7 @@ fn test_replace_mode_overwrites_explicit_target() {
 
     let result = run(&[
         "invert",
-        "-r",
+        "--replace",
         input.to_str().expect("valid input path"),
         target.to_str().expect("valid target path"),
     ]);
@@ -269,7 +273,7 @@ fn test_resize_replace_mode_cleans_up_no_tmp_file() {
 
     let result = run(&[
         "resize",
-        "-r",
+        "--replace",
         "--width",
         "2",
         "--height",
