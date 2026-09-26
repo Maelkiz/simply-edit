@@ -1,5 +1,4 @@
 use crate::{OutputMode, SaveMode, io::save_transformed_image};
-use cliclack::{input, select};
 use std::io::{IsTerminal, stdin};
 
 use super::start_spinner;
@@ -216,7 +215,8 @@ pub(crate) fn run_resize(
 ) -> Result<(), String> {
     let known_dims = match (width, height) {
         (Some(w), Some(h)) => Some((w, h)),
-        (None, None) => Some(prompt_resize_dimensions()?),
+        _ if stdin().is_terminal() => return interactive_resize(path, output, width, height),
+        (None, None) => Some(prompt_resize_dimensions_non_tty()?),
         _ => None,
     };
 
@@ -240,6 +240,35 @@ pub(crate) fn run_resize(
         pb.finish_and_clear();
     }
 
+    result
+}
+
+/// Ask for the size in the TUI, prefilled with whichever side the command line gave.
+fn interactive_resize(
+    path: &str,
+    output: OutputMode,
+    width: Option<u32>,
+    height: Option<u32>,
+) -> Result<(), String> {
+    let img =
+        image::open(path).map_err(|e| format!("resize: failed to open image '{path}': {e}"))?;
+    let screen = crate::tui::screens::ResizeScreen::new((img.width(), img.height()), width, height);
+    let Some(screen) = crate::tui::run_screen(path, &img, screen)? else {
+        crate::tui::print_cancelled();
+        return Ok(());
+    };
+    let (w, h) = screen
+        .dims()
+        .expect("the screen only confirms a valid size");
+    let spinner = if matches!(output, OutputMode::Preview) {
+        None
+    } else {
+        start_spinner("Processing resize...")
+    };
+    let result = save_resize(img, path, output, w, h);
+    if let Some(pb) = spinner {
+        pb.finish_and_clear();
+    }
     result
 }
 
@@ -320,50 +349,26 @@ fn resolve_partial_resize(
     orig_w: u32,
     orig_h: u32,
 ) -> Result<(u32, u32), String> {
-    let (given_label, stretch_label) = match (width, height) {
-        (Some(_), None) => ("width", "Stretch horizontally"),
-        (None, Some(_)) => ("height", "Stretch vertically"),
-        _ => unreachable!(),
-    };
-
-    let mode = prompt_resize_mode(&format!("Only {given_label} provided:"), stretch_label)?;
+    let mode = prompt_resize_mode_non_tty()?;
 
     match (mode, width, height) {
-        (ResizeMode::Preserve, Some(w), None) => {
-            let h = (orig_h as f64 * w as f64 / orig_w as f64).round() as u32;
-            Ok((w, h.max(1)))
-        }
-        (ResizeMode::Preserve, None, Some(h)) => {
-            let w = (orig_w as f64 * h as f64 / orig_h as f64).round() as u32;
-            Ok((w.max(1), h))
-        }
+        (ResizeMode::Preserve, Some(w), None) => Ok((w, scaled_other_side(w, orig_w, orig_h))),
+        (ResizeMode::Preserve, None, Some(h)) => Ok((scaled_other_side(h, orig_h, orig_w), h)),
         (ResizeMode::Stretch, Some(w), None) => Ok((w, orig_h)),
         (ResizeMode::Stretch, None, Some(h)) => Ok((orig_w, h)),
         _ => unreachable!(),
     }
 }
 
+/// The other side's length when one side goes from `orig_given` to `given` and the aspect
+/// ratio is kept. Never returns 0.
+pub(crate) fn scaled_other_side(given: u32, orig_given: u32, orig_other: u32) -> u32 {
+    ((orig_other as f64 * given as f64 / orig_given as f64).round() as u32).max(1)
+}
+
 enum ResizeMode {
     Preserve,
     Stretch,
-}
-
-fn prompt_resize_mode(title: &str, stretch_label: &str) -> Result<ResizeMode, String> {
-    if !stdin().is_terminal() {
-        return prompt_resize_mode_non_tty();
-    }
-
-    let choice = select(title)
-        .item("preserve", "Preserve aspect ratio", "")
-        .item("stretch", stretch_label, "")
-        .interact()
-        .map_err(|e| format!("failed to read resize mode: {e}"))?;
-
-    match choice {
-        "preserve" => Ok(ResizeMode::Preserve),
-        "stretch" => Ok(ResizeMode::Stretch),
-        _ => unreachable!(),
-    }
 }
 
 fn prompt_resize_mode_non_tty() -> Result<ResizeMode, String> {
@@ -379,34 +384,6 @@ fn prompt_resize_mode_non_tty() -> Result<ResizeMode, String> {
             "invalid resize mode '{other}': use 1 (preserve) or 2 (stretch)"
         )),
     }
-}
-
-fn prompt_resize_dimensions() -> Result<(u32, u32), String> {
-    if !stdin().is_terminal() {
-        return prompt_resize_dimensions_non_tty();
-    }
-
-    let width_str: String = input("Enter new width in pixels:")
-        .validate(|s: &String| match s.parse::<u32>() {
-            Err(_) => Err("Please enter a positive integer"),
-            Ok(0) => Err("Width must be greater than 0"),
-            Ok(_) => Ok(()),
-        })
-        .interact()
-        .map_err(|e| format!("failed to read width: {e}"))?;
-    let width: u32 = width_str.parse().unwrap();
-
-    let height_str: String = input("Enter new height in pixels:")
-        .validate(|s: &String| match s.parse::<u32>() {
-            Err(_) => Err("Please enter a positive integer"),
-            Ok(0) => Err("Height must be greater than 0"),
-            Ok(_) => Ok(()),
-        })
-        .interact()
-        .map_err(|e| format!("failed to read height: {e}"))?;
-    let height: u32 = height_str.parse().unwrap();
-
-    Ok((width, height))
 }
 
 fn prompt_resize_dimensions_non_tty() -> Result<(u32, u32), String> {

@@ -2,10 +2,12 @@
 
 mod binarize;
 mod flip;
+mod resize;
 mod rotate;
 
 pub(crate) use binarize::BinarizeScreen;
 pub(crate) use flip::FlipScreen;
+pub(crate) use resize::ResizeScreen;
 pub(crate) use rotate::RotateScreen;
 
 use ratatui::style::{Color, Modifier, Style, Stylize};
