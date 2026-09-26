@@ -3,11 +3,13 @@ use std::time::Duration;
 use image::{DynamicImage, RgbaImage};
 use ratatui::Frame;
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
-use ratatui::layout::{Constraint, Layout};
 use ratatui::text::Line;
-use ratatui::widgets::Paragraph;
+use ratatui_image::picker::Picker;
+use ratatui_image::protocol::StatefulProtocol;
 
+use super::preview_source::{checkerboard_composite, prepare_base};
 use super::terminal::TuiSession;
+use super::widgets;
 
 /// What the event loop should do after a screen has handled a key.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -36,6 +38,10 @@ pub(crate) trait Screen {
     fn controls(&self) -> Vec<Line<'static>>;
     /// Key hints for the footer as `(key, action)` pairs.
     fn hints(&self) -> Vec<(&'static str, &'static str)>;
+    /// Output dimensions for a source of `size`, shown in the header. Defaults to unchanged.
+    fn result_size(&self, size: (u32, u32)) -> (u32, u32) {
+        size
+    }
 }
 
 /// Esc and `q` are the conventional ways to back out of a screen.
@@ -81,20 +87,34 @@ fn read_batch() -> Result<Vec<Event>, String> {
 
 /// Run `screen` full-screen until the user confirms or cancels.
 ///
-/// Returns the final screen state on confirm and `None` on cancel. The terminal is restored before
-/// this returns, so callers can print normally afterwards.
+/// `file` is the name shown in the header. Returns the final screen state on confirm and `None`
+/// on cancel. The terminal is restored before this returns, so callers can print normally
+/// afterwards.
 pub(crate) fn run_screen<S: Screen>(
-    _img: &DynamicImage,
+    file: &str,
+    img: &DynamicImage,
     mut screen: S,
 ) -> Result<Option<S>, String> {
+    let base = prepare_base(img);
+    let size = (img.width(), img.height());
+
     let mut session = TuiSession::enter()?;
+    // Must run after entering the alternate screen and before reading any events: it writes
+    // queries to the terminal and reads the replies from stdin.
+    let picker = Picker::from_query_stdio().unwrap_or_else(|_| Picker::halfblocks());
+    let build = |screen: &S| {
+        let frame = checkerboard_composite(&screen.frame(&base));
+        picker.new_resize_protocol(DynamicImage::ImageRgba8(frame))
+    };
+    let mut preview = build(&screen);
+
     loop {
         session
             .terminal
-            .draw(|f| draw(f, &screen))
+            .draw(|f| draw(f, &screen, file, size, &mut preview))
             .map_err(|e| format!("failed to draw: {e}"))?;
 
-        // Resize and state changes both fall through to the redraw at the top of the loop.
+        // A resize alone needs no new preview; the redraw at the top of the loop re-fits it.
         let keys = read_batch()?.into_iter().filter_map(|e| match e {
             Event::Key(k) if k.kind == KeyEventKind::Press => Some(k),
             _ => None,
@@ -102,27 +122,32 @@ pub(crate) fn run_screen<S: Screen>(
         match apply_keys(&mut screen, keys) {
             Outcome::Confirm => return Ok(Some(screen)),
             Outcome::Cancel => return Ok(None),
-            Outcome::Continue | Outcome::Redraw => {}
+            Outcome::Redraw => preview = build(&screen),
+            Outcome::Continue => {}
         }
     }
 }
 
-fn draw<S: Screen>(f: &mut Frame, screen: &S) {
-    let [header, body, footer] = Layout::vertical([
-        Constraint::Length(1),
-        Constraint::Min(0),
-        Constraint::Length(1),
-    ])
-    .areas(f.area());
-    f.render_widget(Paragraph::new(screen.title()), header);
-    f.render_widget(Paragraph::new(screen.controls()), body);
-    let hints = screen
-        .hints()
-        .iter()
-        .map(|(k, a)| format!("{k} {a}"))
-        .collect::<Vec<_>>()
-        .join(" · ");
-    f.render_widget(Paragraph::new(hints), footer);
+fn draw<S: Screen>(
+    f: &mut Frame,
+    screen: &S,
+    file: &str,
+    size: (u32, u32),
+    preview: &mut StatefulProtocol,
+) {
+    let controls = screen.controls();
+    let areas = widgets::layout(f.area(), controls.len() as u16);
+    widgets::render_header(
+        f,
+        areas.header,
+        &screen.title(),
+        file,
+        size,
+        screen.result_size(size),
+    );
+    widgets::render_preview(f, areas.preview, preview);
+    widgets::render_controls(f, areas.controls, controls);
+    widgets::render_footer(f, areas.footer, &screen.hints());
 }
 
 #[cfg(test)]
