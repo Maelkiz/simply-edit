@@ -10,7 +10,7 @@ simply-edit is a convenient command-line utility for everyday image tasks: flip,
 
 ### Prerequisites
 
-- **Rust 1.85 or later** — Install from [rustup.rs](https://rustup.rs/)
+- **Rust 1.88 or later** — Install from [rustup.rs](https://rustup.rs/)
 
 The installed binary is around 43 MB. It statically includes the ONNX inference
 engine used by `cutout`, so background removal works without any extra runtime.
@@ -87,6 +87,32 @@ simply <command> <path-to-img>
 
 For some commands this will start an interactive prompt, while others run with a sane default. Use `simply <command> --help` for information on a specific command's behaviour.
 
+In a terminal, the interactive commands open a full-screen editor with a live preview of the result:
+
+| Command | What you choose |
+| --- | --- |
+| `rotate` | 90° clockwise, 180° or 90° counter-clockwise |
+| `flip` (no flags) | Horizontal or vertical |
+| `binarize` (no `--threshold`) | Brightness cutoff on a 0–255 slider |
+| `resize` (missing `--width` or `--height`) | Width and height, with an optional aspect ratio lock |
+| `scale` (no `--factor`) | Scale factor, with the resulting size shown live |
+
+Key bindings:
+
+| Keys | Action |
+| --- | --- |
+| `↑` `↓` (or `k` `j`) | Choose an option, or move between fields |
+| `←` `→` (or `h` `l`) | Adjust a value; hold `Shift` for bigger steps |
+| `0`–`9` | Type a value (`binarize` applies it on `Enter`) |
+| `Tab` | Compare with the original (`binarize`), or next field (`resize`) |
+| `Space` | Toggle the aspect ratio lock (`resize`) |
+| `Enter` | Save |
+| `Esc`, `q`, `Ctrl+C` | Cancel without saving |
+
+The preview works in any terminal. Terminals with a graphics protocol (Kitty, WezTerm, Ghostty, and terminals with Sixel or iTerm2 image support) show the image at full detail; other terminals fall back to a coarser preview drawn with Unicode block characters.
+
+When input is piped instead of typed (for example `echo 0.5 | simply scale ./image.png`), the commands read their answer from stdin and skip the editor.
+
 ### Shorthands
 
 Some frequently used commands have convenient shorthands:
@@ -150,7 +176,7 @@ simply cutout ./products/ ./cutouts/
 
 ### View & Preview
 
-If your terminal supports the [Kitty Terminal Graphics Protocol](https://sw.kovidgoyal.net/kitty/graphics-protocol) you can display images and preview the results of commands:
+If your terminal supports the [Kitty Terminal Graphics Protocol](https://sw.kovidgoyal.net/kitty/graphics-protocol) (Kitty, WezTerm or Ghostty) you can display images and preview the results of commands. Unlike the interactive editor, `view` and `--preview` need this protocol:
 
 ```bash
 # Display an image inline in the terminal
