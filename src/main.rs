@@ -2,9 +2,6 @@ mod batch;
 mod cli;
 mod commands;
 mod io;
-// Unused since the TUI took over; deleted in the next commit.
-#[allow(dead_code)]
-mod preview;
 #[cfg(test)]
 mod testutil;
 mod tui;

@@ -15,44 +15,6 @@ pub fn display_image(img: DynamicImage) -> Result<(), String> {
     display_kitty(img)
 }
 
-/// Transmit raw 32-bit RGBA pixels to the terminal using the Kitty graphics protocol.
-/// Uses image ID 1 so frames can be replaced via `delete_kitty_image`.
-#[allow(dead_code)]
-pub(crate) fn display_raw_rgba(width: u32, height: u32, rgba: &[u8]) -> Result<(), String> {
-    let encoded = base64::engine::general_purpose::STANDARD.encode(rgba);
-    let total = encoded.len().div_ceil(CHUNK_SIZE);
-
-    let stdout = io::stdout();
-    let mut out = stdout.lock();
-
-    for (i, chunk) in encoded.as_bytes().chunks(CHUNK_SIZE).enumerate() {
-        let chunk = std::str::from_utf8(chunk).expect("base64 is always valid UTF-8");
-        let m = if i == total - 1 { 0 } else { 1 };
-        if i == 0 {
-            write!(
-                out,
-                "\x1b_Ga=T,f=32,s={width},v={height},i=1,q=1,m={m};{chunk}\x1b\\"
-            )
-        } else {
-            write!(out, "\x1b_Gm={m};{chunk}\x1b\\")
-        }
-        .map_err(|e| format!("view: write error: {e}"))?;
-    }
-
-    writeln!(out).map_err(|e| format!("view: write error: {e}"))?;
-    out.flush().map_err(|e| format!("view: write error: {e}"))?;
-    Ok(())
-}
-
-/// Delete the image with ID 1 from the terminal, clearing the cells it occupied.
-#[allow(dead_code)]
-pub(crate) fn delete_kitty_image() -> Result<(), String> {
-    let stdout = io::stdout();
-    let mut out = stdout.lock();
-    write!(out, "\x1b_Ga=d,d=I,i=1\x1b\\").map_err(|e| format!("view: write error: {e}"))?;
-    out.flush().map_err(|e| format!("view: write error: {e}"))
-}
-
 pub fn run_view(path: &str) -> Result<(), String> {
     let img = image::open(path).map_err(|e| format!("view: failed to open '{path}': {e}"))?;
     display_image(img)
