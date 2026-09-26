@@ -302,8 +302,7 @@ pub(crate) fn run_scale(
     let result: Result<(), String> = (|| {
         let img =
             image::open(path).map_err(|e| format!("scale: failed to open image '{path}': {e}"))?;
-        let w = ((img.width() as f64 * x_factor as f64).round() as u32).max(1);
-        let h = ((img.height() as f64 * y_factor as f64).round() as u32).max(1);
+        let (w, h) = scaled_size(img.width(), img.height(), x_factor, y_factor);
         save_resize(img, path, output, w, h)
     })();
 
@@ -314,16 +313,36 @@ pub(crate) fn run_scale(
     result
 }
 
-pub(crate) fn prompt_scale_factor_cliclack() -> Result<f32, String> {
-    let s: String = cliclack::input("Enter scale factor (e.g. 0.5 to halve, 2 to double):")
-        .validate(|s: &String| match s.parse::<f32>() {
-            Err(_) => Err("Please enter a positive number"),
-            Ok(v) if v <= 0.0 || !v.is_finite() => Err("Scale factor must be greater than 0"),
-            Ok(_) => Ok(()),
-        })
-        .interact()
-        .map_err(|e| format!("failed to read scale factor: {e}"))?;
-    Ok(s.parse().unwrap())
+/// The size after scaling each side by its factor, rounded and never below 1 px.
+pub(crate) fn scaled_size(w: u32, h: u32, x_factor: f32, y_factor: f32) -> (u32, u32) {
+    let w = ((w as f64 * x_factor as f64).round() as u32).max(1);
+    let h = ((h as f64 * y_factor as f64).round() as u32).max(1);
+    (w, h)
+}
+
+/// Ask for a uniform scale factor in the TUI, then scale and save.
+pub(crate) fn interactive_scale(path: &str, output: OutputMode) -> Result<(), String> {
+    let img =
+        image::open(path).map_err(|e| format!("scale: failed to open image '{path}': {e}"))?;
+    let screen = crate::tui::screens::ScaleScreen::new((img.width(), img.height()));
+    let Some(screen) = crate::tui::run_screen(path, &img, screen)? else {
+        crate::tui::print_cancelled();
+        return Ok(());
+    };
+    let f = screen
+        .factor()
+        .expect("the screen only confirms a valid factor");
+    let (w, h) = scaled_size(img.width(), img.height(), f, f);
+    let spinner = if matches!(output, OutputMode::Preview) {
+        None
+    } else {
+        start_spinner("Processing scale...")
+    };
+    let result = save_resize(img, path, output, w, h);
+    if let Some(pb) = spinner {
+        pb.finish_and_clear();
+    }
+    result
 }
 
 pub(crate) fn prompt_scale_factor_stdin() -> Result<f32, String> {

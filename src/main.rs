@@ -443,8 +443,7 @@ fn run() -> Result<(), String> {
                     let img = image::open(file).map_err(|e| {
                         format!("scale: failed to open image '{}': {e}", file.display())
                     })?;
-                    let w = ((img.width() as f64 * f as f64).round() as u32).max(1);
-                    let h = ((img.height() as f64 * f as f64).round() as u32).max(1);
+                    let (w, h) = commands::transforms::scaled_size(img.width(), img.height(), f, f);
                     let scaled = img.resize_exact(w, h, image::imageops::FilterType::Lanczos3);
                     let suffix = format!("scale{w}x{h}");
                     let out_path = batch::resolve_output_path(file, &suffix, &options);
@@ -457,13 +456,10 @@ fn run() -> Result<(), String> {
                 let output = output_mode(&path, replace, preview, output)?;
                 let f = match factor {
                     Some(f) => f,
-                    None => {
-                        if stdin().is_terminal() {
-                            commands::transforms::prompt_scale_factor_cliclack()?
-                        } else {
-                            commands::transforms::prompt_scale_factor_stdin()?
-                        }
+                    None if stdin().is_terminal() => {
+                        return commands::transforms::interactive_scale(&path, output);
                     }
+                    None => commands::transforms::prompt_scale_factor_stdin()?,
                 };
                 commands::transforms::run_scale(&path, output, f, f)
             }
@@ -491,8 +487,8 @@ fn run() -> Result<(), String> {
                     })?;
                     let xf = horizontal.unwrap_or(1.0);
                     let yf = vertical.unwrap_or(1.0);
-                    let w = ((img.width() as f64 * xf as f64).round() as u32).max(1);
-                    let h = ((img.height() as f64 * yf as f64).round() as u32).max(1);
+                    let (w, h) =
+                        commands::transforms::scaled_size(img.width(), img.height(), xf, yf);
                     let scaled = img.resize_exact(w, h, image::imageops::FilterType::Lanczos3);
                     let suffix = format!("scale{w}x{h}");
                     let out_path = batch::resolve_output_path(file, &suffix, &options);
