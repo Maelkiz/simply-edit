@@ -12,8 +12,8 @@ pub(crate) fn save_transformed_image(
     default_suffix: &str,
 ) -> Result<String, String> {
     match output {
-        SaveMode::Generated(suffix) => {
-            let output_path = output_path_with_suffix(source_path, &suffix);
+        SaveMode::Generated(suffix, dir) => {
+            let output_path = place_in(output_path_with_suffix(source_path, &suffix), dir);
             let output_path = enumerate_if_exists(&output_path);
             save_image(img, output_path.as_path())?;
             Ok(output_path.to_string_lossy().to_string())
@@ -126,6 +126,51 @@ pub(crate) fn output_path_with_suffix_ext(input: &str, suffix: &str, ext: &str) 
     parent.join(format!("{stem}_{suffix}.{ext}"))
 }
 
+/// Interprets `path` as a target directory the way `cp` and `mv` do: an existing
+/// directory, or any path ending in a separator (created if missing).
+pub(crate) fn as_output_dir(path: &str) -> Result<Option<PathBuf>, String> {
+    let dir = Path::new(path);
+    if dir.is_dir() {
+        return Ok(Some(dir.to_path_buf()));
+    }
+    if !path.ends_with('/') && !path.ends_with(std::path::MAIN_SEPARATOR) {
+        return Ok(None);
+    }
+    // `file/` never "exists" on Unix, so check the path without its separator.
+    if Path::new(path.trim_end_matches(['/', std::path::MAIN_SEPARATOR])).exists() {
+        return Err(format!("output path '{path}' is not a directory"));
+    }
+    fs::create_dir_all(dir)
+        .map_err(|e| format!("failed to create output directory '{path}': {e}"))?;
+    Ok(Some(dir.to_path_buf()))
+}
+
+/// Moves a generated output path into `dir`, keeping its file name.
+pub(crate) fn place_in(path: PathBuf, dir: Option<PathBuf>) -> PathBuf {
+    match (dir, path.file_name()) {
+        (Some(dir), Some(name)) => dir.join(name),
+        _ => path,
+    }
+}
+
+/// Output path for a format conversion: `dst` as given, or `<stem>.<ext>` next
+/// to the source or inside `dst` when it names a directory.
+pub(crate) fn default_output_path(
+    src: &str,
+    dst: Option<&str>,
+    ext: &str,
+) -> Result<String, String> {
+    let dir = match dst {
+        Some(d) => match as_output_dir(d)? {
+            Some(dir) => Some(dir),
+            None => return Ok(d.to_string()),
+        },
+        None => None,
+    };
+    let path = place_in(Path::new(src).with_extension(ext), dir);
+    Ok(path.to_string_lossy().to_string())
+}
+
 pub(crate) fn enumerate_if_exists(path: &Path) -> PathBuf {
     if !path.exists() {
         return path.to_path_buf();
@@ -153,6 +198,70 @@ pub(crate) fn enumerate_if_exists(path: &Path) -> PathBuf {
 mod tests {
     use super::*;
     use crate::testutil::temp_dir;
+
+    #[test]
+    fn test_as_output_dir_existing_dir() {
+        let dir = temp_dir("io-outdir-existing");
+        let got = as_output_dir(dir.to_str().unwrap()).unwrap();
+        assert_eq!(got, Some(dir.clone()));
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_as_output_dir_file_path_is_not_dir() {
+        assert_eq!(as_output_dir("does/not/exist.png").unwrap(), None);
+    }
+
+    #[test]
+    fn test_as_output_dir_trailing_slash_creates_dir() {
+        let dir = temp_dir("io-outdir-create");
+        let target = dir.join("new").join("nested");
+        let arg = format!("{}/", target.display());
+        let got = as_output_dir(&arg).unwrap();
+        assert!(target.is_dir());
+        assert_eq!(got, Some(PathBuf::from(&arg)));
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_as_output_dir_trailing_slash_on_file_errors() {
+        let dir = temp_dir("io-outdir-file");
+        let file = dir.join("taken");
+        fs::write(&file, b"x").unwrap();
+        let err = as_output_dir(&format!("{}/", file.display())).unwrap_err();
+        assert!(err.contains("not a directory"));
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_place_in_moves_file_name_into_dir() {
+        let got = place_in(
+            PathBuf::from("src/img_invert.png"),
+            Some(PathBuf::from("out")),
+        );
+        assert_eq!(got, PathBuf::from("out/img_invert.png"));
+        let got = place_in(PathBuf::from("src/img_invert.png"), None);
+        assert_eq!(got, PathBuf::from("src/img_invert.png"));
+    }
+
+    #[test]
+    fn test_default_output_path_variants() {
+        let dir = temp_dir("io-default-out");
+        let d = dir.to_str().unwrap();
+        assert_eq!(
+            default_output_path("a/img.png", None, "svg").unwrap(),
+            "a/img.svg"
+        );
+        assert_eq!(
+            default_output_path("a/img.png", Some("x.svg"), "svg").unwrap(),
+            "x.svg"
+        );
+        assert_eq!(
+            default_output_path("a/img.png", Some(d), "svg").unwrap(),
+            dir.join("img.svg").to_string_lossy()
+        );
+        let _ = fs::remove_dir_all(&dir);
+    }
 
     #[test]
     fn test_output_path_with_suffix_simple() {

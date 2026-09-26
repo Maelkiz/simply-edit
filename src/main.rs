@@ -15,14 +15,15 @@ use cli::{BatchArgs, Cli, Command, expand_shorthands};
 use commands::convert::{RasterizeArgs, RasterizeOptions, VectorizeArgs};
 
 enum OutputMode {
-    Generated,
+    /// Auto-generated file name, placed next to the source or in the given directory.
+    Generated(Option<std::path::PathBuf>),
     Explicit(String),
     Replace(Option<String>),
     Preview,
 }
 
 pub(crate) enum SaveMode {
-    Generated(String),
+    Generated(String, Option<std::path::PathBuf>),
     Explicit(String),
     Replace(Option<String>),
 }
@@ -92,7 +93,7 @@ fn run() -> Result<(), String> {
                 batch::print_summary(&result);
                 Ok(())
             } else {
-                let output = output_mode(replace, preview, output);
+                let output = output_mode(&path, replace, preview, output)?;
                 match (vertical, horizontal) {
                     (true, true) => commands::transforms::run_flip_both(&path, output),
                     (true, false) => commands::transforms::run_flip(
@@ -162,7 +163,7 @@ fn run() -> Result<(), String> {
                 batch::print_summary(&result);
                 Ok(())
             } else {
-                let output = output_mode(replace, preview, output);
+                let output = output_mode(&path, replace, preview, output)?;
                 if angle.is_none() {
                     commands::transforms::interactive_rotate(&path, output)
                 } else {
@@ -207,7 +208,7 @@ fn run() -> Result<(), String> {
                 batch::print_summary(&result);
                 Ok(())
             } else {
-                let output = output_mode(replace, preview, output);
+                let output = output_mode(&path, replace, preview, output)?;
                 commands::transforms::run_invert(&path, output)
             }
         }
@@ -248,7 +249,7 @@ fn run() -> Result<(), String> {
                 batch::print_summary(&result);
                 Ok(())
             } else {
-                let output = output_mode(replace, preview, output);
+                let output = output_mode(&path, replace, preview, output)?;
                 commands::transforms::run_grayscale(&path, output)
             }
         }
@@ -261,7 +262,7 @@ fn run() -> Result<(), String> {
             output,
         } => {
             if threshold.is_none() && !is_batch(&path, &batch) {
-                let output = output_mode(replace, preview, output);
+                let output = output_mode(&path, replace, preview, output)?;
                 return commands::transforms::interactive_binarize(&path, output);
             }
             let threshold = threshold.unwrap_or(128);
@@ -295,7 +296,7 @@ fn run() -> Result<(), String> {
                 batch::print_summary(&result);
                 Ok(())
             } else {
-                let output = output_mode(replace, preview, output);
+                let output = output_mode(&path, replace, preview, output)?;
                 commands::transforms::run_binarize(&path, output, threshold)
             }
         }
@@ -358,7 +359,7 @@ fn run() -> Result<(), String> {
                 batch::print_summary(&result);
                 Ok(())
             } else {
-                let output = output_mode(replace, preview, output);
+                let output = output_mode(&path, replace, preview, output)?;
                 commands::cutout::run_cutout(commands::cutout::CutoutArgs {
                     src: path,
                     fast,
@@ -418,7 +419,7 @@ fn run() -> Result<(), String> {
                 batch::print_summary(&result);
                 Ok(())
             } else {
-                let output = output_mode(replace, preview, output);
+                let output = output_mode(&path, replace, preview, output)?;
                 commands::transforms::run_resize(&path, output, width, height)
             }
         }
@@ -453,7 +454,7 @@ fn run() -> Result<(), String> {
                 batch::print_summary(&result);
                 Ok(())
             } else {
-                let output = output_mode(replace, preview, output);
+                let output = output_mode(&path, replace, preview, output)?;
                 let f = match factor {
                     Some(f) => f,
                     None => {
@@ -501,7 +502,7 @@ fn run() -> Result<(), String> {
                 batch::print_summary(&result);
                 Ok(())
             } else {
-                let output = output_mode(replace, preview, output);
+                let output = output_mode(&path, replace, preview, output)?;
                 let xf = horizontal.unwrap_or(1.0);
                 let yf = vertical.unwrap_or(1.0);
                 commands::transforms::run_scale(&path, output, xf, yf)
@@ -541,16 +542,22 @@ fn run() -> Result<(), String> {
                 batch::print_summary(&result);
                 Ok(())
             } else {
+                let dir = match &dst {
+                    Some(d) => io::as_output_dir(d)?,
+                    None => None,
+                };
                 let dst = match dst {
-                    Some(d) => d,
-                    None => {
+                    Some(d) if dir.is_none() => d,
+                    _ => {
                         let fmt = commands::convert::prompt_convert_format(&src)?;
                         let src_path = Path::new(&src);
                         let stem = src_path
                             .file_stem()
                             .and_then(|s| s.to_str())
                             .unwrap_or("output");
-                        let parent = src_path.parent().unwrap_or(Path::new("."));
+                        let parent = dir.unwrap_or_else(|| {
+                            src_path.parent().unwrap_or(Path::new(".")).to_path_buf()
+                        });
                         parent
                             .join(format!("{stem}.{fmt}"))
                             .to_string_lossy()
@@ -602,12 +609,7 @@ fn run() -> Result<(), String> {
                 batch::print_summary(&result);
                 Ok(())
             } else {
-                let dst = dst.unwrap_or_else(|| {
-                    Path::new(&src)
-                        .with_extension("svg")
-                        .to_string_lossy()
-                        .to_string()
-                });
+                let dst = io::default_output_path(&src, dst.as_deref(), "svg")?;
                 commands::convert::run_vectorize(VectorizeArgs {
                     src,
                     dst,
@@ -678,7 +680,7 @@ fn run() -> Result<(), String> {
                 batch::print_summary(&result);
                 Ok(())
             } else {
-                let output = output_mode(replace, preview, output);
+                let output = output_mode(&path, replace, preview, output)?;
                 commands::transforms::run_pad(&path, output, top, right, bottom, left, color)
             }
         }
@@ -731,12 +733,7 @@ fn run() -> Result<(), String> {
                 batch::print_summary(&result);
                 Ok(())
             } else {
-                let dst = dst.unwrap_or_else(|| {
-                    Path::new(&src)
-                        .with_extension("png")
-                        .to_string_lossy()
-                        .to_string()
-                });
+                let dst = io::default_output_path(&src, dst.as_deref(), "png")?;
                 commands::convert::run_rasterize(RasterizeArgs {
                     options: RasterizeOptions {
                         scale,
@@ -775,15 +772,30 @@ fn check_output_collisions(
     ))
 }
 
-fn output_mode(replace: bool, preview: bool, output: Option<String>) -> OutputMode {
+fn output_mode(
+    source: &str,
+    replace: bool,
+    preview: bool,
+    output: Option<String>,
+) -> Result<OutputMode, String> {
     if preview {
-        OutputMode::Preview
-    } else if replace {
-        OutputMode::Replace(output)
-    } else {
-        match output {
-            Some(path) => OutputMode::Explicit(path),
-            None => OutputMode::Generated,
-        }
+        return Ok(OutputMode::Preview);
     }
+    let dir = match &output {
+        Some(path) => io::as_output_dir(path)?,
+        None => None,
+    };
+    Ok(match (replace, dir) {
+        // Like `cp -f src dir/`: overwrite the same-named file inside the directory.
+        (true, Some(dir)) => {
+            let name = Path::new(source).file_name().unwrap_or_default();
+            OutputMode::Replace(Some(dir.join(name).to_string_lossy().to_string()))
+        }
+        (true, None) => OutputMode::Replace(output),
+        (false, Some(dir)) => OutputMode::Generated(Some(dir)),
+        (false, None) => match output {
+            Some(path) => OutputMode::Explicit(path),
+            None => OutputMode::Generated(None),
+        },
+    })
 }

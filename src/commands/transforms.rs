@@ -15,11 +15,11 @@ fn dispatch_save(
             crate::commands::view::display_image(img)?;
             Ok(None)
         }
-        OutputMode::Generated => {
+        OutputMode::Generated(dir) => {
             let p = save_transformed_image(
                 img,
                 source,
-                SaveMode::Generated(suffix.to_string()),
+                SaveMode::Generated(suffix.to_string(), dir),
                 suffix,
             )?;
             Ok(Some(p))

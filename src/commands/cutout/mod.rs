@@ -281,9 +281,9 @@ fn dispatch_save(
             super::view::display_image(img)?;
             Ok(None)
         }
-        OutputMode::Generated => {
+        OutputMode::Generated(dir) => {
             let ext = io::alpha_safe_ext(&extension_of(source));
-            let path = io::output_path_with_suffix_ext(source, SUFFIX, ext);
+            let path = io::place_in(io::output_path_with_suffix_ext(source, SUFFIX, ext), dir);
             let path = io::enumerate_if_exists(&path);
             io::save_image(img, path.as_path())?;
             Ok(Some(path.to_string_lossy().to_string()))
