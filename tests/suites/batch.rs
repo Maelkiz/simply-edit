@@ -23,7 +23,6 @@ fn test_batch_invert_processes_all_files() {
     let output = run(&[
         "invert",
         temp.path().to_str().unwrap(),
-        "--output-dir",
         out.path().to_str().unwrap(),
     ]);
     assert!(output.status.success());
@@ -47,7 +46,6 @@ fn test_batch_grayscale_produces_valid_output() {
     let output = run(&[
         "grayscale",
         temp.path().to_str().unwrap(),
-        "--output-dir",
         out.path().to_str().unwrap(),
     ]);
     assert!(output.status.success());
@@ -69,7 +67,6 @@ fn test_batch_flip() {
         "flip",
         "--vertical",
         temp.path().to_str().unwrap(),
-        "--output-dir",
         out.path().to_str().unwrap(),
     ]);
     assert!(output.status.success());
@@ -87,7 +84,6 @@ fn test_batch_flip_y() {
         "flip",
         "--horizontal",
         temp.path().to_str().unwrap(),
-        "--output-dir",
         out.path().to_str().unwrap(),
     ]);
     assert!(output.status.success());
@@ -117,7 +113,6 @@ fn test_batch_rotate_90() {
         "--angle",
         "90",
         temp.path().to_str().unwrap(),
-        "--output-dir",
         out.path().to_str().unwrap(),
     ]);
     assert!(output.status.success());
@@ -150,7 +145,6 @@ fn test_batch_with_pattern_filters_files() {
         temp.path().to_str().unwrap(),
         "--pattern",
         r"^photo_",
-        "--output-dir",
         out.path().to_str().unwrap(),
     ]);
     assert!(output.status.success());
@@ -167,7 +161,6 @@ fn test_batch_with_output_dir_creates_files_there() {
     let output = run(&[
         "invert",
         temp.path().to_str().unwrap(),
-        "--output-dir",
         out.path().to_str().unwrap(),
     ]);
     assert!(output.status.success());
@@ -197,7 +190,6 @@ fn test_batch_recursive_finds_nested_files() {
         "invert",
         "-r",
         temp.path().to_str().unwrap(),
-        "--output-dir",
         out.path().to_str().unwrap(),
     ]);
     assert!(output.status.success());
@@ -216,7 +208,6 @@ fn test_batch_with_corrupt_file_reports_partial_failure() {
     let output = run(&[
         "invert",
         temp.path().to_str().unwrap(),
-        "--output-dir",
         out.path().to_str().unwrap(),
     ]);
     assert!(output.status.success());
@@ -258,7 +249,6 @@ fn test_batch_convert_with_format() {
         "--format",
         "jpg",
         temp.path().to_str().unwrap(),
-        "--output-dir",
         out.path().to_str().unwrap(),
     ]);
     assert!(output.status.success());
@@ -285,7 +275,6 @@ fn test_batch_rasterize_processes_svgs() {
     let output = run(&[
         "rasterize",
         temp.path().to_str().unwrap(),
-        "--output-dir",
         out.path().to_str().unwrap(),
     ]);
     assert!(output.status.success());
@@ -311,7 +300,6 @@ fn test_batch_scale_with_factor() {
         "--factor",
         "2",
         temp.path().to_str().unwrap(),
-        "--output-dir",
         out.path().to_str().unwrap(),
     ]);
     assert!(output.status.success());
@@ -338,7 +326,6 @@ fn test_batch_resize_with_width_and_height() {
         "--height",
         "8",
         temp.path().to_str().unwrap(),
-        "--output-dir",
         out.path().to_str().unwrap(),
     ]);
     assert!(output.status.success());
@@ -381,7 +368,6 @@ fn test_batch_binarize_processes_all_files() {
     let output = run(&[
         "binarize",
         temp.path().to_str().unwrap(),
-        "--output-dir",
         out.path().to_str().unwrap(),
     ]);
     assert!(output.status.success());
@@ -407,7 +393,6 @@ fn test_batch_binarize_with_threshold() {
         "--threshold",
         "50",
         temp.path().to_str().unwrap(),
-        "--output-dir",
         out.path().to_str().unwrap(),
     ]);
     assert!(output.status.success());
@@ -449,7 +434,6 @@ fn test_batch_cutout_output_dir() {
         "cutout",
         "--fast",
         temp.path().to_str().unwrap(),
-        "--output-dir",
         out.path().to_str().unwrap(),
     ]);
     assert!(output.status.success());
@@ -464,4 +448,20 @@ fn test_batch_cutout_output_dir() {
         let img = image::open(&path).expect("output should be valid image");
         assert_eq!(img.to_rgba8().get_pixel(0, 0).0[3], 0);
     }
+}
+#[test]
+fn test_batch_rejects_file_as_output() {
+    let temp = batch_dir_with_images("batch-outfile", 1);
+    let out = TestDir::new("batch-outfile-out");
+    let file = out.path().join("taken.png");
+    create_png(&file, 4, 4, [0, 0, 0, 255]);
+
+    let output = run(&[
+        "invert",
+        temp.path().to_str().unwrap(),
+        file.to_str().unwrap(),
+    ]);
+    assert!(!output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("not a directory"));
 }

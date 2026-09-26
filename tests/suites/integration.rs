@@ -969,7 +969,6 @@ fn test_shorthand_works_in_batch_mode() {
     let output = run(&[
         "flipv",
         temp.path().to_str().expect("valid input dir"),
-        "--output-dir",
         out.path().to_str().expect("valid output dir"),
     ]);
     assert!(output.status.success());
