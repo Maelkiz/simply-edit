@@ -48,9 +48,36 @@ pub(crate) fn run_flip(
 ) -> Result<(), String> {
     let axis = match axis {
         Some(a) => a,
-        None => prompt_flip_axis()?,
+        None if !stdin().is_terminal() => prompt_flip_axis_non_tty()?,
+        None => {
+            let img = open_for_flip(path)?;
+            return match crate::tui::run_screen(
+                path,
+                &img,
+                crate::tui::screens::FlipScreen::default(),
+            )? {
+                Some(screen) => save_flipped(Some(img), path, output, screen.direction()),
+                None => {
+                    crate::tui::print_cancelled();
+                    Ok(())
+                }
+            };
+        }
     };
+    save_flipped(None, path, output, axis)
+}
 
+fn open_for_flip(path: &str) -> Result<image::DynamicImage, String> {
+    image::open(path).map_err(|e| format!("flip: failed to open image '{path}': {e}"))
+}
+
+/// Flip and save, opening `path` under the spinner unless the image is already loaded.
+fn save_flipped(
+    img: Option<image::DynamicImage>,
+    path: &str,
+    output: OutputMode,
+    axis: FlipAxis,
+) -> Result<(), String> {
     let spinner = if matches!(output, OutputMode::Preview) {
         None
     } else {
@@ -63,8 +90,10 @@ pub(crate) fn run_flip(
     };
 
     let result: Result<Option<String>, String> = (|| {
-        let img =
-            image::open(path).map_err(|e| format!("flip: failed to open image '{path}': {e}"))?;
+        let img = match img {
+            Some(img) => img,
+            None => open_for_flip(path)?,
+        };
         let flipped = match axis {
             FlipAxis::Horizontal => img.fliph(),
             FlipAxis::Vertical => img.flipv(),
@@ -104,22 +133,6 @@ pub(crate) fn run_flip_both(path: &str, output: OutputMode) -> Result<(), String
         println!("Saved both-axis flipped image to {output_path}");
     }
     Ok(())
-}
-
-fn prompt_flip_axis() -> Result<FlipAxis, String> {
-    if !stdin().is_terminal() {
-        return prompt_flip_axis_non_tty();
-    }
-
-    select("Choose flip axis:")
-        .item(FlipAxis::Vertical, "X axis (vertical, top to bottom)", "")
-        .item(
-            FlipAxis::Horizontal,
-            "Y axis (horizontal, left to right)",
-            "",
-        )
-        .interact()
-        .map_err(|e| format!("failed to read flip axis: {e}"))
 }
 
 fn prompt_flip_axis_non_tty() -> Result<FlipAxis, String> {

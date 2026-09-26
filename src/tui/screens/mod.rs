@@ -1,9 +1,11 @@
 //! One `Screen` implementation per interactive command.
 
 mod binarize;
+mod flip;
 mod rotate;
 
 pub(crate) use binarize::BinarizeScreen;
+pub(crate) use flip::FlipScreen;
 pub(crate) use rotate::RotateScreen;
 
 use ratatui::style::{Color, Modifier, Style, Stylize};
