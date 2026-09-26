@@ -17,6 +17,7 @@ pub fn display_image(img: DynamicImage) -> Result<(), String> {
 
 /// Transmit raw 32-bit RGBA pixels to the terminal using the Kitty graphics protocol.
 /// Uses image ID 1 so frames can be replaced via `delete_kitty_image`.
+#[allow(dead_code)]
 pub(crate) fn display_raw_rgba(width: u32, height: u32, rgba: &[u8]) -> Result<(), String> {
     let encoded = base64::engine::general_purpose::STANDARD.encode(rgba);
     let total = encoded.len().div_ceil(CHUNK_SIZE);
@@ -44,6 +45,7 @@ pub(crate) fn display_raw_rgba(width: u32, height: u32, rgba: &[u8]) -> Result<(
 }
 
 /// Delete the image with ID 1 from the terminal, clearing the cells it occupied.
+#[allow(dead_code)]
 pub(crate) fn delete_kitty_image() -> Result<(), String> {
     let stdout = io::stdout();
     let mut out = stdout.lock();

@@ -520,9 +520,6 @@ pub(crate) fn invert_colors(img: image::DynamicImage) -> image::DynamicImage {
 }
 
 pub(crate) fn interactive_binarize(path: &str, output: OutputMode) -> Result<(), String> {
-    use crate::preview::LivePreview;
-    use crossterm::event::KeyCode;
-
     // Open up front so a missing/unreadable file fails immediately on all code paths.
     let img =
         image::open(path).map_err(|e| format!("binarize: failed to open image '{path}': {e}"))?;
@@ -531,76 +528,14 @@ pub(crate) fn interactive_binarize(path: &str, output: OutputMode) -> Result<(),
         let threshold = prompt_binarize_threshold_stdin()?;
         return save_binarized(img, path, output, threshold);
     }
-    if !crate::commands::view::detect_kitty_support() {
-        let threshold = prompt_binarize_threshold_cliclack()?;
-        return save_binarized(img, path, output, threshold);
-    }
 
-    let mut preview = LivePreview::new(&img)?;
-    // None = no value typed yet (show original); Some(t) = apply binarize with t.
-    let mut threshold: Option<u8> = None;
-    let mut typed = String::new();
-
-    preview.render(&preview.scaled)?;
-    crate::preview::print_prompt("Enter threshold (0\u{2013}255)", &typed)?;
-
-    loop {
-        if LivePreview::needs_resize() {
-            preview.handle_resize(&img);
-            let binarized = threshold.map(|t| binarize_rgba(&preview.scaled, t));
-            preview.render(binarized.as_ref().unwrap_or(&preview.scaled))?;
-            crate::preview::print_prompt("Enter threshold (0\u{2013}255)", &typed)?;
+    match crate::tui::run_screen(path, &img, crate::tui::screens::BinarizeScreen::default())? {
+        Some(screen) => save_binarized(img, path, output, screen.threshold()),
+        None => {
+            crate::tui::print_cancelled();
+            Ok(())
         }
-
-        let key = LivePreview::read_key()?;
-        match key.code {
-            KeyCode::Esc | KeyCode::Char('q') => {
-                preview.finish()?;
-                return Ok(());
-            }
-            KeyCode::Char('c')
-                if key
-                    .modifiers
-                    .contains(crossterm::event::KeyModifiers::CONTROL) =>
-            {
-                preview.finish()?;
-                return Ok(());
-            }
-            KeyCode::Enter if !typed.is_empty() => break,
-            KeyCode::Enter => continue,
-            KeyCode::Char(c) if c.is_ascii_digit() => {
-                if typed.len() >= 3 {
-                    continue;
-                }
-                let candidate = format!("{typed}{c}");
-                // Only accept digits that keep the value within 0–255.
-                if candidate.parse::<u16>().map(|t| t <= 255).unwrap_or(false) {
-                    typed = candidate;
-                    threshold = Some(typed.parse::<u8>().unwrap());
-                } else {
-                    continue;
-                }
-            }
-            KeyCode::Backspace => {
-                if typed.pop().is_none() {
-                    continue;
-                }
-                threshold = if typed.is_empty() {
-                    None
-                } else {
-                    Some(typed.parse::<u8>().unwrap_or(128))
-                };
-            }
-            _ => continue,
-        }
-
-        let binarized = threshold.map(|t| binarize_rgba(&preview.scaled, t));
-        preview.render(binarized.as_ref().unwrap_or(&preview.scaled))?;
-        crate::preview::print_prompt("Enter threshold (0\u{2013}255)", &typed)?;
     }
-
-    preview.finish()?;
-    save_binarized(img, path, output, threshold.unwrap_or(128))
 }
 
 pub(crate) fn interactive_rotate(path: &str, output: OutputMode) -> Result<(), String> {
@@ -666,36 +601,6 @@ fn save_binarized(
         println!("Saved binarized image to {output_path}");
     }
     Ok(())
-}
-
-fn prompt_binarize_threshold_cliclack() -> Result<u8, String> {
-    let s: String = input("Enter threshold (0-255):")
-        .validate(|s: &String| match s.parse::<u16>() {
-            Err(_) => Err("Please enter a number between 0 and 255"),
-            Ok(n) if n > 255 => Err("Threshold must be between 0 and 255"),
-            Ok(_) => Ok(()),
-        })
-        .interact()
-        .map_err(|e| format!("binarize: failed to read threshold: {e}"))?;
-    Ok(s.parse::<u8>().unwrap())
-}
-
-/// Binarize a raw RGBA buffer directly without going through DynamicImage.
-/// Uses the same Rec. 601 luma coefficients (77/150/29 >> 8) as the image crate's to_luma8.
-fn binarize_rgba(
-    src: &image::ImageBuffer<image::Rgba<u8>, Vec<u8>>,
-    threshold: u8,
-) -> image::ImageBuffer<image::Rgba<u8>, Vec<u8>> {
-    let mut out = src.clone();
-    for pixel in out.pixels_mut() {
-        let luma =
-            ((pixel[0] as u32 * 77 + pixel[1] as u32 * 150 + pixel[2] as u32 * 29) >> 8) as u8;
-        let bw = if luma > threshold { 255u8 } else { 0u8 };
-        pixel[0] = bw;
-        pixel[1] = bw;
-        pixel[2] = bw;
-    }
-    out
 }
 
 #[cfg(test)]
