@@ -144,7 +144,7 @@ pub(crate) fn run_rotate(
 ) -> Result<(), String> {
     let deg = match degrees {
         Some(deg) => deg,
-        None => prompt_rotate_degrees()?,
+        None => prompt_rotate_degrees_non_tty()?,
     };
     let spinner = if matches!(output, OutputMode::Preview) {
         None
@@ -177,19 +177,6 @@ pub(crate) fn run_rotate(
         println!("Saved rotated image to {output_path}");
     }
     Ok(())
-}
-
-fn prompt_rotate_degrees() -> Result<u16, String> {
-    if !stdin().is_terminal() {
-        return prompt_rotate_degrees_non_tty();
-    }
-
-    select("Choose rotation:")
-        .item(90u16, "90 degrees", "")
-        .item(180u16, "180 degrees", "")
-        .item(270u16, "270 degrees", "")
-        .interact()
-        .map_err(|e| format!("failed to read rotation: {e}"))
 }
 
 fn prompt_rotate_degrees_non_tty() -> Result<u16, String> {
@@ -617,86 +604,19 @@ pub(crate) fn interactive_binarize(path: &str, output: OutputMode) -> Result<(),
 }
 
 pub(crate) fn interactive_rotate(path: &str, output: OutputMode) -> Result<(), String> {
-    use crate::preview::LivePreview;
-    use crossterm::event::{KeyCode, KeyModifiers};
-
-    const DEGREES: [u16; 3] = [90, 180, 270];
-    const LABELS: [&str; 3] = ["90 degrees", "180 degrees", "270 degrees"];
-
     if !stdin().is_terminal() {
-        return run_rotate(path, output, None);
-    }
-    if !crate::commands::view::detect_kitty_support() {
         return run_rotate(path, output, None);
     }
 
     let img =
         image::open(path).map_err(|e| format!("rotate: failed to open image '{path}': {e}"))?;
-
-    let mut preview = LivePreview::new(&img)?;
-    let mut cursor = 0usize;
-
-    let frame = make_rotate_frame(&preview, DEGREES[cursor]);
-    preview.render(&frame)?;
-    crate::preview::print_select_prompt("Choose rotation:", &LABELS, cursor)?;
-
-    loop {
-        if LivePreview::needs_resize() {
-            preview.handle_resize(&img);
-            let frame = make_rotate_frame(&preview, DEGREES[cursor]);
-            preview.render(&frame)?;
-            crate::preview::print_select_prompt("Choose rotation:", &LABELS, cursor)?;
+    match crate::tui::run_screen(path, &img, crate::tui::screens::RotateScreen::default())? {
+        Some(screen) => save_rotated(img, path, output, screen.degrees()),
+        None => {
+            crate::tui::print_cancelled();
+            Ok(())
         }
-
-        let key = LivePreview::read_key()?;
-        match key.code {
-            KeyCode::Esc | KeyCode::Char('q') => {
-                preview.finish()?;
-                return Ok(());
-            }
-            KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                preview.finish()?;
-                return Ok(());
-            }
-            KeyCode::Up | KeyCode::Char('k') => {
-                if cursor == 0 {
-                    continue;
-                }
-                cursor -= 1;
-            }
-            KeyCode::Down | KeyCode::Char('j') => {
-                if cursor == DEGREES.len() - 1 {
-                    continue;
-                }
-                cursor += 1;
-            }
-            KeyCode::Enter => break,
-            _ => continue,
-        }
-
-        let frame = make_rotate_frame(&preview, DEGREES[cursor]);
-        preview.render(&frame)?;
-        crate::preview::print_select_prompt("Choose rotation:", &LABELS, cursor)?;
     }
-
-    preview.finish()?;
-    save_rotated(img, path, output, DEGREES[cursor])
-}
-
-/// Rotate `preview.content` (unpadded) by `degrees`, then re-fit to the terminal budget.
-/// Works on the small pre-scaled image so it's fast; re-fitting handles the changed aspect ratio.
-fn make_rotate_frame(
-    preview: &crate::preview::LivePreview,
-    degrees: u16,
-) -> image::ImageBuffer<image::Rgba<u8>, Vec<u8>> {
-    let dyn_img = image::DynamicImage::ImageRgba8(preview.content.clone());
-    let rotated = match degrees {
-        90 => dyn_img.rotate90(),
-        180 => dyn_img.rotate180(),
-        270 => dyn_img.rotate270(),
-        _ => dyn_img,
-    };
-    preview.fit_for_render(&rotated)
 }
 
 fn save_rotated(

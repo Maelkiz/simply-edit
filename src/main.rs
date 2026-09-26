@@ -5,8 +5,6 @@ mod io;
 mod preview;
 #[cfg(test)]
 mod testutil;
-// Not wired to any command yet; the allow goes once the first screen uses it.
-#[allow(dead_code)]
 mod tui;
 
 use std::io::{IsTerminal, stdin};

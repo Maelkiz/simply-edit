@@ -2,8 +2,13 @@
 
 mod app;
 mod preview_source;
+pub(crate) mod screens;
 mod terminal;
 mod widgets;
 
-#[allow(unused_imports)]
 pub(crate) use app::{Outcome, Screen, is_cancel_key, run_screen};
+
+/// Tell the user a cancelled screen left their files untouched.
+pub(crate) fn print_cancelled() {
+    eprintln!("Cancelled — nothing saved.");
+}

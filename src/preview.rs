@@ -80,12 +80,6 @@ impl LivePreview {
         self.scaled = pad_to_budget(self.content.clone(), self.term_px);
     }
 
-    /// Scale and pad `img` to the current terminal budget — use for per-frame transform results.
-    pub(crate) fn fit_for_render(&self, img: &DynamicImage) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
-        let content = scale_content(img, self.term_px);
-        pad_to_budget(content, self.term_px)
-    }
-
     /// Check whether a SIGWINCH has been received since the last `handle_resize`.
     pub(crate) fn needs_resize() -> bool {
         RESIZED.load(Ordering::Relaxed)
@@ -138,40 +132,6 @@ pub(crate) fn print_prompt(label: &str, typed: &str) -> Result<(), String> {
          \r\x1b[36m└\x1b[0m  \r\n"
     )
     .map_err(|e| format!("preview: write error: {e}"))?;
-    out.flush()
-        .map_err(|e| format!("preview: write error: {e}"))
-}
-
-/// Print a cliclack-styled active select prompt below a live preview image.
-///
-/// Renders the cliclack active-select layout:
-///   ◆  {label}          ← cyan ◆
-///   │  ● {item}         ← cyan │, green ●, normal label  (cursor item)
-///   │  ○ {item}         ← cyan │, dim ○, dim label       (other items)
-///   └                   ← cyan └
-///
-/// Raw mode disables output post-processing, so `\r\n` is used for line breaks.
-pub(crate) fn print_select_prompt(
-    label: &str,
-    items: &[&str],
-    cursor: usize,
-) -> Result<(), String> {
-    let stdout = io::stdout();
-    let mut out = stdout.lock();
-    write!(out, "\r\x1b[36m◆\x1b[0m  {label}\r\n")
-        .map_err(|e| format!("preview: write error: {e}"))?;
-    for (i, item) in items.iter().enumerate() {
-        if i == cursor {
-            write!(out, "\r\x1b[36m│\x1b[0m  \x1b[32m●\x1b[0m {item}\r\n")
-        } else {
-            write!(
-                out,
-                "\r\x1b[36m│\x1b[0m  \x1b[2m○\x1b[0m \x1b[2m{item}\x1b[0m\r\n"
-            )
-        }
-        .map_err(|e| format!("preview: write error: {e}"))?;
-    }
-    write!(out, "\r\x1b[36m└\x1b[0m\r\n").map_err(|e| format!("preview: write error: {e}"))?;
     out.flush()
         .map_err(|e| format!("preview: write error: {e}"))
 }
