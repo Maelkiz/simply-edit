@@ -136,16 +136,16 @@ Batch image processing is supported and is used like this:
 simply invert ./photos/
 
 # Convert all images in the directory to WebP, writing results to a separate directory
-simply convert --format webp ./photos/ --output-dir ./converted/
+simply convert --format webp ./photos/ ./converted/
 
 # Grayscale only matching files, recursively
 simply grayscale ./photos/ -r --pattern "^photo_"
 
 # Binarize all images in a directory with a custom threshold
-simply binarize --threshold 100 ./scans/ --output-dir ./cleaned/
+simply binarize --threshold 100 ./scans/ ./cleaned/
 
 # Remove the background from every product shot, writing to a separate directory
-simply cutout ./products/ --output-dir ./cutouts/
+simply cutout ./products/ ./cutouts/
 ```
 
 ### View & Preview
