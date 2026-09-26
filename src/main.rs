@@ -61,7 +61,7 @@ fn run() -> Result<(), String> {
                     (false, true) => "fliph",
                     (false, false) => unreachable!(),
                 };
-                let options = batch::to_batch_options(&batch)?;
+                let options = batch::to_batch_options(&batch, output.as_deref())?;
                 {
                     let files = batch::collect_files(
                         Path::new(&path),
@@ -125,7 +125,7 @@ fn run() -> Result<(), String> {
                     return Err("rotate: --angle required in batch mode".to_string());
                 }
                 let deg = angle.unwrap();
-                let options = batch::to_batch_options(&batch)?;
+                let options = batch::to_batch_options(&batch, output.as_deref())?;
                 {
                     let suffix = format!("rotate{deg}");
                     let files = batch::collect_files(
@@ -181,7 +181,7 @@ fn run() -> Result<(), String> {
                 if preview {
                     return Err("invert: --preview cannot be used in batch mode".to_string());
                 }
-                let options = batch::to_batch_options(&batch)?;
+                let options = batch::to_batch_options(&batch, output.as_deref())?;
                 {
                     let files = batch::collect_files(
                         Path::new(&path),
@@ -222,7 +222,7 @@ fn run() -> Result<(), String> {
                 if preview {
                     return Err("grayscale: --preview cannot be used in batch mode".to_string());
                 }
-                let options = batch::to_batch_options(&batch)?;
+                let options = batch::to_batch_options(&batch, output.as_deref())?;
                 {
                     let files = batch::collect_files(
                         Path::new(&path),
@@ -269,7 +269,7 @@ fn run() -> Result<(), String> {
                 if preview {
                     return Err("binarize: --preview cannot be used in batch mode".to_string());
                 }
-                let options = batch::to_batch_options(&batch)?;
+                let options = batch::to_batch_options(&batch, output.as_deref())?;
                 {
                     let files = batch::collect_files(
                         Path::new(&path),
@@ -320,7 +320,7 @@ fn run() -> Result<(), String> {
                 if preview {
                     return Err("cutout: --preview cannot be used in batch mode".to_string());
                 }
-                let options = batch::to_batch_options(&batch)?;
+                let options = batch::to_batch_options(&batch, output.as_deref())?;
                 {
                     let files = batch::collect_files(
                         Path::new(&path),
@@ -386,7 +386,7 @@ fn run() -> Result<(), String> {
                          (single-dimension aspect-ratio resize is only available interactively)"
                         .to_string());
                 }
-                let options = batch::to_batch_options(&batch)?;
+                let options = batch::to_batch_options(&batch, output.as_deref())?;
                 {
                     let suffix = format!("resize{}x{}", width.unwrap(), height.unwrap());
                     let files = batch::collect_files(
@@ -437,7 +437,7 @@ fn run() -> Result<(), String> {
                 let Some(f) = factor else {
                     return Err("scale: batch mode requires --factor".to_string());
                 };
-                let options = batch::to_batch_options(&batch)?;
+                let options = batch::to_batch_options(&batch, output.as_deref())?;
                 let result = batch::run_batch(Path::new(&path), &options, |file| {
                     let img = image::open(file).map_err(|e| {
                         format!("scale: failed to open image '{}': {e}", file.display())
@@ -483,7 +483,7 @@ fn run() -> Result<(), String> {
                 if preview {
                     return Err("stretch: --preview cannot be used in batch mode".to_string());
                 }
-                let options = batch::to_batch_options(&batch)?;
+                let options = batch::to_batch_options(&batch, output.as_deref())?;
                 let result = batch::run_batch(Path::new(&path), &options, |file| {
                     let img = image::open(file).map_err(|e| {
                         format!("stretch: failed to open image '{}': {e}", file.display())
@@ -517,7 +517,7 @@ fn run() -> Result<(), String> {
                 let fmt = format.ok_or_else(|| {
                     "convert: --format required in batch mode (e.g. --format png)".to_string()
                 })?;
-                let options = batch::to_batch_options(&batch)?;
+                let options = batch::to_batch_options(&batch, dst.as_deref())?;
                 {
                     let files = batch::collect_files(
                         Path::new(&src),
@@ -572,7 +572,7 @@ fn run() -> Result<(), String> {
                 if preview {
                     return Err("vectorize: --preview cannot be used in batch mode".to_string());
                 }
-                let options = batch::to_batch_options(&batch)?;
+                let options = batch::to_batch_options(&batch, dst.as_deref())?;
                 {
                     let files = batch::collect_files(
                         Path::new(&src),
@@ -651,7 +651,7 @@ fn run() -> Result<(), String> {
                 if preview {
                     return Err("pad: --preview cannot be used in batch mode".to_string());
                 }
-                let options = batch::to_batch_options(&batch)?;
+                let options = batch::to_batch_options(&batch, output.as_deref())?;
                 {
                     let files = batch::collect_files(
                         Path::new(&path),
@@ -702,7 +702,7 @@ fn run() -> Result<(), String> {
                     width,
                     height,
                 };
-                let options = batch::to_batch_options(&batch)?;
+                let options = batch::to_batch_options(&batch, dst.as_deref())?;
                 {
                     let files = batch::collect_files(
                         Path::new(&src),
@@ -753,10 +753,7 @@ fn run() -> Result<(), String> {
 }
 
 fn is_batch(path: &str, batch: &BatchArgs) -> bool {
-    Path::new(path).is_dir()
-        || batch.pattern.is_some()
-        || batch.output_dir.is_some()
-        || batch.recursive
+    Path::new(path).is_dir() || batch.pattern.is_some() || batch.recursive
 }
 
 fn check_output_collisions(

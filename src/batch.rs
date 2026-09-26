@@ -23,7 +23,10 @@ pub(crate) struct BatchResult {
     pub failed: Vec<(PathBuf, String)>,
 }
 
-pub(crate) fn to_batch_options(args: &BatchArgs) -> Result<BatchOptions, String> {
+pub(crate) fn to_batch_options(
+    args: &BatchArgs,
+    output_dir: Option<&str>,
+) -> Result<BatchOptions, String> {
     let pattern = match &args.pattern {
         Some(pat) => {
             let re =
@@ -33,16 +36,23 @@ pub(crate) fn to_batch_options(args: &BatchArgs) -> Result<BatchOptions, String>
         None => None,
     };
 
-    if let Some(dir) = &args.output_dir
-        && !dir.exists()
-    {
-        fs::create_dir_all(dir)
-            .map_err(|e| format!("failed to create output directory '{}': {e}", dir.display()))?;
+    let output_dir = output_dir.map(PathBuf::from);
+    if let Some(dir) = &output_dir {
+        if !dir.exists() {
+            fs::create_dir_all(dir).map_err(|e| {
+                format!("failed to create output directory '{}': {e}", dir.display())
+            })?;
+        } else if !dir.is_dir() {
+            return Err(format!(
+                "output path '{}' is not a directory (batch mode writes into a directory)",
+                dir.display()
+            ));
+        }
     }
 
     Ok(BatchOptions {
         pattern,
-        output_dir: args.output_dir.clone(),
+        output_dir,
         recursive: args.recursive,
     })
 }
@@ -562,10 +572,9 @@ mod tests {
     fn test_to_batch_options_invalid_regex() {
         let args = BatchArgs {
             pattern: Some("[invalid".to_string()),
-            output_dir: None,
             recursive: false,
         };
-        assert!(to_batch_options(&args).is_err());
+        assert!(to_batch_options(&args, None).is_err());
     }
 
     #[test]
@@ -718,12 +727,26 @@ mod tests {
 
         let args = BatchArgs {
             pattern: None,
-            output_dir: Some(out.clone()),
             recursive: false,
         };
-        let opts = to_batch_options(&args).unwrap();
+        let opts = to_batch_options(&args, out.to_str()).unwrap();
         assert!(out.exists());
         assert_eq!(opts.output_dir, Some(out));
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_to_batch_options_rejects_file_as_output_dir() {
+        let dir = temp_dir("batch-outfile");
+        let file = dir.join("not_a_dir.png");
+        fs::write(&file, b"x").unwrap();
+
+        let args = BatchArgs {
+            pattern: None,
+            recursive: false,
+        };
+        let err = to_batch_options(&args, file.to_str()).err().unwrap();
+        assert!(err.contains("not a directory"));
         let _ = fs::remove_dir_all(&dir);
     }
 
@@ -731,10 +754,9 @@ mod tests {
     fn test_to_batch_options_valid_regex() {
         let args = BatchArgs {
             pattern: Some(r"^\d+\.png$".to_string()),
-            output_dir: None,
             recursive: false,
         };
-        let opts = to_batch_options(&args).unwrap();
+        let opts = to_batch_options(&args, None).unwrap();
         assert!(opts.pattern.is_some());
         assert!(opts.pattern.unwrap().is_match("123.png"));
     }

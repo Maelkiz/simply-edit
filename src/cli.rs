@@ -1,5 +1,4 @@
 use std::ffi::OsString;
-use std::path::PathBuf;
 
 use clap::{ArgAction, Args, Parser, Subcommand};
 
@@ -25,10 +24,6 @@ pub(crate) struct BatchArgs {
     /// Regex pattern to filter filenames
     #[arg(long)]
     pub pattern: Option<String>,
-
-    /// Output directory for batch results
-    #[arg(long)]
-    pub output_dir: Option<PathBuf>,
 
     /// Process subdirectories recursively
     #[arg(short = 'r', long)]
@@ -62,7 +57,7 @@ pub(crate) enum Command {
         /// Path to image file or directory
         path: String,
 
-        /// Output path (auto-generated if omitted)
+        /// Output path, or output directory in batch mode (auto-generated if omitted)
         output: Option<String>,
 
         #[command(flatten)]
@@ -91,7 +86,7 @@ pub(crate) enum Command {
         /// Path to image file or directory
         path: String,
 
-        /// Output path (auto-generated if omitted)
+        /// Output path, or output directory in batch mode (auto-generated if omitted)
         output: Option<String>,
 
         #[command(flatten)]
@@ -114,7 +109,7 @@ pub(crate) enum Command {
         /// Path to image file or directory
         path: String,
 
-        /// Output path (auto-generated if omitted)
+        /// Output path, or output directory in batch mode (auto-generated if omitted)
         output: Option<String>,
 
         #[command(flatten)]
@@ -137,7 +132,7 @@ pub(crate) enum Command {
         /// Path to image file or directory
         path: String,
 
-        /// Output path (auto-generated if omitted)
+        /// Output path, or output directory in batch mode (auto-generated if omitted)
         output: Option<String>,
 
         #[command(flatten)]
@@ -164,7 +159,7 @@ pub(crate) enum Command {
         /// Path to image file or directory
         path: String,
 
-        /// Output path (auto-generated if omitted)
+        /// Output path, or output directory in batch mode (auto-generated if omitted)
         output: Option<String>,
 
         #[command(flatten)]
@@ -204,7 +199,7 @@ pub(crate) enum Command {
         #[arg(required_unless_present = "download_model")]
         path: Option<String>,
 
-        /// Output path (auto-generated if omitted)
+        /// Output path, or output directory in batch mode (auto-generated if omitted)
         output: Option<String>,
 
         #[command(flatten)]
@@ -235,7 +230,7 @@ pub(crate) enum Command {
         /// Path to image file or directory
         path: String,
 
-        /// Output path (auto-generated if omitted)
+        /// Output path, or output directory in batch mode (auto-generated if omitted)
         output: Option<String>,
 
         #[command(flatten)]
@@ -262,7 +257,7 @@ pub(crate) enum Command {
         /// Path to image file or directory
         path: String,
 
-        /// Output path (auto-generated if omitted)
+        /// Output path, or output directory in batch mode (auto-generated if omitted)
         output: Option<String>,
 
         #[command(flatten)]
@@ -293,7 +288,7 @@ pub(crate) enum Command {
         /// Path to image file or directory
         path: String,
 
-        /// Output path (auto-generated if omitted)
+        /// Output path, or output directory in batch mode (auto-generated if omitted)
         output: Option<String>,
 
         #[command(flatten)]
@@ -312,7 +307,7 @@ pub(crate) enum Command {
         /// Source image path or directory
         src: String,
 
-        /// Output path (interactive format prompt if omitted)
+        /// Output path, or output directory in batch mode (interactive format prompt if omitted)
         dst: Option<String>,
 
         #[command(flatten)]
@@ -339,7 +334,7 @@ pub(crate) enum Command {
         /// Source image path or directory
         src: String,
 
-        /// Output SVG path (auto-generated if omitted)
+        /// Output SVG path, or output directory in batch mode (auto-generated if omitted)
         dst: Option<String>,
 
         #[command(flatten)]
@@ -412,7 +407,7 @@ pub(crate) enum Command {
         /// Path to image file or directory
         path: String,
 
-        /// Output path (auto-generated if omitted)
+        /// Output path, or output directory in batch mode (auto-generated if omitted)
         output: Option<String>,
 
         #[command(flatten)]
@@ -443,7 +438,7 @@ pub(crate) enum Command {
         /// Source SVG path or directory
         src: String,
 
-        /// Output path (auto-generated if omitted)
+        /// Output path, or output directory in batch mode (auto-generated if omitted)
         dst: Option<String>,
 
         #[command(flatten)]
@@ -1080,14 +1075,11 @@ mod tests {
             "invert",
             "--pattern",
             ".*\\.jpg$",
-            "--output-dir",
-            "/tmp/out",
             "--recursive",
             "image.png",
         ]) {
             Command::Invert { batch, path, .. } => {
                 assert_eq!(batch.pattern.as_deref(), Some(".*\\.jpg$"));
-                assert_eq!(batch.output_dir, Some(PathBuf::from("/tmp/out")));
                 assert!(batch.recursive);
                 assert_eq!(path, "image.png");
             }
@@ -1424,20 +1416,16 @@ mod tests {
 
     #[test]
     fn test_pad_batch_flags() {
-        match parse(&[
-            "simply",
-            "pad",
-            "--horizontal",
-            "10",
-            "--output-dir",
-            "/tmp/out",
-            "images/",
-        ]) {
+        match parse(&["simply", "pad", "--horizontal", "10", "images/", "/tmp/out"]) {
             Command::Pad {
                 horizontal: Some(10),
-                batch,
+                path,
+                output,
                 ..
-            } => assert_eq!(batch.output_dir, Some(std::path::PathBuf::from("/tmp/out"))),
+            } => {
+                assert_eq!(path, "images/");
+                assert_eq!(output.as_deref(), Some("/tmp/out"));
+            }
             other => panic!("unexpected: {other:?}"),
         }
     }
