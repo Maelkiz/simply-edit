@@ -1155,3 +1155,86 @@ fn test_cutout_without_trim_keeps_original_dimensions() {
     let cut = image::open(temp.path().join("logo_cutout.png")).expect("valid output");
     assert_eq!((cut.width(), cut.height()), (20, 20));
 }
+
+#[test]
+fn test_directory_output_uses_generated_name_inside_it() {
+    let temp = TestDir::new("simply-dir-output");
+    let input = temp.path().join("img.png");
+    let out = temp.path().join("out");
+    std::fs::create_dir(&out).expect("create out dir");
+    create_png(&input, 3, 2, [220, 30, 30, 255]);
+
+    let output = run(&["invert", input.to_str().unwrap(), out.to_str().unwrap()]);
+    assert!(output.status.success());
+    assert_valid_image(&out.join("img_invert.png"));
+
+    // A second run must not clobber the first result.
+    let output = run(&["invert", input.to_str().unwrap(), out.to_str().unwrap()]);
+    assert!(output.status.success());
+    assert_valid_image(&out.join("img_invert1.png"));
+}
+
+#[test]
+fn test_trailing_slash_output_creates_directory() {
+    let temp = TestDir::new("simply-dir-output-slash");
+    let input = temp.path().join("img.png");
+    let out = temp.path().join("new").join("nested");
+    create_png(&input, 3, 2, [220, 30, 30, 255]);
+
+    let output = run(&[
+        "grayscale",
+        input.to_str().unwrap(),
+        &format!("{}/", out.display()),
+    ]);
+    assert!(output.status.success());
+    assert_valid_image(&out.join("img_grayscale.png"));
+}
+
+#[test]
+fn test_replace_into_directory_overwrites_same_name() {
+    let temp = TestDir::new("simply-dir-output-replace");
+    let input = temp.path().join("img.png");
+    let out = temp.path().join("out");
+    std::fs::create_dir(&out).expect("create out dir");
+    create_png(&input, 3, 2, [220, 30, 30, 255]);
+    create_png(&out.join("img.png"), 1, 1, [0, 0, 0, 255]);
+
+    let output = run(&[
+        "invert",
+        "--replace",
+        input.to_str().unwrap(),
+        out.to_str().unwrap(),
+    ]);
+    assert!(output.status.success());
+    let img = image::open(out.join("img.png")).expect("valid image");
+    assert_eq!((img.width(), img.height()), (3, 2));
+}
+
+#[test]
+fn test_vectorize_and_rasterize_into_directory() {
+    let temp = TestDir::new("simply-dir-output-convert");
+    let input = temp.path().join("img.png");
+    let out = temp.path().join("out");
+    std::fs::create_dir(&out).expect("create out dir");
+    create_png(&input, 4, 4, [220, 30, 30, 255]);
+
+    let output = run(&[
+        "vectorize",
+        "--fast",
+        input.to_str().unwrap(),
+        out.to_str().unwrap(),
+    ]);
+    assert!(output.status.success());
+    let svg = out.join("img.svg");
+    assert!(svg.exists());
+
+    let raster_out = temp.path().join("raster");
+    std::fs::create_dir(&raster_out).expect("create raster dir");
+    let output = run(&[
+        "rasterize",
+        svg.to_str().unwrap(),
+        raster_out.to_str().unwrap(),
+    ]);
+    assert!(output.status.success());
+    assert_valid_image(&raster_out.join("img.png"));
+}
