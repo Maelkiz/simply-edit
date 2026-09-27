@@ -1,8 +1,8 @@
-# simply-edit
+# simply
 
 > A simple CLI tool for manipulating images.
 
-simply-edit is a convenient command-line utility for everyday image tasks: flip, rotate, invert, grayscale, binarize, pad, resize, scale, stretch, remove backgrounds, and convert between common formats. It is designed to be easy to use, with sensible defaults, straightforward commands, and quality-of-life features, such as optional in-place replacement, batch operations, and view/preview functionality using the [Kitty Terminal Graphics Protocol](https://sw.kovidgoyal.net/kitty/graphics-protocol).
+simply is a convenient command-line utility for everyday image tasks: flip, rotate, invert, grayscale, binarize, pad, resize, scale, stretch, remove backgrounds, and convert between common formats. It is designed to be easy to use, with sensible defaults, straightforward commands, and quality-of-life features, such as optional in-place replacement, batch operations, and view/preview functionality using the [Kitty Terminal Graphics Protocol](https://sw.kovidgoyal.net/kitty/graphics-protocol).
 
 ---
 
@@ -19,10 +19,10 @@ The model weights are *not* included — they are an optional download, see
 
 ### Install from Source
 
-Install simply-edit so you can run the `simply` commands from anywhere:
+Install simply so you can run the `simply` commands from anywhere:
 
 ```bash
-cargo install --git https://github.com/Maelkiz/simply-edit.git
+cargo install --git https://github.com/Maelkiz/simply.git
 ```
 
 ### Verify Installation
@@ -229,7 +229,7 @@ The download is verified against a pinned SHA-256 checksum and written to a
 temporary file first, so an interrupted transfer never leaves a corrupt cache.
 
 Weights are cached in your platform cache directory, under
-`simply-edit/models/`. Set `SIMPLY_MODEL_DIR` to store them elsewhere — useful
+`simply/models/`. Set `SIMPLY_MODEL_DIR` to store them elsewhere — useful
 for air-gapped machines and shared caches:
 
 ```bash

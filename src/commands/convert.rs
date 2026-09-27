@@ -417,7 +417,7 @@ mod tests {
     #[test]
     fn test_rasterize_creates_png() {
         let temp_root = std::env::temp_dir().join(format!(
-            "simply-edit-svg-test-{}-{}",
+            "simply-svg-test-{}-{}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -456,7 +456,7 @@ mod tests {
     #[test]
     fn test_convert_png_to_webp() {
         let temp_root = std::env::temp_dir().join(format!(
-            "simply-edit-webp-test-{}-{}",
+            "simply-webp-test-{}-{}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -487,7 +487,7 @@ mod tests {
     #[test]
     fn test_convert_webp_to_png() {
         let temp_root = std::env::temp_dir().join(format!(
-            "simply-edit-webp-to-png-test-{}-{}",
+            "simply-webp-to-png-test-{}-{}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -518,7 +518,7 @@ mod tests {
     #[test]
     fn test_convert_svg_to_webp() {
         let temp_root = std::env::temp_dir().join(format!(
-            "simply-edit-svg-to-webp-test-{}-{}",
+            "simply-svg-to-webp-test-{}-{}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -563,7 +563,7 @@ mod tests {
     #[test]
     fn test_prepare_vectorize_input_no_downscale_when_under_threshold() {
         let temp_root = std::env::temp_dir().join(format!(
-            "simply-edit-pvi-under-{}-{}",
+            "simply-pvi-under-{}-{}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -587,7 +587,7 @@ mod tests {
     #[test]
     fn test_prepare_vectorize_input_downscales_large_image() {
         let temp_root = std::env::temp_dir().join(format!(
-            "simply-edit-pvi-large-{}-{}",
+            "simply-pvi-large-{}-{}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -618,7 +618,7 @@ mod tests {
     #[test]
     fn test_prepare_vectorize_input_full_quality_skips_downscale() {
         let temp_root = std::env::temp_dir().join(format!(
-            "simply-edit-pvi-fullq-{}-{}",
+            "simply-pvi-fullq-{}-{}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)

@@ -40,7 +40,7 @@ pub(crate) fn model_path() -> Result<PathBuf, String> {
                     "cutout: could not determine a cache directory; set {MODEL_DIR_ENV} to choose where the model is stored"
                 )
             })?
-            .join("simply-edit")
+            .join("simply")
             .join("models"),
     };
     Ok(dir.join(MODEL_FILE))

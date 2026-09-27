@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 pub(crate) fn temp_dir(name: &str) -> PathBuf {
     let dir = std::env::temp_dir().join(format!(
-        "simply-edit-{name}-{}-{}",
+        "simply-{name}-{}-{}",
         std::process::id(),
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
